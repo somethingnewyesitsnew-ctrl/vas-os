@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VAS OS</title>
+<meta name="version" content="v4.2-2026">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="ts-stk" id="ts-stk"></div>
+
+
+
+<!-- ════ LOGIN ════ -->
+<div id="login">
+<div class="lcard">
+  <div class="llogo" id="login-sys-name">VAS OS</div>
+  <div class="lsub">Operations Management System</div>
+  <div class="lf"><label>Username</label><input id="lu" placeholder="e.g. aziz" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lp').focus()"></div>
+  <div class="lf"><label>Password</label><input id="lp" type="password" placeholder="••••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <input type="checkbox" id="l-remember" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ac)">
+    <label for="l-remember" style="font-size:12px;color:rgba(255,255,255,.6);cursor:pointer;user-select:none">Remember me</label>
+  </div>
+  <div id="lerr" style="display:none;background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);border-radius:8px;padding:8px 12px;font-size:11px;color:#fca5a5;margin-bottom:8px;text-align:center"></div>
+  <button class="lbtn" id="lbtn" onclick="doLogin()">Sign In</button>
+</div>
+</div>
+
+<!-- ════ MOBILE BOTTOM NAV ════ -->
+<div id="mob-nav">
+  <div class="mn-items">
+    <div class="mn-it on" id="mn-dash" onclick="navTo('dash');setMobNav('mn-dash')">
+      <div class="mn-icon">⬛</div><div>Home</div>
+      <div class="mn-bdg" id="mn-bdg-dash"></div>
+    </div>
+    <div class="mn-it" id="mn-tasks" onclick="navTo('mytasks');setMobNav('mn-tasks')">
+      <div class="mn-icon">☑</div><div>Tasks</div>
+      <div class="mn-bdg" id="mn-bdg-tasks"></div>
+    </div>
+    <div class="mn-it" id="mn-add" onclick="toggleMobFab()">
+      <div class="mn-icon" style="font-size:26px;line-height:1;color:var(--ac)">+</div><div>New</div>
+    </div>
+    <div class="mn-it" id="mn-meet" onclick="navTo('meetings');setMobNav('mn-meet')">
+      <div class="mn-icon">📅</div><div>Meetings</div>
+      <div class="mn-bdg" id="mn-bdg-meet"></div>
+    </div>
+    <div class="mn-it" id="mn-more" onclick="toggleMobMenu()">
+      <div class="mn-icon">☰</div><div>More</div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile FAB menu -->
+<div id="mob-fab-menu" style="display:none;position:fixed;bottom:72px;left:0;right:0;z-index:900;background:var(--bg);border-top:1px solid var(--bd);padding:12px 16px;box-shadow:0 -8px 32px #0006;animation:slideUp .18s ease">
+  <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px">Create New</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button onclick="hideMobFab();openTaskModal(null)" style="padding:14px 10px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">☑ Task</button>
+    <button onclick="hideMobFab();openMeetingModal(null)" style="padding:14px 10px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📅 Meeting</button>
+    <button onclick="hideMobFab();openTodoModal(null)" style="padding:14px 10px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">✓ Todo</button>
+    <button onclick="hideMobFab()" style="padding:14px 10px;background:var(--s2);color:var(--tx3);border:1px solid var(--bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- Mobile "More" menu -->
+<div id="mob-more-menu" style="display:none;position:fixed;bottom:72px;left:0;right:0;z-index:900;background:var(--bg);border-top:2px solid var(--bd);box-shadow:0 -8px 32px #0008;animation:slideUp .18s ease;max-height:75vh;display:none;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">
+    <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3)">Navigation</span>
+    <button onclick="hideMobMore()" style="background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+  </div>
+  <div id="mob-more-list" style="overflow-y:auto;padding:10px 12px 16px;flex:1"></div>
+</div>
+<div id="mob-overlay" onclick="hideMobFab();hideMobMore()" style="display:none;position:fixed;inset:0;z-index:899;background:rgba(0,0,0,.4)"></div>
+
+<!-- ════ APP ════ -->
+<div id="app">
+<div id="sb-toggle" class="sb-open" onclick="toggleSidebar()" title="Toggle sidebar">☰</div>
+<nav class="sb" id="sb-nav">
+  <div class="sb-brand">
+    <div style="display:flex;align-items:baseline;gap:6px"><div class="sb-logo" id="sys-name-display">VAS OS</div><span style="font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:.06em;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px">v2.5</span></div>
+    <div class="nsync" id="nsync" onclick="refreshData()" title="Click to sync now"><div class="nsd"></div><span id="nsync-lbl">Loading</span></div>
+  </div>
+  <div class="sb-user"><div class="sav" id="sav" style="width:26px;height:26px;font-size:9px">AZ</div><div><div class="sun" id="sun">-</div><div class="sur" id="sur">-</div></div></div>
+  <div class="sb-sec">My Space</div>
+  <div class="ni on" data-p="dash" onclick="nav('dash',this)"><span class="ni-i">⬛</span>Dashboard</div>
+  <div class="ni" data-p="mytasks" onclick="nav('mytasks',this)"><span class="ni-i">☑</span>My Tasks<span class="nbdg" id="nb1" style="display:none">0</span></div>
+  <div class="ni" data-p="todos" onclick="nav('todos',this)"><span class="ni-i">✓</span>My Todos<span class="nbdg" id="nb-td" style="display:none">0</span></div>
+  <div class="ni" data-p="toreview" onclick="nav('toreview',this)"><span class="ni-i">◎</span>To Review<span class="nbdg" id="nb2" style="display:none">0</span></div>
+  <div class="ni" data-p="helprequests" onclick="nav('helprequests',this)" id="nav-hr"><span class="ni-i">🤝</span>Help Requests<span class="nbdg" id="nb-hr" style="display:none">0</span></div>
+  <div class="ni" data-p="reminders" onclick="nav('reminders',this)" id="nav-rm"><span class="ni-i">🔔</span>Reminders<span class="nbdg" id="nb-rm" style="display:none">0</span></div>
+  <div class="ni" data-p="comments" onclick="nav('comments',this)" id="nav-cm"><span class="ni-i">💬</span>Comments<span class="nbdg" id="nb-cm" style="display:none">0</span></div>
+  <div class="sb-sec">Communications</div>
+  <div class="ni" data-p="hrcoms" onclick="nav('hrcoms',this)" id="nav-hrc" style="display:none"><span class="ni-i">💬</span>HR Comms<span class="nbdg" id="nb-hrc" style="display:none">0</span></div>
+  <div class="ni" data-p="announcements" onclick="nav('announcements',this)" id="nav-ann" style="display:none"><span class="ni-i">📢</span>Announcements<span class="nbdg" id="nb-ann" style="display:none">0</span></div>
+  <div class="sb-sec" id="sec-mgmt" style="display:none">Management</div>
+  <div class="ni" data-p="projects" onclick="nav('projects',this)" id="nav-pr" style="display:none"><span class="ni-i">◉</span>Projects<span class="nbdg" id="nb-pr" style="display:none">0</span></div>
+  <div class="ni" data-p="alltasks" onclick="nav('alltasks',this)" id="nav-at" style="display:none"><span class="ni-i">≡</span>All Tasks<span class="nbdg" id="nb-at" style="display:none">0</span></div>
+  <div class="ni" data-p="team" onclick="nav('team',this)" id="nav-tm" style="display:none"><span class="ni-i">◈</span>Team</div>
+  <div class="ni" data-p="eval" onclick="nav('eval',this)" id="nav-ev" style="display:none"><span class="ni-i">◉</span>Evaluation</div>
+  <div class="ni" data-p="backlog" onclick="nav('backlog',this)" id="nav-bl" style="display:none"><span class="ni-i">◆</span>Backlog</div>
+  <div class="ni" data-p="library" onclick="nav('library',this)" id="nav-lib" style="display:none"><span class="ni-i">📖</span>Library<span class="nbdg" id="nb-lib" style="display:none;background:#dc2626">0</span></div>
+  <div class="sb-sec" id="sec-ops" style="display:none">Operations</div>
+  <div class="ni" data-p="services" onclick="nav('services',this)" id="nav-sv" style="display:none"><span class="ni-i">◐</span>Services<span class="nbdg" id="nb-sv" style="display:none">0</span></div>
+  <div class="ni" data-p="operators" onclick="nav('operators',this)" id="nav-op" style="display:none"><span class="ni-i">◑</span>Operators</div>
+  <div class="ni" data-p="companies" onclick="nav('companies',this)" id="nav-co" style="display:none"><span class="ni-i">◧</span>Companies</div>
+  <div class="sb-sec">Collaboration</div>
+  <div class="ni" data-p="svctest" onclick="nav('svctest',this)" id="nav-svct" style="display:none"><span class="ni-i">🧪</span>Service Tests<span class="nbdg" id="nb-svct" style="display:none">0</span></div>
+  <div class="ni" data-p="meetings" onclick="nav('meetings',this)" id="nav-mt" style="display:none"><span class="ni-i">📅</span>Meetings<span class="nbdg" id="nb-mt" style="display:none">0</span></div>
+  <div class="ni" data-p="moutcomes" onclick="nav('moutcomes',this)" id="nav-mo" style="display:none"><span class="ni-i">📝</span>Meeting Outcomes<span class="nbdg" id="nb-mo" style="display:none">0</span></div>
+  <div class="sb-sec">Knowledge</div>
+  <div class="ni" data-p="docs" onclick="nav('docs',this)" id="nav-doc" style="display:none"><span class="ni-i">📚</span>Docs</div>
+  <div class="ni" data-p="archive" onclick="nav('archive',this)" id="nav-arc" style="display:none"><span class="ni-i">🗄</span>Archive</div>
+  <div class="ni" data-p="settings" onclick="nav('settings',this)" id="nav-st" style="display:none"><span class="ni-i">⚙</span>Settings</div>
+  <div class="ni" data-p="syslog" onclick="nav('syslog',this)" id="nav-sl" style="display:none"><span class="ni-i">▤</span>System Log</div>
+  <div class="sb-ft"><div class="ni" onclick="doLogout()" style="color:var(--tx3)"><span class="ni-i">←</span>Sign Out</div></div>
+</nav>
+<div class="main">
+  <div class="topbar" style="padding-left:48px">
+    <div class="tb-t" id="tb-t">Dashboard</div>
+    <div class="tb-sav" id="tb-sav"><div class="spin"></div>Saving to Notion…</div>
+    <div class="tb-r">
+      <button onclick="startTutorial()" title="Interactive Tutorial" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0">🎓 Tutorial</button>
+      <button class="btn bp bsm" onclick="openTaskModal(null)" style="font-size:12px;padding:6px 12px">+ Task</button><button class="btn bp bsm" id="tb-btn" onclick="tbAct()" style="display:none">+ New</button>
+      <div class="nb-b" onclick="toggleND()">🔔<span class="nb-dot" id="nb3" style="display:none">0</span></div>
+    </div>
+  </div>
+  <div class="nd" id="nd">
+    <div class="ndh">Notifications<span style="font-size:10px;color:var(--tx3);font-weight:500;cursor:pointer" onclick="markAllRead()">Mark all read</span></div>
+    <div id="nd-list"></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+  <div id="alert-strip" style="display:none;flex-shrink:0"></div>
+  <div id="page-header" style="padding:10px 16px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div id="page-title-display" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--tx)">Dashboard</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div id="top-clock" style="font-size:11px;font-weight:600;color:var(--tx3);font-family:var(--fnm);letter-spacing:.02em"></div>
+      <div id="sys-name-topbar" style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:6px">VAS OS</div>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+</div>
+</div>
+
+<!-- ════ SIDE PANEL ════ -->
+<div class="sp-pnl" id="sp-pnl">
+  <div class="sp-hd"><div><div class="sp-ttl" id="sp-ttl">—</div><div style="margin-top:5px" id="sp-pills"></div></div><button class="sp-cl" onclick="closeSP()">✕</button></div>
+  <div class="sp-bd" id="sp-bd"></div>
+</div>
+
+<!-- ════ MODALS ════ -->
+<!-- Task -->
+<div class="mo" id="m-task"><div class="mbox">
+  <div class="mh"><div class="mt" id="m-task-t">Create Task</div><button class="mx" onclick="CM('m-task')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Title *</label><input id="tf-title" placeholder="What needs to be done?"></div>
+    <div class="fgr"><label>Priority</label><select id="tf-priority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select></div>
+    <div class="fgr"><label>Type</label><select id="tf-type"><option>Feature</option><option>Bug Fix</option><option>Content</option><option>Design</option><option>Maintenance</option><option>Research</option></select></div>
+    <div class="ff fgr" style="position:relative">
+      <label>Assign To</label>
+      <div id="tf-assign-wrap" style="min-height:38px;border:1px solid var(--bd2);border-radius:7px;padding:5px 7px;display:flex;flex-wrap:wrap;gap:4px;cursor:text;background:var(--s)" onclick="document.getElementById('tf-assign-search').focus()">
+        <div id="tf-assign-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        <input id="tf-assign-search" placeholder="Type to search members…" autocomplete="off"
+          style="border:none;outline:none;background:transparent;font-family:var(--fn);font-size:12px;min-width:120px;flex:1;padding:2px"
+          oninput="filterAssignSearch(this.value)" onfocus="showAssignDrop()" onblur="setTimeout(hideAssignDrop,200)">
+      </div>
+      <div id="tf-assign-drop" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:300;background:var(--s);border:1px solid var(--bd);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:180px;overflow-y:auto"></div>
+      <input type="hidden" id="tf-assign">
+    </div>
+    <div class="fgr"><label>Reviewer</label><select id="tf-reviewer"></select></div>
+    <div class="fgr"><label>Service</label><select id="tf-service"></select></div>
+    <div class="fgr"><label>Operator</label><select id="tf-operator"></select></div>
+    <div class="fgr"><label>Company</label><select id="tf-company"></select></div>
+    <div class="fgr"><label>Due Date</label><input type="date" id="tf-due"></div>
+    <div class="fgr"><label>Est. Hours</label><input type="number" id="tf-est" placeholder="e.g. 4" min="0.5" step="0.5"></div>
+    <div class="fgr"><label>🔁 Recurrence <span style="font-size:9px;color:var(--tx3);font-weight:400">(optional)</span></label><select id="tf-recur"><option value="">None (one-time)</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 Weeks</option><option value="monthly">Monthly</option></select></div>
+    <div class="fgr"><label>Project <span style="font-size:9px;color:var(--tx3);font-weight:400">(optional)</span></label><select id="tf-project"></select></div>
+    <div class="fgr"><label>Requested By</label><input id="tf-reqby"></div>
+    <div class="ff fgr"><label>Link (optional)</label><input id="tf-link" placeholder="https://…" type="url"></div>
+    <div class="ff fgr"><label>Description</label><textarea id="tf-desc" placeholder="Requirements, context, acceptance criteria…"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-task')">Cancel</button><button class="btn bp" id="tf-btn" onclick="saveTask()">Create Task</button></div>
+</div></div>
+
+<!-- Estimate -->
+<div class="mo" id="m-est"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt">Set Estimate Before Starting</div><button class="mx" onclick="CM('m-est')">✕</button></div>
+  <div class="mb">
+    <p style="font-size:12px;color:var(--tx2);margin-bottom:14px;line-height:1.6">Required before starting. Used in Team Evaluation to measure estimate accuracy.</p>
+    <div class="fgr"><label>Estimated Hours *</label><input type="number" id="est-h" min="0.5" step="0.5" placeholder="e.g. 4" style="font-size:22px;text-align:center;padding:12px;font-weight:700"></div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-est')">Cancel</button><button class="btn bp" onclick="confirmStart()">Confirm & Start</button></div>
+</div></div>
+
+<!-- Re-estimate modal -->
+<div class="mo" id="m-reest"><div class="mbox">
+  <div class="mh"><div class="mt">⏱ Re-Estimate Time</div><button class="mx" onclick="CM('m-reest')">✕</button></div>
+  <div class="mb">
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 13px;font-size:12px;color:#b45309;margin-bottom:14px;line-height:1.6">Re-estimating logs an event on the task timeline. You must explain what stopped you.</div>
+    <div class="fg">
+      <div class="fgr"><label>Original Estimate</label><input id="reest-current" readonly style="opacity:.5;background:var(--s2)"></div>
+      <div class="fgr"><label>New Estimate (hours) *</label><input type="number" id="reest-h" min="0.5" step="0.5" placeholder="e.g. 6"></div>
+      <div class="ff fgr"><label>What stopped you? *</label><textarea id="reest-reason" placeholder="e.g. Discovered a dependency that needs setup first…" style="min-height:80px"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-reest')">Cancel</button><button class="btn bp" onclick="confirmReEstimate()">Update Estimate</button></div>
+</div></div>
+
+<!-- Help Request modal -->
+<div class="mo" id="m-help"><div class="mbox">
+  <div class="mh"><div class="mt">🤝 Request Help</div><button class="mx" onclick="CM('m-help')">✕</button></div>
+  <div class="mb">
+    <div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:10px 13px;font-size:12px;color:var(--ac);margin-bottom:14px;line-height:1.6">Creates a Help Request task assigned to another member. When they submit it, you review and accept/reject like a normal task.</div>
+    <div class="fg">
+      <div class="fgr"><label>Ask for help from *</label><select id="help-member"></select></div>
+      <div class="fgr"><label>Due Date</label><input type="date" id="help-due"></div>
+      <div class="ff fgr"><label>What do you need help with? *</label><textarea id="help-desc" placeholder="Describe exactly what you need…" style="min-height:80px"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-help')">Cancel</button><button class="btn bp" onclick="confirmHelpRequest()">Send Request</button></div>
+</div></div>
+
+<!-- Remind modal -->
+<div class="mo" id="m-remind"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt">🔔 Send Reminder</div><button class="mx" onclick="CM('m-remind')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="fgr"><label>Remind</label><select id="remind-member"></select></div>
+      <div class="ff fgr"><label>Message (optional)</label><textarea id="remind-msg" placeholder="e.g. Please don't forget this before EOD…" style="min-height:60px"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-remind')">Cancel</button><button class="btn bp" onclick="confirmRemind()">Send</button></div>
+</div></div>
+
+<!-- HR Communication modal -->
+<div class="mo" id="m-hrcom"><div class="mbox">
+  <div class="mh"><div class="mt" id="m-hrcom-title">💬 Send to HR</div><button class="mx" onclick="CM('m-hrcom')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="fgr" id="hrcom-title-row"><label>Title *</label><input id="hrcom-title" placeholder="e.g. Leave Request, Concern, Query…"></div>
+      <div class="ff fgr"><label>Message *</label><textarea id="hrcom-body" style="min-height:100px" placeholder="Describe your request or concern in detail…"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-hrcom')">Cancel</button><button class="btn bp" id="hrcom-submit-btn" onclick="submitHrCom()">Send to HR</button></div>
+</div></div>
+
+<!-- Announcement modal -->
+<div class="mo" id="m-ann"><div class="mbox">
+  <div class="mh"><div class="mt">📢 New Announcement</div><button class="mx" onclick="CM('m-ann')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="fgr"><label>Title *</label><input id="ann-title" placeholder="e.g. Policy Update, Event, Notice…"></div>
+      <div class="fgr">
+        <label>Priority</label>
+        <select id="ann-priority"><option value="Normal">Normal</option><option value="Important">Important</option><option value="Urgent">Urgent</option></select>
+      </div>
+      <div class="ff fgr">
+        <label>Audience</label>
+        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;max-height:140px;overflow-y:auto" id="ann-audience-list"></div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:4px">Leave all unchecked to send to Everyone</div>
+      </div>
+      <div class="ff fgr"><label>Message *</label><textarea id="ann-body" style="min-height:100px" placeholder="Announcement content…"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-ann')">Cancel</button><button class="btn bp" onclick="submitAnnouncement()">Publish</button></div>
+</div></div>
+
+<!-- Submit for Review -->
+<div class="mo" id="m-sub"><div class="mbox">
+  <div class="mh"><div class="mt">Submit for Review</div><button class="mx" onclick="CM('m-sub')">✕</button></div>
+  <div class="mb">
+    <div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:10px 13px;font-size:12px;color:var(--ac);margin-bottom:14px;line-height:1.6">📄 What you write below is <strong>automatically added to Documentation</strong> when approved.</div>
+    <div id="sub-time-info" style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:11px 13px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:3px">Estimated</div>
+        <div style="font-size:18px;font-weight:800;color:var(--tx)" id="sub-est-val">—</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:3px">⏱ Time Spent</div>
+        <div style="font-size:18px;font-weight:800;color:var(--ac)" id="sub-auto-h">—</div>
+        <div style="font-size:9px;color:var(--tx3)" id="sub-auto-note">Auto-calculated from start time</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:3px">Started</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx2)" id="sub-started-at">—</div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="ff fgr"><label>What Was Done * (becomes a Documentation entry)</label><textarea id="sub-what" style="min-height:100px" placeholder="Describe exactly what you built/fixed/created. Include links, file paths, test results."></textarea></div>
+      <div class="ff fgr"><label>Technical Notes (optional)</label><textarea id="sub-tech" placeholder="Architecture decisions, implementation details, known issues…"></textarea></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-sub')">Cancel</button><button class="btn bp" onclick="confirmSubmit()">Submit for Review</button></div>
+</div></div>
+
+<!-- Member -->
+<div class="mo" id="m-mbr"><div class="mbox">
+  <div class="mh"><div class="mt" id="m-mbr-t">Add Team Member</div><button class="mx" onclick="CM('m-mbr')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Full Name *</label><input id="mf-name"></div>
+    <div class="fgr"><label>Role</label><select id="mf-role"><option>CEO</option><option>Projects Manager</option><option>HR Manager</option><option>Super Senior Developer</option><option>Senior Developer</option><option>Front End Developer</option><option>Front End Designer</option><option>Sys Admin</option><option selected>Content Manager</option><option>Developer</option></select></div>
+    <div class="fgr"><label>Department</label><select id="mf-dept"><option>Management</option><option>Engineering</option><option>Content</option><option>Design</option><option>Operations</option></select></div>
+    <div class="fgr"><label>Employment Type</label><select id="mf-mtype"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Access</label><select id="mf-access"><option>Admin</option><option>Manager</option><option selected>Member</option></select></div>
+    <div class="fgr"><label>Username *</label><input id="mf-username" placeholder="e.g. khateeb"></div>
+    <div class="fgr"><label>Password</label><input id="mf-password" placeholder="abohamood@1." value="abohamood@1."></div>
+    <div class="fgr"><label>Email</label><input type="email" id="mf-email"></div>
+    <div class="fgr"><label>WhatsApp</label><input id="mf-wa" placeholder="+249…"></div>
+    <div class="fgr"><label>WA API Key <span style="font-size:9px;color:var(--tx3);font-weight:500">(CallMeBot — member activates once)</span></label><input id="mf-wa-apikey" placeholder="Paste API key from CallMeBot reply…" style="font-family:var(--fnm)"></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-mbr')">Cancel</button><button class="btn bp" id="mf-btn" onclick="saveMember()">Add Member</button></div>
+</div></div>
+
+<!-- Service -->
+<div class="mo" id="m-svc"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt" id="m-svc-t">Add Service</div><button class="mx" onclick="CM('m-svc')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Service Name *</label><input id="sf-name"></div>
+    <div class="fgr"><label>Category</label><select id="sf-cat"><option>Content</option><option>Education</option><option>Entertainment</option><option>Gaming</option><option>Books</option></select></div>
+    <div class="fgr"><label>Status</label><select id="sf-status"><option>Live</option><option>In Development</option><option>Paused</option></select></div>
+    <div class="fgr"><label>Type</label><select id="sf-type"><option value="Digital">Digital</option><option value="IVR">IVR</option><option value="USSD">USSD</option><option value="SMS">SMS</option></select></div>
+    <div class="fgr"><label>Category</label><select id="sf-cat"><option>Content</option><option>Education</option><option>Entertainment</option><option>Gaming</option><option>Books</option><option>Other</option></select></div>
+    <div class="fgr"><label>Operator</label><select id="sf-operator"><option value="">None</option></select></div>
+    <div class="fgr"><label>Company Owning It</label><select id="sf-owned"><option value="">None</option></select></div>
+    <div class="fgr"><label>Location</label><input id="sf-location" placeholder="e.g. Sudan"></div>
+    <div class="fgr"><label>Link (URL)</label><input id="sf-link" placeholder="https://…" type="url"></div>
+    <div class="ff fgr"><label>Description</label><textarea id="sf-desc"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-svc')">Cancel</button><button class="btn bp" id="sf-btn" onclick="saveService()">Save</button></div>
+</div></div>
+
+<!-- Operator -->
+<div class="mo" id="m-op"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt" id="m-op-t">Add Operator</div><button class="mx" onclick="CM('m-op')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Name *</label><input id="of-name"></div>
+    <div class="fgr"><label>Country</label><select id="of-country"><option>Sudan</option><option>UAE</option><option>Saudi Arabia</option><option>Egypt</option><option>Other</option></select></div>
+    <div class="fgr"><label>Status</label><select id="of-status"><option>Active</option><option>Negotiating</option><option>Inactive</option></select></div>
+    <div class="fgr"><label>Contact</label><input id="of-contact"></div>
+    <div class="fgr"><label>Email</label><input type="email" id="of-email"></div>
+    <div class="fgr"><label>Phone</label><input id="of-phone"></div>
+    <div class="ff fgr"><label>Notes</label><textarea id="of-notes"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-op')">Cancel</button><button class="btn bp" id="of-btn" onclick="saveOperator()">Save</button></div>
+</div></div>
+
+<!-- Company -->
+<div class="mo" id="m-co"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt" id="m-co-t">Add Company</div><button class="mx" onclick="CM('m-co')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Company Name *</label><input id="cf-name"></div>
+    <div class="fgr"><label>Type</label><select id="cf-type"><option>Partner</option><option>Client</option><option>Vendor</option><option>Investor</option></select></div>
+    <div class="fgr"><label>Country</label><select id="cf-country"><option>Sudan</option><option>UAE</option><option>Saudi Arabia</option><option>Other</option></select></div>
+    <div class="fgr"><label>Contact</label><input id="cf-contact"></div>
+    <div class="fgr"><label>Email</label><input type="email" id="cf-email"></div>
+    <div class="ff fgr"><label>Notes</label><textarea id="cf-notes"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-co')">Cancel</button><button class="btn bp" id="cf-btn" onclick="saveCompany()">Save</button></div>
+</div></div>
+
+
+<!-- Library -->
+<div class="mo" id="m-lib"><div class="mbox">
+  <div class="mh"><div class="mt" id="m-lib-t">Add Library Entry</div><button class="mx" onclick="CM('m-lib')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Topic / Title *</label><input id="lb-topic" placeholder="e.g. API Integration Guide"></div>
+    <div class="fgr"><label>Description</label><textarea id="lb-desc" rows="3" placeholder="What is this about?"></textarea></div>
+    <div class="fgr"><label>Link / URL</label><input id="lb-link" placeholder="https://…" type="url"></div>
+    <div class="fgr"><label>Notes</label><textarea id="lb-notes" rows="3" placeholder="Additional notes, tips, context…"></textarea></div>
+    <div class="fgr"><label>Project (optional)</label><select id="lb-project"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Service (optional)</label><select id="lb-service"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Operator (optional)</label><select id="lb-operator"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Tags (comma-separated)</label><input id="lb-tags" placeholder="e.g. api, guide, reference"></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-lib')">Cancel</button><button class="btn bp" id="lb-btn" onclick="saveLibEntry()">Save Entry</button></div>
+</div></div>
+
+<!-- Doc -->
+<div class="mo" id="m-doc"><div class="mbox">
+  <div class="mh"><div class="mt" id="m-doc-t">Add Documentation</div><button class="mx" onclick="CM('m-doc')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Title *</label><input id="df-title"></div>
+    <div class="fgr"><label>Type</label><select id="df-type"><option>Task Documentation</option><option>Process Guide</option><option>Technical Reference</option><option>Meeting Notes</option><option>SOP</option><option>Policy</option><option>How-To</option></select></div>
+    <div class="fgr"><label>Status</label><select id="df-status"><option>Draft</option><option selected>Published</option></select></div>
+    <div class="ff fgr"><label>Content *</label><textarea id="df-content" style="min-height:120px"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-doc')">Cancel</button><button class="btn bp" id="df-btn" onclick="saveDoc()">Save</button></div>
+</div></div>
+
+<!-- Backlog -->
+<div class="mo" id="m-bl"><div class="mbox">
+  <div class="mh"><div class="mt">Submit Backlog Idea</div><button class="mx" onclick="CM('m-bl')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Idea Title *</label><input id="bf-title"></div>
+    <div class="fgr"><label>Category</label><select id="bf-cat"><option>Feature</option><option>Bug Report</option><option>Process Improvement</option><option>Infrastructure</option><option>Content Strategy</option><option>Design</option><option>Research</option></select></div>
+    <div class="fgr"><label>Priority</label><select id="bf-prio"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="ff fgr"><label>Description</label><textarea id="bf-desc"></textarea></div>
+    <div class="ff fgr"><label>Why It Matters</label><textarea id="bf-why"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-bl')">Cancel</button><button class="btn bp" onclick="saveBacklog()">Submit</button></div>
+</div></div>
+
+<!-- Todo -->
+<div class="mo" id="m-todo"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt" id="m-todo-t">Add Todo</div><button class="mx" onclick="CM('m-todo')">✕</button></div>
+  <div class="mb"><div class="fg">
+    <div class="ff fgr"><label>Todo *</label><input id="todo-title" placeholder="What needs to be done?"></div>
+    <div class="fgr"><label>Priority</label><select id="todo-prio"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select></div>
+    <div class="fgr"><label>Due Date</label><input type="date" id="todo-due"></div>
+    <div class="fgr"><label>⏰ Reminder</label><input type="datetime-local" id="todo-reminder" title="Get an in-app alert at this time"></div>
+    <div class="ff fgr"><label>Notes</label><textarea id="todo-notes" style="min-height:55px"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-todo')">Cancel</button><button class="btn bp" id="todo-btn" onclick="saveTodo()">Save</button></div>
+</div></div>
+
+<!-- Delete confirm -->
+<div class="mo" id="m-del"><div class="mbox mbox-sm">
+  <div class="mh"><div class="mt" style="color:var(--r)">⚠ Confirm Delete</div><button class="mx" onclick="CM('m-del')">✕</button></div>
+  <div class="mb"><p id="del-msg" style="font-size:13px;color:var(--tx2);line-height:1.6"></p></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-del')">Cancel</button><button class="btn bd2" onclick="doDelete()">Delete</button></div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- App scripts — split into modules for maintainability, loaded in dependency order -->
+<script src="js/00-core-preamble.js"></script>
+<script src="js/02-ui-utils-config.js"></script>
+<script src="js/03-supabase-helpers.js"></script>
+<script src="js/04-member-types-perms.js"></script>
+<script src="js/05-data-load.js"></script>
+<script src="js/06-task-db-writes.js"></script>
+<script src="js/07-notify-log.js"></script>
+<script src="js/08-auth-nav.js"></script>
+<script src="js/09-syslog-persist.js"></script>
+<script src="js/10-dashboard.js"></script>
+<script src="js/11-tasks.js"></script>
+<script src="js/12-todos-reminders.js"></script>
+<script src="js/13-projects.js"></script>
+<script src="js/14-team-eval.js"></script>
+<script src="js/15-backlog.js"></script>
+<script src="js/16-services-operators.js"></script>
+<script src="js/17-library.js"></script>
+<script src="js/18-docs-archive.js"></script>
+<script src="js/19-meetings.js"></script>
+<script src="js/20-service-tests.js"></script>
+<script src="js/21-settings.js"></script>
+<script src="js/22-syslog-page.js"></script>
+<script src="js/23-hr-comms-announcements-reports.js"></script>
+<script src="js/24-comments-page.js"></script>
+<script src="js/25-tutorial.js"></script>
+<script src="js/26-task-panel.js"></script>
+<script src="js/27-modals-saves.js"></script>
+<script src="js/28-badges-updates.js"></script>
+<script src="js/29-init-mobile.js"></script>
+
+
+<!-- Project -->
+<div class="mo" id="m-proj"><div class="mbox">
+  <div class="mhd"><div class="mt" id="m-proj-t">New Project</div><button class="mcl" onclick="CM('m-proj')">✕</button></div>
+  <div class="mbd"><div class="fg">
+    <div class="ff fgr"><label>Project Name *</label><input id="pf-name" placeholder="Project title…"></div>
+    <div class="fgr"><label>Status</label><select id="pf-status"><option>Planning</option><option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></div>
+    <div class="fgr"><label>Company Owning It</label><select id="pf-owned"></select></div>
+    <div class="fgr"><label>Field of Work</label><select id="pf-field"><option value="">Select…</option><option>Engineering</option><option>Content</option><option>Design</option><option>Marketing</option><option>Operations</option><option>Finance</option><option>Research</option><option>Other</option></select></div>
+    <div class="fgr"><label>Location</label><input id="pf-location" placeholder="e.g. Khartoum, Sudan"></div>
+    <div class="fgr"><label>Date of Starting</label><input type="date" id="pf-started"></div>
+    <div class="fgr"><label>Target Date</label><input type="date" id="pf-target"></div>
+    <div class="ff fgr"><label>Members</label><select id="pf-members" multiple style="height:88px;border-radius:7px"></select></div>
+    <div class="ff fgr"><label>Link (URL)</label><input id="pf-link" placeholder="https://…" type="url"></div>
+    <div class="ff fgr"><label>Description</label><textarea id="pf-desc"></textarea></div>
+  </div></div>
+  <div class="mf"><button class="btn bg2" onclick="CM('m-proj')">Cancel</button><button class="btn bp" id="pf-btn" onclick="saveProject()">Save Project</button></div>
+</div></div>
+
+<!-- Meeting -->
+<div class="mo" id="m-meeting"><div class="mbox">
+  <div class="mhd"><div class="mt" id="m-meeting-t">New Meeting</div><button class="mcl" onclick="CM('m-meeting')">✕</button></div>
+  <div class="mbd" style="padding:18px 22px 10px"><div class="fg">
+    <div class="ff fgr"><label>Meeting Title *</label><input id="mf-title" placeholder="What is this meeting about?"></div>
+    <div class="fgr"><label>Date *</label><input type="date" id="mf-date"></div>
+    <div class="fgr"><label>Time *</label><input type="time" id="mf-time" value="09:00"></div>
+    <div class="fgr"><label>Duration (minutes)</label><select id="mf-duration"><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></div>
+    <div class="fgr"><label>Type</label><select id="mf-type"><option>Internal</option><option>External</option><option>Client</option><option>Operator</option></select></div>
+    <div class="ff fgr"><label>Location / Link</label><input id="mf-location" placeholder="e.g. Conference Room A, or Zoom link"></div>
+    <div class="fgr"><label>🔁 Recurrence <span style="font-size:9px;color:var(--tx3);font-weight:400">(optional)</span></label><select id="mf-recur"><option value="">None (one-time)</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 Weeks</option><option value="monthly">Monthly</option></select></div>
+    <div class="ff fgr" style="position:relative">
+      <label>Invite Members</label>
+      <div id="mf-inv-wrap" style="min-height:38px;border:1px solid var(--bd2);border-radius:7px;padding:5px 7px;display:flex;flex-wrap:wrap;gap:4px;cursor:text;background:var(--s)" onclick="document.getElementById('mf-inv-search').focus()">
+        <div id="mf-inv-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        <input id="mf-inv-search" placeholder="Search members…" autocomplete="off"
+          style="border:none;outline:none;background:transparent;font-family:var(--fn);font-size:13px;min-width:120px;flex:1;padding:2px"
+          oninput="filterInvSearch(this.value)" onfocus="showInvDrop()" onblur="setTimeout(hideInvDrop,200)">
+      </div>
+      <div id="mf-inv-drop" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:300;background:var(--s);border:1px solid var(--bd);border-radius:8px;box-shadow:var(--shmd);max-height:180px;overflow-y:auto"></div>
+    </div>
+    <div class="ff fgr"><label>Description / Agenda</label><textarea id="mf-desc" placeholder="Meeting agenda, topics to discuss…" style="min-height:70px"></textarea></div>
+    <div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding:6px 0 2px;border-top:1px solid var(--bd);margin-top:4px">Related To (optional)</div>
+    <div class="fgr"><label>Project</label><select id="mf-project"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Service</label><select id="mf-service"><option value="">— None —</option></select></div>
+    <div class="fgr"><label>Operator / Company</label><select id="mf-operator"><option value="">— None —</option></select></div>
+  </div></div>
+  <div class="mf" style="padding:14px 22px;gap:10px"><button class="btn bg2" onclick="CM('m-meeting')" style="padding:10px 20px;font-size:13px">Cancel</button><button class="btn bp" id="mf-btn" onclick="saveMeeting()" style="padding:10px 22px;font-size:13px;font-weight:700">Create Meeting</button></div>
+</div></div>
+</body>
+</html>

@@ -1,0 +1,165 @@
+// §07 ── NOTIFICATIONS & LOGGING ────────────────────────────────────────
+async function loadNotifs(){
+  if(!CU)return;
+  const params = `order=created_at.desc&limit=40&or=(to_name.eq.${CU.name},admins_only.eq.true)`;
+  const data = await sbQ('notifications', params);
+  if(Array.isArray(data)){
+    notifs = data.map(n=>({...n, readBy: n.read_by||[], time: n.created_at}));
+  } else {
+    notifs = JSON.parse(localStorage.getItem('v8_notifs_local')||'[]');
+  }
+  renderNotifs(); updateBadges();
+}
+
+async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false){
+  if(!toName&&!adminsOnly) return;
+  const n={id:'n'+gid(),to:toName||'',from:CU?.name||'',text,type,taskTitle,adminsOnly,readBy:[],time:now()};
+  notifs.unshift(n); notifs=notifs.slice(0,60);
+  if(n.to===CU?.name||(n.adminsOnly&&isAdmin())) renderNotifs();
+  updateBadges();
+  // Write to Supabase async
+  sbInsert('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[]}).then(r=>{ if(r?.id) n.id=r.id; }).catch(()=>{});
+  localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
+}
+
+function notifyAdmins(text, type='Mention', taskTitle=''){
+  sendNotif('', text, type, taskTitle, true);
+}
+
+// ── External notify sheet (WhatsApp + Email) ──────────────────────────
+window._notifyMembers={};
+function showExternalNotifySheet(memberIds, taskTitle, taskDesc, taskId){
+  const members=memberIds.map(id=>DB.team.find(m=>m.id===id)).filter(Boolean).filter(m=>m.wa||m.email);
+  if(!members.length) return;
+  const taskLink=taskId?(window.location.href.split('#')[0]+'#task-'+taskId):'';
+
+  // Store each member's urls in a map keyed by safe id — no encoding in HTML
+  window._notifyMembers={};
+  members.forEach(m=>{
+    const safeId='nm_'+m.id.replace(/[^a-z0-9]/gi,'_');
+    const waText='Hi '+m.name+'! You have been assigned a new task in VAS OS:\n\n*'+taskTitle+'*\n'+(taskDesc?taskDesc+'\n':'')+'\n'+(taskLink?'Open it here:\n'+taskLink+'\n':'')+'Regards, '+(CU?.name||'VAS OS');
+    const emailSubj='New Task Assigned: '+taskTitle;
+    const emailText='Hi '+m.name+',\n\nYou have been assigned a new task in VAS OS:\n\nTitle: '+taskTitle+'\n'+(taskDesc?'Details: '+taskDesc+'\n':'')+'\n'+(taskLink?'Open the task directly:\n'+taskLink+'\n':'')+'Regards,\n'+(CU?.name||'VAS OS');
+    window._notifyMembers[safeId]={
+      wa: m.wa?'https://wa.me/'+m.wa.replace(/\D/g,'')+'?text='+encodeURIComponent(waText):null,
+      email: m.email?'mailto:'+m.email+'?subject='+encodeURIComponent(emailSubj)+'&body='+encodeURIComponent(emailText):null
+    };
+  });
+
+  const rows=members.map(m=>{
+    const safeId='nm_'+m.id.replace(/[^a-z0-9]/gi,'_');
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">
+      <span style="width:32px;height:32px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${m.name}</div>
+        <div style="font-size:10px;color:var(--tx3)">${m.role||''}${m.wa?' · '+m.wa:''}${m.email?' · '+m.email:''}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${m.wa?`<button onclick="openNotifyWA('${safeId}')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#25d36618;color:#25d366;border:1px solid #25d36633;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.558 4.14 1.532 5.878L.054 23.25a.75.75 0 0 0 .922.922l5.372-1.478A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.698 9.698 0 0 1-4.95-1.357l-.356-.211-3.684 1.013 1.013-3.684-.211-.356A9.697 9.697 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg> WhatsApp</button>`:''}
+        ${m.email?`<button onclick="openNotifyEmail('${safeId}')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#2563eb18;color:#2563eb;border:1px solid #2563eb33;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg> Email</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ext-notify-sheet')?.remove();
+  const el=document.createElement('div');
+  el.id='ext-notify-sheet';
+  el.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg);border-top:2px solid var(--bd);border-radius:16px 16px 0 0;padding:20px 20px 28px;max-width:560px;margin:0 auto;box-shadow:0 -8px 32px #0005;animation:slideUp .22s ease';
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:14px;font-weight:800">Notify Assignees</div>
+      <button onclick="document.getElementById('ext-notify-sheet')?.remove()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Task: <strong style="color:var(--tx)">${taskTitle}</strong></div>
+    ${rows}
+    <button onclick="document.getElementById('ext-notify-sheet')?.remove()" style="width:100%;margin-top:14px;padding:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx3);font-size:12px;font-weight:600;cursor:pointer">Done</button>`;
+  document.body.appendChild(el);
+  setTimeout(()=>document.getElementById('ext-notify-sheet')?.remove(),60000);
+}
+
+window.openNotifyWA=(safeId)=>{
+  const url=window._notifyMembers?.[safeId]?.wa;
+  if(url) window.open(url,'_blank'); else toast('No WhatsApp number for this member','bad');
+};
+window.openNotifyEmail=(safeId)=>{
+  const url=window._notifyMembers?.[safeId]?.email;
+  if(url) window.open(url,'_blank'); else toast('No email for this member','bad');
+};
+
+function logAction(action, event, severity='Info', target='', details=''){
+  nLog({action,event,actor:CU?.name||'',actorRole:CU?.role||'',severity,target});
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+// ── Tag-style multi-assignee picker ──────────────────────────────────
+let _selectedAssignees = []; // array of member ids
+
+function initAssignPicker(preselected=[]) {
+  _selectedAssignees = [...preselected];
+  renderAssignTags();
+}
+
+function renderAssignTags() {
+  const wrap = document.getElementById('tf-assign-tags');
+  if (!wrap) return;
+  wrap.innerHTML = _selectedAssignees.map(id => {
+    const m = DB.team.find(x => x.id === id);
+    if (!m) return '';
+    return `<span class="atag" style="background:${m.color}">
+      <span style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700">${m.av}</span>
+      ${m.name.split(' ')[0]}
+      <span class="atag-x" onclick="removeAssignTag('${id}')">✕</span>
+    </span>`;
+  }).join('');
+}
+
+function removeAssignTag(id) {
+  _selectedAssignees = _selectedAssignees.filter(x => x !== id);
+  renderAssignTags();
+}
+
+function filterAssignSearch(q) {
+  const drop = document.getElementById('tf-assign-drop');
+  if (!drop) return;
+  const filtered = DB.team.filter(m =>
+    !_selectedAssignees.includes(m.id) &&
+    (m.name.toLowerCase().includes(q.toLowerCase()) || m.role.toLowerCase().includes(q.toLowerCase()))
+  );
+  if (!filtered.length) { drop.style.display = 'none'; return; }
+  drop.style.display = 'block';
+  drop.innerHTML = filtered.map(m =>
+    `<div onclick="addAssignTag('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
+      <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
+      <div><div style="font-weight:600">${m.name}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
+    </div>`
+  ).join('');
+}
+
+function addAssignTag(id) {
+  if (!_selectedAssignees.includes(id)) {
+    _selectedAssignees.push(id);
+    renderAssignTags();
+  }
+  const inp = document.getElementById('tf-assign-search');
+  if (inp) { inp.value = ''; }
+  document.getElementById('tf-assign-drop').style.display = 'none';
+  // keep focus
+  setTimeout(() => inp && inp.focus(), 50);
+}
+
+function showAssignDrop() {
+  filterAssignSearch(document.getElementById('tf-assign-search')?.value || '');
+}
+
+function hideAssignDrop() {
+  const drop = document.getElementById('tf-assign-drop');
+  if (drop) drop.style.display = 'none';
+}
+
+function getSelectedAssignees() {
+  return [..._selectedAssignees];
+}

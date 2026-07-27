@@ -1,0 +1,239 @@
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║                    VAS OS v2.5 — SCRIPT INDEX                      ║
+// ║  Search for §XX to jump to any section                             ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  §01  WHATSAPP / NOTIFICATIONS  (~L892)                            ║
+// ║  §02  UTILITIES — toast, OM, CM, SP, share  (~L1062)              ║
+// ║  §03  SUPABASE — sbQ, sbInsert, sbUpdate  (~L1122)                ║
+// ║  §04  MEMBER TYPES & PERMISSIONS  (~L1182)                         ║
+// ║  §05  DATA LOAD — loadFromNotion, refreshData  (~L1205)            ║
+// ║  §06  TASK PAYLOAD & DB WRITES  (~L1352)                           ║
+// ║  §07  NOTIFICATIONS — sendNotif, logAction  (~L1562)               ║
+// ║  §08  AUTH — doLogin, startApp, nav  (~L1715)                      ║
+// ║  §09  LOG — getPersistedLog, logAction v2  (~L1999)                ║
+// ║  §10  DASHBOARD — rDash  (~L2248)                                  ║
+// ║  §11  TASKS — rMyTasks, rAllTasks, rToReview  (~L2949)             ║
+// ║  §12  TODOS & REMINDERS — rTodos, rReminders  (~L3153)             ║
+// ║  §13  PROJECTS — rProjects, openProjectDetail  (~L3319)            ║
+// ║  §14  TEAM & EVAL — rTeam, rEval  (~L3427)                         ║
+// ║  §15  BACKLOG — rBacklog  (~L4052)                                 ║
+// ║  §16  SERVICES & OPERATORS  (~L4101)                               ║
+// ║  §17  LIBRARY — rLibrary, CF access  (~L4309)                      ║
+// ║  §18  DOCS & ARCHIVE — rDocs, rArchive  (~L4634)                   ║
+// ║  §19  MEETINGS — rMeetings, openMeetingDetail  (~L5207)            ║
+// ║  §20  SERVICE TESTS — rSvcTest, sessions  (~L5792)                 ║
+// ║  §21  SETTINGS — rSettings, lists, backup  (~L6377)                ║
+// ║  §22  SYSTEM LOG — rSyslog  (~L6947)                               ║
+// ║  §23  HR COMMS & ANNOUNCEMENTS  (~L7099)                           ║
+// ║  §24  COMMENTS — rComments  (~L8003)                               ║
+// ║  §25  TUTORIAL — showTutStep  (~L8196)                             ║
+// ║  §26  TASK PANEL — openTask, approve, reject  (~L8256)             ║
+// ║  §27  MODALS — openTaskModal, saveTask, etc  (~L8807)              ║
+// ║  §28  BADGES & MOBILE NAV  (~L9369)                                ║
+// ║  §29  INIT — preload, clock, mobile menu  (~L9470)                 ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ══ SECURITY — Anti-inspection ══════════════════════════════════════
+(function(){
+  // 1. Disable right-click context menu
+  document.addEventListener('contextmenu',e=>e.preventDefault());
+
+  // 2. Block keyboard shortcuts that open DevTools or view source
+  document.addEventListener('keydown',e=>{
+    const k=e.key;
+    // F12
+    if(k==='F12'){e.preventDefault();return;}
+    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (DevTools)
+    if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(k)){e.preventDefault();return;}
+    // Ctrl+U (view source)
+    if(e.ctrlKey&&['U','u'].includes(k)){e.preventDefault();return;}
+    // Ctrl+S (save file)
+    if(e.ctrlKey&&['S','s'].includes(k)){e.preventDefault();return;}
+    // Ctrl+P (print / expose DOM)
+    if(e.ctrlKey&&['P','p'].includes(k)){e.preventDefault();}
+  });
+
+  // Clear any stuck blur/filter from previous sessions
+  document.body.style.filter='';
+  document.body.removeAttribute('data-locked');
+
+  // 3. Clear console continuously
+  setInterval(()=>{try{console.clear();}catch(e){}},1500);
+
+  // 4. Disable drag-select text on sensitive areas
+  document.addEventListener('selectstart',e=>{
+    if(e.target.closest('.lcard')){e.preventDefault();}
+  });
+})();
+
+// ══ EXTERNAL NOTIFICATIONS (EmailJS + UltraMsg WhatsApp) ═════════════
+const NOTIF_CFG_KEY='vas_notif_config';
+function getNotifCfg(){
+  try{return JSON.parse(localStorage.getItem(NOTIF_CFG_KEY)||'{}');}catch(e){return{};}
+}
+
+// ── UltraMsg WhatsApp ─────────────────────────────────────────────────
+const UM_INSTANCE='instance50648';
+const UM_TOKEN='ckzgirm5qsvnmb71';
+const UM_BASE=`https://api.ultramsg.com/${UM_INSTANCE}/messages/chat`;
+
+async function sendWA(member, msg){
+  if(!member?.wa) return;
+  const phone=member.wa.replace(/\D/g,'');
+  if(!phone) return;
+  try{
+    await fetch(UM_BASE,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`token=${UM_TOKEN}&to=${phone}&body=${encodeURIComponent(msg)}`
+    });
+    logAction('WhatsApp Sent',`WA sent to ${member.name}`,'Info','','');
+  } catch(e){ console.warn('UltraMsg error:',e); }
+}
+
+// ── Deep link builder ─────────────────────────────────────────────────
+function appLink(hash){ return window.location.href.split('#')[0]+(hash?'#'+hash:''); }
+const SYS=()=>localStorage.getItem('vas_sys_name')||'VAS OS';
+
+// ── Universal notifier — one function for every event type ────────────
+// eventType: 'task_assigned' | 'task_approved' | 'task_rejected' | 'task_submitted'
+//            | 'task_started' | 'task_overdue' | 'task_due_soon'
+//            | 'help_requested' | 'help_accepted' | 'help_completed'
+//            | 'reminder' | 'meeting_invited' | 'meeting_starting'
+//            | 'announcement' | 'hr_reply' | 'review_requested'
+async function notifyWA(memberId, eventType, data={}){
+  const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
+  if(!member||!member.wa) return;
+  if(member.name===CU?.name) return; // never notify yourself
+  const sys=SYS();
+  const by=CU?.name||'System';
+  const link=data.link||'';
+  let msg='';
+
+  switch(eventType){
+    case 'task_assigned':
+      msg=`🔔 *${sys}*\n\nHi ${member.name}! A new task has been assigned to you.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n📅 Due: ${data.due||'Not set'}\n👤 Assigned by: ${by}${data.desc?'\n\n'+data.desc.slice(0,200):''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'task_approved':
+      msg=`✅ *${sys}*\n\nHi ${member.name}! Your task has been approved.\n\n📋 *${data.title||'Task'}*\n👤 Approved by: ${by}${data.note?'\n💬 Note: '+data.note:''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'task_rejected':
+      msg=`❌ *${sys}*\n\nHi ${member.name}! Your task was rejected and needs revision.\n\n📋 *${data.title||'Task'}*\n👤 Rejected by: ${by}${data.reason?'\n💬 Reason: '+data.reason:''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'task_submitted':
+      msg=`📤 *${sys}*\n\nHi ${member.name}! A task has been submitted for your review.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n👤 Submitted by: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'review_requested':
+      msg=`🔍 *${sys}*\n\nHi ${member.name}! You have a task waiting for your review.\n\n📋 *${data.title||'Task'}*\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'help_requested':
+      msg=`🤝 *${sys}*\n\nHi ${member.name}! Your help has been requested.\n\n📋 *${data.title||'Task'}*\n👤 Requested by: ${by}${data.desc?'\n\n📝 '+data.desc.slice(0,200):''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'help_accepted':
+      msg=`✅ *${sys}*\n\nHi ${member.name}! Your help request was accepted.\n\n📋 *${data.title||'Task'}*\n👤 Accepted by: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'help_completed':
+      msg=`🏁 *${sys}*\n\nHi ${member.name}! Help has been completed on your task.\n\n📋 *${data.title||'Task'}*\n👤 Completed by: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'reminder':
+      msg=`⏰ *${sys}* — Reminder\n\nHi ${member.name}!\n\n${data.desc||'You have a reminder.'}\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'meeting_invited':
+      msg=`📅 *${sys}*\n\nHi ${member.name}! You've been invited to a meeting.\n\n🗓 *${data.title||'Meeting'}*\n📆 Date: ${data.date||'TBD'} at ${data.time||'TBD'}\n📍 ${data.location||'See details'}\n👤 Organised by: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'meeting_starting':
+      msg=`🔔 *${sys}*\n\nHi ${member.name}! Your meeting is starting now.\n\n🗓 *${data.title||'Meeting'}*\n📍 ${data.location||''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'announcement':
+      msg=`📢 *${sys}* — Announcement\n\n*${data.title||'New Announcement'}*\n\n${data.desc||''}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'hr_reply':
+      msg=`💬 *${sys}* — HR Update\n\nHi ${member.name}! Your HR communication has received a reply.\n\n📝 Re: ${data.title||'Your message'}\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'task_due_soon':
+      msg=`⚠️ *${sys}* — Due Tomorrow\n\nHi ${member.name}! A task is due tomorrow.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}${link?'\n\n🔗 '+link:''}`;
+      break;
+    case 'task_overdue':
+      msg=`🚨 *${sys}* — Overdue\n\nHi ${member.name}! A task is overdue.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n📅 Was due: ${data.due||'?'}${link?'\n\n🔗 '+link:''}`;
+      break;
+    default:
+      msg=`🔔 *${sys}*\n\nHi ${member.name}! ${data.desc||'You have a new notification.'}${link?'\n\n🔗 '+link:''}`;
+  }
+  await sendWA(member, msg);
+}
+
+// ── Email (unchanged) ─────────────────────────────────────────────────
+async function sendEmailNotif(member, taskTitle, taskPriority, taskDue, taskDesc, taskId){
+  const cfg=getNotifCfg();
+  if(!cfg.emailjs_public_key||!cfg.emailjs_service_id||!cfg.emailjs_template_id)return;
+  if(!member?.email){return;}
+  try{
+    emailjs.init(cfg.emailjs_public_key);
+    const taskLink=appLink('task-'+taskId);
+    await emailjs.send(cfg.emailjs_service_id, cfg.emailjs_template_id,{
+      to_email: member.email, to_name: member.name,
+      task_title: taskTitle, task_priority: taskPriority||'Normal',
+      task_due: taskDue||'Not set',
+      task_desc: taskDesc?taskDesc.slice(0,300):'No description',
+      task_link: taskLink, assigned_by: CU?.name||'System',
+      sys_name: SYS()
+    });
+    logAction('Email Sent',`Email sent to ${member.name} for task "${taskTitle}"`,'Info',taskTitle,'');
+  } catch(e){ console.warn('EmailJS error:',e); }
+}
+
+// ── Legacy shim so existing calls still work ─────────────────────────
+async function notifyMemberExternal(memberId, taskTitle, taskPriority, taskDue, taskDesc, taskId){
+  const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
+  if(!member||member.name===CU?.name) return;
+  const cfg=getNotifCfg();
+  const link=appLink('task-'+taskId);
+  await notifyWA(memberId,'task_assigned',{title:taskTitle,priority:taskPriority,due:taskDue,desc:taskDesc,link});
+  if(cfg.email_enabled&&member.email) await sendEmailNotif(member,taskTitle,taskPriority,taskDue,taskDesc,taskId);
+}
+// legacy alias
+const sendWANotif=notifyMemberExternal;
+
+
+// NOTION DB IDs — verified exact schemas
+// ══════════════════════════════════════════════════════
+const NDB={
+  tasks:'4abbbc95-3f15-4f9e-83dc-ee63b1439ccc',
+  team:'bd03669e-f3c8-482c-b817-476f4878a695',
+  services:'3741c99b-4f46-4dfd-98ee-0b08751666cc',
+  companies:'dfc81ed6-95ed-4d0e-9053-d3748496cdc3', // operators too
+  backlog:'9a9576d1-f2d5-4a10-9fc2-061430d66ba0',
+  docs:'92a34ab5-e48e-424c-a6c3-e761a7809577',
+  archive:'4c255b57-db98-4adb-82ea-608b6509a72a',
+  syslog:'db7c0457-3e12-4c47-b920-3f0c33ebdfe4',
+  todos:'3168766f-dc17-402b-9852-6648c4a33d17',
+};
+
+// Maps local id → Notion page URL (for updates/deletes)
+// NID removed — Supabase uses table UUIDs directly
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+const now=()=>new Date().toISOString();
+
+function calcNextDue(currentDue, recur){
+  const base=currentDue?new Date(currentDue):new Date();
+  const d=new Date(base);
+  switch(recur){
+    case 'daily':    d.setDate(d.getDate()+1); break;
+    case 'weekly':   d.setDate(d.getDate()+7); break;
+    case 'biweekly': d.setDate(d.getDate()+14); break;
+    case 'monthly':  d.setMonth(d.getMonth()+1); break;
+    default:         d.setDate(d.getDate()+7);
+  }
+  return d.toISOString().split('T')[0];
+}
+const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const fd=(d)=>{if(!d)return'—';return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})};
+const fdt=(d)=>{if(!d)return'—';const dt=new Date(d);return fd(d)+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')};
+const fr=(d)=>{if(!d)return'';const m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago'};
+const hb=(a,b)=>{if(!a||!b)return null;const ms=new Date(b)-new Date(a);if(isNaN(ms)||ms<0)return null;return Math.round(ms/36000)/100;};
+const dur=(h)=>{if(h===null)return'—';return h<1?Math.round(h*60)+'m':h+'h'};
+const mkColor=(n)=>{const c=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626','#374151'];let h=0;for(let i=0;i<(n||'').length;i++)h=(n||'').charCodeAt(i)+((h<<5)-h);return c[Math.abs(h)%c.length]};
+const mkAv=(n)=>(n||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
