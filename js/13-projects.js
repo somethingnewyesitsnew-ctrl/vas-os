@@ -99,6 +99,16 @@ window.openProjectDetail=(id)=>{
       ${[['Done',done,'#15803d'],['Active',active,'#2563eb'],['Total',tasks.length,'#64748b']].map(([l,v,c])=>`<div style="background:${c}12;border:1px solid ${c}25;border-radius:8px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--tx3);font-weight:600;margin-bottom:2px;text-transform:uppercase">${l}</div><div style="font-size:16px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
     </div>
     ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${m.name}</span>`:''}).join('')}</div>`:''}
+    ${(()=>{
+      const relLib=(typeof getLibrary==='function'?getLibrary():[]).filter(it=>it.projectId===pr.id);
+      if(!relLib.length) return '';
+      return `<div class="spl" style="margin-bottom:6px">📖 Library (${relLib.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${relLib.map(it=>`<span onclick="openLibEntry('${it.id}')" style="cursor:pointer;background:var(--al);color:var(--ac);border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📖 ${it.topic}</span>`).join('')}</div>`;
+    })()}
+    ${(()=>{
+      const relDocs=DB.docs.filter(d=>{const t=d.fromTask?DB.tasks.find(x=>x.id===d.fromTask):null;return t&&t.projectId===pr.id;});
+      if(!relDocs.length) return '';
+      return `<div class="spl" style="margin-bottom:6px">📚 Documentation (${relDocs.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${relDocs.map(d=>`<span onclick="openDoc2('${d.id}')" style="cursor:pointer;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📚 ${d.title}</span>`).join('')}</div>`;
+    })()}
     <div id="proj-tasks-wrap"></div>
     <div class="spa">
       <button class="btn bg2 bsm" onclick="openProjectModal('${pr.id}')">✏ Edit</button>

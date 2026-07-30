@@ -175,9 +175,9 @@ window.openLibEntry=(id)=>{
   }
   if(proj||svc||op){
     body+=`<div class="sps">Linked To</div>`;
-    if(proj) body+=`<div style="font-size:12px;margin-bottom:5px">◉ <strong>Project:</strong> ${proj.name}</div>`;
-    if(svc) body+=`<div style="font-size:12px;margin-bottom:5px">◐ <strong>Service:</strong> ${svc.name}</div>`;
-    if(op) body+=`<div style="font-size:12px;margin-bottom:5px">◑ <strong>Operator:</strong> ${op.name}</div>`;
+    if(proj) body+=`<div onclick="openProjectDetail('${proj.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◉ <strong>Project:</strong> ${proj.name}</div>`;
+    if(svc) body+=`<div onclick="openSvcDetail('${svc.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◐ <strong>Service:</strong> ${svc.name}</div>`;
+    if(op) body+=`<div onclick="openEntityDetail('${op.id}','${DB.operators.find(o=>o.id===op.id)?'op':'co'}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◑ <strong>Operator:</strong> ${op.name}</div>`;
   }
   if((it.tags||[]).length){
     body+=`<div class="sps">Tags</div>`;

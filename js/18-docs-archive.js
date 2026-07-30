@@ -64,6 +64,7 @@ window.fDocs=()=>{
 window.openDoc2=(id)=>{
   const d=DB.docs.find(doc=>doc.id===id);if(!d)return;
   const auth=DB.team.find(m=>m.id===d.author);const src=d.fromTask?DB.tasks.find(t=>t.id===d.fromTask):null;
+  const proj=src?.projectId?DB.projects.find(p=>p.id===src.projectId):null;
   document.getElementById('sp-ttl').textContent=d.title;
   document.getElementById('sp-pills').innerHTML=`<span class="pill sd">${d.status}</span>`;
   document.getElementById('sp-bd').innerHTML=`<div class="sp2">
@@ -71,6 +72,7 @@ window.openDoc2=(id)=>{
     <div class="spf"><div class="spl">Type</div><div class="spv">${d.type}</div></div>
   </div>
   ${src?`<div class="spf"><div class="spl">Source Task</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openTask('${src.id}')">${src.title}</div></div>`:''}
+  ${proj?`<div class="spf"><div class="spl">Project</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openProjectDetail('${proj.id}')">◉ ${proj.name}</div></div>`:''}
   <div class="spf"><div class="spl">Content</div><div class="spnote">${d.content||''}</div></div>
   <div class="spa">
     ${isAdmin()?`<button class="btn bg2 bsm" onclick="openDocModal('${d.id}')">✏ Edit</button>
