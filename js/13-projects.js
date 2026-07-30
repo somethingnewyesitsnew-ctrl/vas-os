@@ -60,6 +60,7 @@ function rProjects(el){
         </div>
         ${members.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">${members.slice(0,5).map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px">${m.name.split(' ')[0]}</span>`:''}).join('')}</div>`:''}
         <div class="ac" onclick="event.stopPropagation()">
+          <div class="ib" style="color:var(--ac)" title="Add task to this project" onclick="event.stopPropagation();openTaskModal(null,'${pr.id}')">☑+</div>
           <div class="ib edt" onclick="event.stopPropagation();openProjectModal('${pr.id}')">✏</div>
           <div class="ib del" onclick="event.stopPropagation();delItem('projects','${pr.id}','${pr.name.replace(/'/g,"\'")}')">🗑</div>
         </div>
@@ -98,11 +99,56 @@ window.openProjectDetail=(id)=>{
       ${[['Done',done,'#15803d'],['Active',active,'#2563eb'],['Total',tasks.length,'#64748b']].map(([l,v,c])=>`<div style="background:${c}12;border:1px solid ${c}25;border-radius:8px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--tx3);font-weight:600;margin-bottom:2px;text-transform:uppercase">${l}</div><div style="font-size:16px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
     </div>
     ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${m.name}</span>`:''}).join('')}</div>`:''}
-    <div class="spl" style="margin-bottom:7px">Tasks (${tasks.length})</div>
-    ${tasks.slice(0,8).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}</div>`).join('')}
+    <div id="proj-tasks-wrap"></div>
     <div class="spa">
       <button class="btn bg2 bsm" onclick="openProjectModal('${pr.id}')">✏ Edit</button>
       <button class="btn bd2 bsm" onclick="delItem('projects','${pr.id}','${pr.name.replace(/'/g,"\'")}');closeSP()">Delete</button>
     </div>`
   );
+  renderProjectTasksList(pr.id);
+};
+
+// ── Task list inside a project's side panel ──────────────────────────
+// Separate render function (rather than baked into openProjectDetail's
+// one-shot HTML string) so the tab clicks below can re-render just this
+// block without rebuilding/reopening the whole panel.
+window.renderProjectTasksList=(projectId, tab)=>{
+  const wrap=document.getElementById('proj-tasks-wrap');
+  if(!wrap) return;
+  tab=tab||wrap.dataset.tab||'Active';
+  wrap.dataset.tab=tab;
+  const all=DB.tasks.filter(t=>t.projectId===projectId);
+  const TABS=['Active','Done','All'];
+  const filtered=tab==='All'?all:tab==='Done'?all.filter(t=>t.status==='Done'):all.filter(t=>!['Done','Cancelled'].includes(t.status));
+  const shown=filtered.slice(0,15);
+
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+    <div class="spl" style="margin-bottom:0">Tasks (${all.length})</div>
+    <button class="btn bp bxs" onclick="openTaskModal(null,'${projectId}')">+ Add Task</button>
+  </div>
+  <div class="tabs" style="margin-bottom:8px">
+    ${TABS.map(tb=>`<div class="tab ${tb===tab?'on':''}" onclick="renderProjectTasksList('${projectId}','${tb}')" style="font-size:12px">${tb} <span style="opacity:.5;font-size:10px">${tb==='All'?all.length:tb==='Done'?all.filter(t=>t.status==='Done').length:all.filter(t=>!['Done','Cancelled'].includes(t.status)).length}</span></div>`).join('')}
+  </div>`;
+
+  if(!filtered.length){
+    h+=`<div style="text-align:center;padding:16px 0;font-size:12px;color:var(--tx3)">No ${tab==='All'?'':tab.toLowerCase()+' '}tasks yet${tab!=='Done'?' — click + Add Task above':''}</div>`;
+  } else {
+    h+=shown.map(t=>{
+      const ds=getDueStatus(t);
+      const ass=DB.team.find(m=>m.id===t.assignedTo);
+      return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+        ${spill(t.status)}
+        <span style="font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+        ${ass?`<span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800;flex-shrink:0" title="${ass.name}">${ass.av}</span>`:''}
+        ${ppill(t.priority)}
+        <span class="due-badge ${ds.cls}" style="flex-shrink:0">${ds.label}</span>
+      </div>`;
+    }).join('');
+    if(filtered.length>shown.length){
+      h+=`<div onclick="closeSP();window._navProject='${projectId}';navTo('alltasks')" style="text-align:center;padding:9px 0;font-size:11px;color:var(--ac);font-weight:700;cursor:pointer">+${filtered.length-shown.length} more — view all in All Tasks →</div>`;
+    } else if(all.length){
+      h+=`<div onclick="closeSP();window._navProject='${projectId}';navTo('alltasks')" style="text-align:center;padding:9px 0;font-size:11px;color:var(--ac);font-weight:700;cursor:pointer">View in All Tasks →</div>`;
+    }
+  }
+  wrap.innerHTML=h;
 };

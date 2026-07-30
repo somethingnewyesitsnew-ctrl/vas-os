@@ -1,5 +1,5 @@
 // §27 ── MODALS & SAVE FUNCTIONS ────────────────────────────────────────
-function openTaskModal(id){
+function openTaskModal(id, presetProjectId){
   _editId=id; const t=id?DB.tasks.find(x=>x.id===id):null;
   document.getElementById('m-task-t').textContent=t?'Edit Task':'Create Task';
   document.getElementById('tf-btn').textContent=t?'Save Changes':'Create Task';
@@ -23,7 +23,7 @@ function openTaskModal(id){
   document.getElementById('tf-desc').value=t?.desc||'';
   if(document.getElementById('tf-est')) document.getElementById('tf-est').value=t?.est||'';
   if(document.getElementById('tf-recur')) document.getElementById('tf-recur').value=t?.recur||'';
-  if(document.getElementById('tf-project')) document.getElementById('tf-project').value=t?.projectId||'';
+  if(document.getElementById('tf-project')) document.getElementById('tf-project').value=t?.projectId||presetProjectId||'';
   // Apply current saved dropdown lists
   try{
     const saved=JSON.parse(localStorage.getItem('vas_dropdown_lists')||'{}');

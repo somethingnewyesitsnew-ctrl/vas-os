@@ -68,8 +68,9 @@ function renderTasks(el,tasks,showMember){
   let initDue=window._navDue||'';
   let initMember=window._navMember||'';
   let initDay=window._navDay||'';
+  let initProj=window._navProject||'';
   if(initTab==='Overdue'){initDue='overdue';initTab='All';}
-  window._navF=null; window._navDue=null; window._navMember=null; window._navDay=null;
+  window._navF=null; window._navDue=null; window._navMember=null; window._navDay=null; window._navProject=null;
 
   const TAB_COLORS={All:'#64748b',New:'#94a3b8','In Progress':'#2563eb','Pending Help':'#ea580c','Pending Review':'#7c3aed',Done:'#15803d',Rejected:'#dc2626','On Hold':'#ca8a04'};
 
@@ -83,7 +84,7 @@ function renderTasks(el,tasks,showMember){
     const fop=document.getElementById('t-fop')?.value||'';
     const fdue=document.getElementById('t-fdue')?.value||'';
     const fday=document.getElementById('t-fday')?.value||initDay;
-    const fproj=document.getElementById('t-fproj')?.value||'';
+    const fproj=document.getElementById('t-fproj')?.value||initProj;
     const fco=document.getElementById('t-fco')?.value||'';
     if(sq)f=f.filter(tk=>tk.title.toLowerCase().includes(sq)||(tk.desc||'').toLowerCase().includes(sq));
     if(fp)f=f.filter(tk=>tk.priority===fp);
@@ -195,6 +196,13 @@ function renderTasks(el,tasks,showMember){
     setTimeout(()=>{
       const el2=document.getElementById('t-fa');
       if(el2){el2.value=initMember;}
+      window.rr&&window.rr();
+    },0);
+  }
+  if(initProj){
+    setTimeout(()=>{
+      const el2=document.getElementById('t-fproj');
+      if(el2){el2.value=initProj;el2.style.borderColor='var(--ac)';el2.style.color='var(--ac)';}
       window.rr&&window.rr();
     },0);
   }
