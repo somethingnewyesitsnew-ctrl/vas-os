@@ -276,7 +276,7 @@ window.rejectLibAccess=(reqId)=>{
   nav('library',document.querySelector('[data-p="library"]'));
 };
 
-window.openLibModal=(id)=>{
+window.openLibModal=(id, presetProjectId)=>{
   const items=getLibrary();
   const it=id?items.find(x=>x.id===id):null;
   document.getElementById('m-lib-t').textContent=it?'Edit Library Entry':'Add Library Entry';
@@ -287,7 +287,7 @@ window.openLibModal=(id)=>{
   document.getElementById('lb-notes').value=it?.notes||'';
   document.getElementById('lb-tags').value=(it?.tags||[]).join(', ');
   const projSel=document.getElementById('lb-project');
-  projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${it?.projectId===p.id?'selected':''}>${p.name}</option>`).join('');
+  projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${(it?.projectId||presetProjectId)===p.id?'selected':''}>${p.name}</option>`).join('');
   const svcSel=document.getElementById('lb-service');
   svcSel.innerHTML='<option value="">— None —</option>'+(DB.services||[]).map(s=>`<option value="${s.id}" ${it?.serviceId===s.id?'selected':''}>${s.name}</option>`).join('');
   const opSel=document.getElementById('lb-operator');

@@ -203,6 +203,14 @@ const sendTGNotif=notifyMemberExternal;
 
 // NOTION DB IDs — verified exact schemas
 // ══════════════════════════════════════════════════════
+// ══ APP VERSION ══════════════════════════════════════════════════════
+// Bumped by hand on every commit that changes app behavior (not just
+// docs/comments). Combined at runtime with the live commit SHA fetched
+// from GitHub (see loadVersionBadge() in 29-init-mobile.js) so the
+// sidebar always shows exactly what's deployed, automatically.
+const APP_VERSION='4.3.0';
+const APP_REPO='somethingnewyesitsnew-ctrl/vas-os';
+
 const NDB={
   tasks:'4abbbc95-3f15-4f9e-83dc-ee63b1439ccc',
   team:'bd03669e-f3c8-482c-b817-476f4878a695',
