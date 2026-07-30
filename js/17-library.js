@@ -203,7 +203,7 @@ window.requestLibAccess=()=>{
   // Notify all admins + PMs
   DB.team.filter(m=>isAdminMember(m)).forEach(m=>{
     sendNotif(m.name,`${CU.name} requested Library access${reason?' — '+reason:''}`, 'Library Request','Library');
-    notifyWA(m.id,'default',{desc:`📚 Library Access Request\n\n${CU.name} is requesting access to the Library.${reason?'\n\nReason: '+reason:''}\n\nPlease review in the app.`,link:appLink('library')});
+    notifyTG(m.id,'default',{desc:`📚 Library Access Request\n\n${CU.name} is requesting access to the Library.${reason?'\n\nReason: '+reason:''}\n\nPlease review in the app.`,link:appLink('library')});
   });
   nav('library',document.querySelector('[data-p="library"]'));
 };
@@ -252,7 +252,7 @@ window.approveLibAccess=(reqId)=>{
   const m=DB.team.find(x=>x.id===r.memberId);
   if(m){
     sendNotif(m.name,`Your Library access request has been approved by ${CU.name}`,'Library Access','Library');
-    notifyWA(m.id,'default',{desc:`✅ Library Access Approved\n\nHi ${m.name}! ${CU.name} has approved your Library access. You can now access the Library.`,link:appLink('library')});
+    notifyTG(m.id,'default',{desc:`✅ Library Access Approved\n\nHi ${m.name}! ${CU.name} has approved your Library access. You can now access the Library.`,link:appLink('library')});
   }
   logAction('Library Access Approved',`${CU.name} approved library access for ${r.memberName}`,'Success','Library',`Requested: ${fd(r.at?.slice(0,10))}`);
   toast(`Access granted to ${r.memberName} ✓`,'ok');
@@ -268,7 +268,7 @@ window.rejectLibAccess=(reqId)=>{
   const m=DB.team.find(x=>x.id===r.memberId);
   if(m){
     sendNotif(m.name,`Your Library access request was declined by ${CU.name}`,'Library Access','Library');
-    notifyWA(m.id,'default',{desc:`❌ Library Access Declined\n\nHi ${m.name}! Your Library access request was not approved by ${CU.name}. Contact your manager for more info.`,link:appLink('')});
+    notifyTG(m.id,'default',{desc:`❌ Library Access Declined\n\nHi ${m.name}! Your Library access request was not approved by ${CU.name}. Contact your manager for more info.`,link:appLink('')});
   }
   logAction('Library Access Rejected',`${CU.name} rejected library access for ${r.memberName}`,'Warning','Library','');
   toast(`Request rejected`,'ok');

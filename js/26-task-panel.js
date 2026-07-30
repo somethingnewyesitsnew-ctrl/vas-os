@@ -268,7 +268,7 @@ window.confirmHelpRequest=async()=>{
   DB.tasks.unshift(helpTask);
   if(helper)sendNotif(helper.name,`${CU.name} needs your help with "${t.title}". Please review and submit when done.`,'Help Request',helpTask.title);
   notifyAdmins(`${CU.name} requested help from ${helper?.name||'?'} on "${t.title}"`,'Help Request',t.title);
-  if(helper) notifyWA(helper.id,'help_requested',{title:t.title,desc,link:appLink('task-'+helpTask.id)});
+  if(helper) notifyTG(helper.id,'help_requested',{title:t.title,desc,link:appLink('task-'+helpTask.id)});
   notifyAdminsWA(`🤝 Help Request\n\n${CU.name} requested help from ${helper?.name||'?'}\nTask: "${t.title}"`,appLink('task-'+t.id));
   logAction('Help Requested',`${CU.name} requested help from ${helper?.name||'?'} for "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:helper?.id,memberName:helper?.name});
   CM('m-help');toast(`Help request sent to ${helper?.name||'?'} ✓`,'ok');openTask(_pendTask);updateBadges();
@@ -395,7 +395,7 @@ window.confirmRemind=async()=>{
     DB.reminders.unshift({id:row.id,fromId:CU.id,fromName:CU.name,toId:m.id,toName:m.name,taskId:t.id,taskTitle:t.title,msg:row.msg,read:false,at:row.at});
   }
   sendNotif(m.name,msg||defaultMsg,'Reminder',t.title);
-  notifyWA(m.id,'reminder',{desc:`⏰ *Reminder from ${CU.name}*\n\n${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
+  notifyTG(m.id,'reminder',{desc:`⏰ *Reminder from ${CU.name}*\n\n${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
   logAction('Reminder Sent',`${CU.name} reminded ${m.name} about "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:m.id,memberName:m.name});
   CM('m-remind');toast(`Reminder sent to ${m.name} ✓`,'ok');
   updateBadges();
@@ -454,7 +454,7 @@ window.confirmSubmit=async()=>{
   const revMember2=DB.team.find(m=>m.id===t.reviewer);
   if(revMember2) sendNotif(revMember2.name,`Review needed: "${t.title}" — ${actual?actual+'h actual':'auto-timed'} by ${CU.name}`,'Review Needed',t.title);
   notifyAdmins(`${CU.name} submitted "${t.title}" for review (${actual?actual+'h':' time auto-tracked'})`,'Task Submitted',t.title);
-  if(revMember2) notifyWA(revMember2.id,'task_submitted',{title:t.title,priority:t.priority,link:appLink('task-'+t.id)});
+  if(revMember2) notifyTG(revMember2.id,'task_submitted',{title:t.title,priority:t.priority,link:appLink('task-'+t.id)});
   notifyAdminsWA(`📤 Task Submitted for Review\n\n${CU.name} submitted "${t.title}"\n${actual?'Actual: '+actual+'h':''}\nReviewer: ${revMember2?.name||'Not set'}`,appLink('task-'+t.id));
   logAction('Task Submitted',`${CU.name} submitted "${t.title}" for review`,'Info',t.title,actual?`Actual: ${actual}h`:'',{taskId:t.id,taskTitle:t.title,memberId:revMember2?.id,memberName:revMember2?.name});
   await nUpdateTask(t);
@@ -485,7 +485,7 @@ window.approveTask=async(id)=>{
   const assMember=DB.team.find(m=>m.id===t.assignedTo);
   if(assMember) sendNotif(assMember.name,`Your task "${t.title}" was APPROVED by ${CU.name} — archived + doc created`,'Task Approved',t.title);
   notifyAdmins(`${CU.name} approved "${t.title}" — cycle time: ${ch?ch+'h':'unknown'}`,'Task Approved',t.title);
-  if(assMember) notifyWA(assMember.id,'task_approved',{title:t.title,link:appLink('task-'+t.id)});
+  if(assMember) notifyTG(assMember.id,'task_approved',{title:t.title,link:appLink('task-'+t.id)});
   logAction('Task Approved',`${CU.name} approved "${t.title}"`, 'Success', t.title, `Cycle: ${ch?ch+'h':'?'}`,{taskId:t.id,taskTitle:t.title,memberId:assMember?.id,memberName:assMember?.name});
 
   // Auto-spawn next recurrence if set
@@ -527,7 +527,7 @@ window.rejectTask=async(id)=>{
   const assMember2=DB.team.find(m=>m.id===t.assignedTo);
   if(assMember2) sendNotif(assMember2.name,`Your task "${t.title}" was REJECTED by ${CU.name}. Reason: ${reason}`,'Task Rejected',t.title);
   notifyAdmins(`${CU.name} rejected "${t.title}" — reason: ${reason}`,'Task Rejected',t.title);
-  if(assMember2) notifyWA(assMember2.id,'task_rejected',{title:t.title,reason,link:appLink('task-'+t.id)});
+  if(assMember2) notifyTG(assMember2.id,'task_rejected',{title:t.title,reason,link:appLink('task-'+t.id)});
   logAction('Task Rejected',`${CU.name} rejected "${t.title}" — ${reason}`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:assMember2?.id,memberName:assMember2?.name});
   toast('Rejected — member notified ✓','ok'); closeSP(); updateBadges();
   if(page==='toreview')nav('toreview',document.querySelector('.ni.on'));

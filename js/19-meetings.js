@@ -430,7 +430,7 @@ window.saveMeeting=async()=>{
       if(name!==CU.name){
         sendNotif(name,`You're invited to: "${title}" on ${fd(date)} at ${time}${recur?` · repeats ${recur}`:''}`, 'Mention', title);
         const inv=DB.team.find(x=>x.name===name);
-        if(inv) notifyWA(inv.id,'meeting_invited',{title,date:fd(date),time,location:data.location||'',link:appLink('meetings')});
+        if(inv) notifyTG(inv.id,'meeting_invited',{title,date:fd(date),time,location:data.location||'',link:appLink('meetings')});
       }
     });
     // If recurring, pre-schedule next occurrence

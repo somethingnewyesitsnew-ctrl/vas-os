@@ -101,11 +101,11 @@ window.submitHrCom=async()=>{
     DB.hrComs.unshift({id:row.id,fromId:CU.id,fromName:CU.name,title,body,status:'Pending',readByHR:false,memberRead:false,replies:[],at:row.at});
     DB.team.filter(m=>m.role?.toLowerCase().includes('hr')||m.access==='HR').forEach(m=>{
       sendNotif(m.name,`${CU.name} sent an HR message: "${title}"`,'HR Message',title);
-      notifyWA(m.id,'default',{desc:`💬 *New HR Communication*\n\nFrom: ${CU.name}\nTitle: "${title}"\n\n${body.slice(0,200)}`,link:appLink('hrcoms')});
+      notifyTG(m.id,'default',{desc:`💬 *New HR Communication*\n\nFrom: ${CU.name}\nTitle: "${title}"\n\n${body.slice(0,200)}`,link:appLink('hrcoms')});
     });
     // Also notify admins
     DB.team.filter(m=>isAdminMember(m)&&!m.role?.toLowerCase().includes('hr')).forEach(m=>{
-      notifyWA(m.id,'default',{desc:`💬 *HR Message Received*\n\n${CU.name} sent an HR message: "${title}"`,link:appLink('hrcoms')});
+      notifyTG(m.id,'default',{desc:`💬 *HR Message Received*\n\n${CU.name} sent an HR message: "${title}"`,link:appLink('hrcoms')});
     });
     toast('Message sent to HR ✓','ok');
   } else {
@@ -118,7 +118,7 @@ window.submitHrCom=async()=>{
       const sender=DB.team.find(m=>m.id===com.fromId);
       if(sender){
         sendNotif(sender.name,`HR replied to your message: "${com.title}"`,'HR Reply',com.title);
-        notifyWA(sender.id,'hr_reply',{title:com.title,link:appLink('hrcoms')});
+        notifyTG(sender.id,'hr_reply',{title:com.title,link:appLink('hrcoms')});
       }
     }
     toast('Reply sent ✓','ok');
@@ -134,7 +134,7 @@ window.setHrComStatus=async(comId,status)=>{
   const sender=DB.team.find(m=>m.id===com.fromId);
   if(sender){
     sendNotif(sender.name,`Your HR message "${com.title}" is now: ${status}`,'HR Update',com.title);
-    notifyWA(sender.id,'hr_reply',{title:`Your HR message status updated to: ${status} — "${com.title}"`,link:appLink('hrcoms')});
+    notifyTG(sender.id,'hr_reply',{title:`Your HR message status updated to: ${status} — "${com.title}"`,link:appLink('hrcoms')});
   }
   toast(`Status updated to ${status}`,'ok');
   updateBadges();
@@ -227,7 +227,7 @@ window.submitAnnouncement=async()=>{
   const recipients=isAll?DB.team:DB.team.filter(m=>audienceIds.includes(m.id));
   recipients.filter(m=>m.id!==CU.id).forEach(m=>{
     sendNotif(m.name,`New ${priority} announcement: "${title}"`,`${priority} Announcement`,title);
-    notifyWA(m.id,'announcement',{title,desc:body.slice(0,300),link:appLink('announcements')});
+    notifyTG(m.id,'announcement',{title,desc:body.slice(0,300),link:appLink('announcements')});
   });
   CM('m-ann'); toast(`Announcement published to ${isAll?'everyone':audienceNames.join(', ')} ✓`,'ok');
   updateBadges();

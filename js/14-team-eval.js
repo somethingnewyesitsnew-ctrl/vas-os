@@ -31,7 +31,7 @@ window.fTeam=()=>{
           ${m.email?`<div style="font-size:10px;color:var(--tx3);margin-top:4px">✉ ${m.email}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px" onclick="event.stopPropagation()">
-          ${m.wa?`<a href="https://wa.me/${m.wa.replace(/[^0-9]/g,'')}" target="_blank" class="btn bk bxs" title="WhatsApp">📱</a>`:''}
+          ${m.telegram?`<span class="btn bk bxs" title="Telegram connected" style="cursor:default">✈️</span>`:''}
           <div class="ib edt" onclick="openMemberModal('${m.id}')">✏</div>
           <div class="ib" onclick="event.stopPropagation();window._navMember='${m.id}';navTo('alltasks')" title="View tasks" style="color:var(--ac);font-size:11px;font-weight:700">📋</div>
           <div class="ib del" onclick="delItem('team','${m.id}','${m.name}')">🗑</div>
@@ -54,7 +54,7 @@ window.openMemberDetail=(id)=>{
   </div>
   <div class="sp2">
     <div class="spf"><div class="spl">Email</div><div class="spv">${m.email||'—'}</div></div>
-    <div class="spf"><div class="spl">WhatsApp</div><div class="spv">${m.wa||'—'}</div></div>
+    <div class="spf"><div class="spl">Telegram Chat ID</div><div class="spv">${m.telegram||'—'}</div></div>
     <div class="spf"><div class="spl">Active Tasks</div><div class="spv">${ma.length}</div></div>
     <div class="spf"><div class="spl">Completed</div><div class="spv">${md}</div></div>
   </div>`;
@@ -101,7 +101,7 @@ window.openMemberDetail=(id)=>{
   </div>`;
 
   body+=`<div class="spa" style="flex-wrap:wrap">
-    ${m.wa?`<a href="https://wa.me/${m.wa.replace(/[^0-9]/g,'')}" target="_blank" class="btn bk bsm">📱 WhatsApp</a>`:''}
+    ${m.telegram?`<span class="btn bk bsm" style="cursor:default">✈️ Telegram connected</span>`:''}
     <button class="btn bp bsm" onclick="closeSP();window._navMember='${m.id}';navTo('alltasks')">📋 All Tasks</button>
     <button class="btn bg2 bsm" onclick="closeSP();window._navMember='${m.id}';navTo('archive')">🗄 Archive</button>
     <button class="btn bg2 bsm" onclick="openMemberModal('${m.id}')">✏ Edit</button>
@@ -295,7 +295,7 @@ window.fTeam=()=>{
           ${m.email?`<div style="font-size:10px;color:var(--tx3);margin-top:4px">✉ ${m.email}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px" onclick="event.stopPropagation()">
-          ${m.wa?`<a href="https://wa.me/${m.wa.replace(/[^0-9]/g,'')}" target="_blank" class="btn bk bxs" title="WhatsApp">📱</a>`:''}
+          ${m.telegram?`<span class="btn bk bxs" title="Telegram connected" style="cursor:default">✈️</span>`:''}
           <div class="ib edt" onclick="openMemberModal('${m.id}')">✏</div>
           <div class="ib" onclick="event.stopPropagation();window._navMember='${m.id}';navTo('alltasks')" title="View tasks" style="color:var(--ac);font-size:11px;font-weight:700">📋</div>
           <div class="ib del" onclick="delItem('team','${m.id}','${m.name}')">🗑</div>
@@ -318,7 +318,7 @@ window.openMemberDetail=(id)=>{
   </div>
   <div class="sp2">
     <div class="spf"><div class="spl">Email</div><div class="spv">${m.email||'—'}</div></div>
-    <div class="spf"><div class="spl">WhatsApp</div><div class="spv">${m.wa||'—'}</div></div>
+    <div class="spf"><div class="spl">Telegram Chat ID</div><div class="spv">${m.telegram||'—'}</div></div>
     <div class="spf"><div class="spl">Active Tasks</div><div class="spv">${ma.length}</div></div>
     <div class="spf"><div class="spl">Completed</div><div class="spv">${md}</div></div>
   </div>`;
@@ -365,7 +365,7 @@ window.openMemberDetail=(id)=>{
   </div>`;
 
   body+=`<div class="spa" style="flex-wrap:wrap">
-    ${m.wa?`<a href="https://wa.me/${m.wa.replace(/[^0-9]/g,'')}" target="_blank" class="btn bk bsm">📱 WhatsApp</a>`:''}
+    ${m.telegram?`<span class="btn bk bsm" style="cursor:default">✈️ Telegram connected</span>`:''}
     <button class="btn bp bsm" onclick="closeSP();window._navMember='${m.id}';navTo('alltasks')">📋 All Tasks</button>
     <button class="btn bg2 bsm" onclick="closeSP();window._navMember='${m.id}';navTo('archive')">🗄 Archive</button>
     <button class="btn bg2 bsm" onclick="openMemberModal('${m.id}')">✏ Edit</button>

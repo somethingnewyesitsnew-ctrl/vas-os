@@ -54,8 +54,7 @@ function openMemberModal(id){
   }
   if(document.getElementById('mf-username'))document.getElementById('mf-username').value=m?.username||'';
   if(document.getElementById('mf-password'))document.getElementById('mf-password').value=m?.password||'abohamood@1.';
-  document.getElementById('mf-wa').value=m?.wa||'';
-  if(document.getElementById('mf-wa-apikey'))document.getElementById('mf-wa-apikey').value=m?.wa_apikey||'';
+  document.getElementById('mf-telegram').value=m?.telegram||'';
   // Apply saved lists to role/dept selects
   try{
     const saved=JSON.parse(localStorage.getItem('vas_dropdown_lists')||'{}');
@@ -193,20 +192,20 @@ window.saveTask=async()=>{
       try{await sbDelete('todos',tid);}catch(e){}
     }
     // Notify assignee
-    // Notify all assignees — in-app + WhatsApp
+    // Notify all assignees — in-app + Telegram
     const allAssigneeIds=t.assignees?.length?t.assignees:[t.assignedTo].filter(Boolean);
     allAssigneeIds.forEach(aid=>{
       const am=DB.team.find(m=>m.id===aid);
       if(am&&am.name!==CU?.name){
         sendNotif(am.name,`New task assigned: "${title}" — ${t.priority} priority`,"Task Assigned",title);
-        notifyWA(aid,'task_assigned',{title,priority:t.priority,due:t.due||'Not set',desc:t.desc||'',link:appLink('task-'+t.id)});
+        notifyTG(aid,'task_assigned',{title,priority:t.priority,due:t.due||'Not set',desc:t.desc||'',link:appLink('task-'+t.id)});
       }
     });
-    // Notify reviewer — in-app + WhatsApp
+    // Notify reviewer — in-app + Telegram
     const rev=DB.team.find(m=>m.id===t.reviewer);
     if(rev&&rev.name!==CU?.name&&rev.name!==ass?.name){
       sendNotif(rev.name,`You are reviewer for new task: "${title}" (assigned to ${ass?.name||'?'})`,'Task Assigned',title);
-      notifyWA(rev.id,'review_requested',{title,priority:t.priority,link:appLink('task-'+t.id)});
+      notifyTG(rev.id,'review_requested',{title,priority:t.priority,link:appLink('task-'+t.id)});
     }
     // Notify all admins
     notifyAdmins(`${CU.name} created new task: "${title}" → assigned to ${ass?.name||'unassigned'}`,'Task Assigned',title);
@@ -224,8 +223,7 @@ window.saveMember=async()=>{
     m.name=name; m.role=document.getElementById('mf-role').value; m.dept=document.getElementById('mf-dept').value;
     m.access=document.getElementById('mf-access').value; m.email=document.getElementById('mf-email').value;
     m.memberType=document.getElementById('mf-mtype')?.value||m.memberType||'';
-    m.wa=document.getElementById('mf-wa').value;
-    m.wa_apikey=document.getElementById('mf-wa-apikey')?.value.trim()||m.wa_apikey||'';
+    m.telegram=document.getElementById('mf-telegram').value.trim();
     m.av=mkAv(name);
     if(document.getElementById('mf-username')?.value) m.username=document.getElementById('mf-username').value.trim().toLowerCase();
     if(document.getElementById('mf-password')?.value) m.password=document.getElementById('mf-password').value;
@@ -234,7 +232,7 @@ window.saveMember=async()=>{
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   } else {
     const colors=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626'];
-    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,wa:document.getElementById('mf-wa').value,wa_apikey:document.getElementById('mf-wa-apikey')?.value.trim()||'',av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
+    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
     DB.team.push(m);
     logAction('Member Added',`${CU.name} added "${name}"`,'Success',name,'');
     const r=await nMember(m,m.id); if(r?.url)NID[m.id]=r.url;

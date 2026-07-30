@@ -109,7 +109,7 @@ function rSettings(el){
         </div>
         <div id="sheets-status" style="font-size:11px;margin-top:8px;color:var(--tx3)"></div>
       </div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Configure automatic email and WhatsApp alerts when tasks are assigned. Both are free with no backend required.</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Configure automatic email and Telegram alerts when tasks are assigned. Both are free with no backend required.</div>
 
         <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
@@ -133,29 +133,24 @@ function rSettings(el){
         </div>
 
         <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.558 4.14 1.532 5.878L.054 23.25a.75.75 0 0 0 .922.922l5.372-1.478A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.698 9.698 0 0 1-4.95-1.357l-.356-.211-3.684 1.013 1.013-3.684-.211-.356A9.697 9.697 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
-          WhatsApp via UltraMsg
-          <span style="margin-left:auto;background:#dcfce7;color:#16a34a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #86efac">✓ Active</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#229ED9"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.568 8.16-1.61 7.59c-.121.545-.44.679-.892.423l-2.46-1.814-1.187 1.143c-.131.131-.242.242-.497.242l.178-2.523 4.59-4.148c.199-.178-.043-.276-.31-.099l-5.67 3.572-2.44-.762c-.53-.166-.541-.53.111-.784l9.538-3.677c.442-.166.828.099.649.827z"/></svg>
+          Telegram via Bot API
+          <span style="margin-left:auto;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #bae6fd">Manual setup required</span>
         </div>
         <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--tx3);line-height:1.8">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span>Instance</span><strong style="color:var(--tx);font-family:var(--fnm)">instance50648</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span>API URL</span><strong style="color:var(--tx);font-family:var(--fnm)">api.ultramsg.com</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span>Status</span><strong style="color:#16a34a">Connected</strong>
-          </div>
+          1. Message <strong style="color:var(--tx)">@BotFather</strong> on Telegram → <code style="background:var(--s);padding:1px 4px;border-radius:3px">/newbot</code> → follow the prompts to get a bot token.<br>
+          2. Paste that token into <code style="background:var(--s);padding:1px 4px;border-radius:3px">TG_BOT_TOKEN</code> at the top of <code style="background:var(--s);padding:1px 4px;border-radius:3px">js/00-core-preamble.js</code> and redeploy.<br>
+          3. Each member opens a chat with your bot and taps <strong style="color:var(--tx)">Start</strong> — this is required, a bot can't message someone who hasn't started a chat with it first.<br>
+          4. Get their numeric Chat ID (have them message <strong style="color:var(--tx)">@userinfobot</strong>, or check your bot's <code style="background:var(--s);padding:1px 4px;border-radius:3px">getUpdates</code> API response) and paste it into their profile under Team → Edit Member → Telegram Chat ID.
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
-            ℹ️ Each member needs a WhatsApp number saved in their profile (numbers only, with country code — e.g. <strong style="color:var(--tx)">971501234567</strong>).
+            ℹ️ Unlike phone numbers, a Telegram Chat ID only works for messages sent <em>by your bot</em> — there's no "click to open chat" link an admin can share, since the ID isn't a public handle.
           </div>
         </div>
         <div style="margin-bottom:10px">
-          <label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Your WhatsApp number (for test)</label>
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Your Telegram Chat ID (for test)</label>
           <div style="display:flex;gap:7px">
-            <input id="cfg-wa-test-num" placeholder="971501234567" value="${CU?.wa||''}" style="flex:1;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none">
-            <button class="btn bp bsm" onclick="testWADirect()">🧪 Test</button>
+            <input id="cfg-tg-test-id" placeholder="e.g. 123456789" value="${CU?.telegram||''}" style="flex:1;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none">
+            <button class="btn bp bsm" onclick="testTGDirect()">🧪 Test</button>
           </div>
         </div>
 
@@ -399,32 +394,32 @@ window.saveNotifConfig=()=>{
   toast('Settings saved ✓','ok');
 };
 
-window.testWADirect=async()=>{
-  const num=(document.getElementById('cfg-wa-test-num')?.value||'').replace(/\D/g,'');
-  if(!num){toast('Enter a WhatsApp number first','bad');return;}
+window.testTGDirect=async()=>{
+  const chatId=(document.getElementById('cfg-tg-test-id')?.value||'').trim();
+  if(!chatId){toast('Enter a Telegram Chat ID first','bad');return;}
   toast('Sending test message…','inf');
   try{
     const sys=SYS();
-    const msg=`✅ *${sys}* — Test\n\nHi! This is a test notification from ${sys}.\n\nIf you received this, WhatsApp notifications are working correctly. 🎉`;
-    const res=await fetch(UM_BASE,{
+    const msg=`✅ *${sys}* — Test\n\nHi! This is a test notification from ${sys}.\n\nIf you received this, Telegram notifications are working correctly. 🎉`;
+    const res=await fetch(`${TG_API_BASE}/sendMessage`,{
       method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`token=${UM_TOKEN}&to=${num}&body=${encodeURIComponent(msg)}`
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'Markdown'})
     });
     const data=await res.json().catch(()=>({}));
-    if(data.sent==='true'||data.message==='ok'||res.ok){
-      // Also save the number to CU.wa if not set
-      if(!CU.wa){CU.wa=num;const m=DB.team.find(x=>x.id===CU.id);if(m){m.wa=num;await nMemberUpd(m);}}
-      toast('✅ Test sent! Check your WhatsApp','ok',6000);
+    if(data.ok){
+      // Also save the chat id to CU.telegram if not set
+      if(!CU.telegram){CU.telegram=chatId;const m=DB.team.find(x=>x.id===CU.id);if(m){m.telegram=chatId;await nMemberUpd(m);}}
+      toast('✅ Test sent! Check your Telegram','ok',6000);
     } else {
-      toast('Sent — check WhatsApp (may take a few seconds)','ok',6000);
+      toast('Send failed — check the bot token and Chat ID: '+(data.description||'unknown error'),'bad',7000);
     }
   } catch(e){
     toast('Error: '+e.message,'bad');
   }
 };
 
-window.testNotifConfig=window.testWADirect;
+window.testNotifConfig=window.testTGDirect;
 
 // ══ BACKUP SYSTEM ══════════════════════════════════════════════════════
 const BACKUP_KEY='vas_backups';

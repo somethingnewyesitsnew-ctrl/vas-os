@@ -2,7 +2,7 @@
 // ║                    VAS OS v2.5 — SCRIPT INDEX                      ║
 // ║  Search for §XX to jump to any section                             ║
 // ╠══════════════════════════════════════════════════════════════════════╣
-// ║  §01  WHATSAPP / NOTIFICATIONS  (~L892)                            ║
+// ║  §01  TELEGRAM / NOTIFICATIONS  (~L892)                            ║
 // ║  §02  UTILITIES — toast, OM, CM, SP, share  (~L1062)              ║
 // ║  §03  SUPABASE — sbQ, sbInsert, sbUpdate  (~L1122)                ║
 // ║  §04  MEMBER TYPES & PERMISSIONS  (~L1182)                         ║
@@ -66,29 +66,35 @@
   });
 })();
 
-// ══ EXTERNAL NOTIFICATIONS (EmailJS + UltraMsg WhatsApp) ═════════════
+// ══ EXTERNAL NOTIFICATIONS (EmailJS + Telegram Bot) ══════════════════
 const NOTIF_CFG_KEY='vas_notif_config';
 function getNotifCfg(){
   try{return JSON.parse(localStorage.getItem(NOTIF_CFG_KEY)||'{}');}catch(e){return{};}
 }
 
-// ── UltraMsg WhatsApp ─────────────────────────────────────────────────
-const UM_INSTANCE='instance50648';
-const UM_TOKEN='ckzgirm5qsvnmb71';
-const UM_BASE=`https://api.ultramsg.com/${UM_INSTANCE}/messages/chat`;
+// ── Telegram Bot ──────────────────────────────────────────────────────
+// Create a bot via @BotFather on Telegram, paste its token below (or move
+// it into Settings → a config field if you want it editable without a
+// redeploy). Each team member must open a chat with the bot and press
+// Start once — you then paste their numeric chat_id into their profile
+// (Team → Edit Member → Telegram Chat ID). Bots cannot message a user
+// who hasn't started a conversation with them first — this mirrors the
+// old "member activates once" WhatsApp/CallMeBot setup.
+const TG_BOT_TOKEN='PASTE_YOUR_BOT_TOKEN_HERE';
+const TG_API_BASE=`https://api.telegram.org/bot${TG_BOT_TOKEN}`;
 
-async function sendWA(member, msg){
-  if(!member?.wa) return;
-  const phone=member.wa.replace(/\D/g,'');
-  if(!phone) return;
+async function sendTG(member, msg){
+  if(!member?.telegram) return;
+  const chatId=String(member.telegram).trim();
+  if(!chatId) return;
   try{
-    await fetch(UM_BASE,{
+    await fetch(`${TG_API_BASE}/sendMessage`,{
       method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`token=${UM_TOKEN}&to=${phone}&body=${encodeURIComponent(msg)}`
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'Markdown'})
     });
-    logAction('WhatsApp Sent',`WA sent to ${member.name}`,'Info','','');
-  } catch(e){ console.warn('UltraMsg error:',e); }
+    logAction('Telegram Sent',`Telegram sent to ${member.name}`,'Info','','');
+  } catch(e){ console.warn('Telegram error:',e); }
 }
 
 // ── Deep link builder ─────────────────────────────────────────────────
@@ -101,9 +107,9 @@ const SYS=()=>localStorage.getItem('vas_sys_name')||'VAS OS';
 //            | 'help_requested' | 'help_accepted' | 'help_completed'
 //            | 'reminder' | 'meeting_invited' | 'meeting_starting'
 //            | 'announcement' | 'hr_reply' | 'review_requested'
-async function notifyWA(memberId, eventType, data={}){
+async function notifyTG(memberId, eventType, data={}){
   const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
-  if(!member||!member.wa) return;
+  if(!member||!member.telegram) return;
   if(member.name===CU?.name) return; // never notify yourself
   const sys=SYS();
   const by=CU?.name||'System';
@@ -159,7 +165,7 @@ async function notifyWA(memberId, eventType, data={}){
     default:
       msg=`🔔 *${sys}*\n\nHi ${member.name}! ${data.desc||'You have a new notification.'}${link?'\n\n🔗 '+link:''}`;
   }
-  await sendWA(member, msg);
+  await sendTG(member, msg);
 }
 
 // ── Email (unchanged) ─────────────────────────────────────────────────
@@ -188,11 +194,11 @@ async function notifyMemberExternal(memberId, taskTitle, taskPriority, taskDue, 
   if(!member||member.name===CU?.name) return;
   const cfg=getNotifCfg();
   const link=appLink('task-'+taskId);
-  await notifyWA(memberId,'task_assigned',{title:taskTitle,priority:taskPriority,due:taskDue,desc:taskDesc,link});
+  await notifyTG(memberId,'task_assigned',{title:taskTitle,priority:taskPriority,due:taskDue,desc:taskDesc,link});
   if(cfg.email_enabled&&member.email) await sendEmailNotif(member,taskTitle,taskPriority,taskDue,taskDesc,taskId);
 }
 // legacy alias
-const sendWANotif=notifyMemberExternal;
+const sendTGNotif=notifyMemberExternal;
 
 
 // NOTION DB IDs — verified exact schemas

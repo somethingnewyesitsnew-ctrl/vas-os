@@ -41,12 +41,12 @@ function logAction(action,event,severity='Info',target='',details='',meta={}){
   nLog(e);
 }
 
-// Notify all admins via in-app + WhatsApp
+// Notify all admins via in-app + Telegram
 function notifyAdminsWA(msg,link=''){
   if(!isAdmin()) // don't notify if actor is admin themselves
     DB.team.filter(m=>isAdminMember(m)&&m.id!==CU?.id).forEach(m=>{
       sendNotif(m.name,msg,'Admin Alert','');
-      notifyWA(m.id,'default',{desc:`🔔 *VAS Admin Alert*\n\n${msg}`,link:link||appLink('')});
+      notifyTG(m.id,'default',{desc:`🔔 *VAS Admin Alert*\n\n${msg}`,link:link||appLink('')});
     });
 }
 

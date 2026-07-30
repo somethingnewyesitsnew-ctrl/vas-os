@@ -213,7 +213,7 @@ function startReminderChecker(){
         if(minsOld>=120&&!taskRemFired.has('notopened_'+t.id)){
           taskRemFired.add('notopened_'+t.id);saveTaskRemFired();
           sendNotif(CU.name,`⏰ Task not opened: "${t.title}" assigned ${Math.floor(minsOld/60)}h ago`,'Reminder',t.title);
-          notifyWA(CU.id,'default',{desc:`⏰ *Task Not Started*\n\nHi ${CU.name}!\n\n"${t.title}" was assigned ${Math.floor(minsOld/60)}h ago and hasn't been opened.\n\nPlease open and start it.`,link:''});
+          notifyTG(CU.id,'default',{desc:`⏰ *Task Not Started*\n\nHi ${CU.name}!\n\n"${t.title}" was assigned ${Math.floor(minsOld/60)}h ago and hasn't been opened.\n\nPlease open and start it.`,link:''});
           toast(`⏰ "${t.title.slice(0,30)}" not opened yet`,'warn',8000);
         }
       }
@@ -223,7 +223,7 @@ function startReminderChecker(){
         if(hrsOpen>=12&&!taskRemFired.has('open12_'+t.id)){
           taskRemFired.add('open12_'+t.id);saveTaskRemFired();
           sendNotif(CU.name,`⚠️ Task open ${hrsOpen}h: "${t.title}"`,'Reminder',t.title);
-          notifyWA(CU.id,'default',{desc:`⚠️ *Task Duration Alert*\n\nHi ${CU.name}!\n\n"${t.title}" has been in progress for ${hrsOpen} hours.\n\nPlease submit or update.`,link:''});
+          notifyTG(CU.id,'default',{desc:`⚠️ *Task Duration Alert*\n\nHi ${CU.name}!\n\n"${t.title}" has been in progress for ${hrsOpen} hours.\n\nPlease submit or update.`,link:''});
           toast(`⚠️ "${t.title.slice(0,30)}" open ${hrsOpen}h`,'warn',8000);
         }
       }
@@ -234,7 +234,7 @@ function startReminderChecker(){
           taskRemFired.add('overest_'+t.id);saveTaskRemFired();
           const over=Math.round((hrsActual-t.est)*10)/10;
           sendNotif(CU.name,`🚨 "${t.title}" is ${over}h over ${t.est}h estimate`,'Reminder',t.title);
-          notifyWA(CU.id,'default',{desc:`🚨 *Over Estimate*\n\nHi ${CU.name}!\n\n"${t.title}" exceeded its estimate.\n⏱ Est: ${t.est}h | Actual: ${Math.round(hrsActual*10)/10}h (+${over}h)\n\nConsider submitting or re-estimating.`,link:''});
+          notifyTG(CU.id,'default',{desc:`🚨 *Over Estimate*\n\nHi ${CU.name}!\n\n"${t.title}" exceeded its estimate.\n⏱ Est: ${t.est}h | Actual: ${Math.round(hrsActual*10)/10}h (+${over}h)\n\nConsider submitting or re-estimating.`,link:''});
           toast(`🚨 "${t.title.slice(0,30)}" ${over}h over estimate`,'warn',8000);
         }
       }
@@ -256,7 +256,7 @@ function startReminderChecker(){
         if(!svcTestFired.has(remKey)){
           svcTestFired.add(remKey);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
           const op=[...DB.operators,...DB.companies].find(o=>o.id===s.operator_id);
-          notifyWA(CU.id,'default',{desc:`📅 *Test Reminder — Tomorrow*\n\nHi ${CU.name}! You have a service test TOMORROW.\n\n🏢 Operator: ${op?.name||'?'}\n📅 ${tomorrowStr}\n\nBe ready to complete all test items.`,link:''});
+          notifyTG(CU.id,'default',{desc:`📅 *Test Reminder — Tomorrow*\n\nHi ${CU.name}! You have a service test TOMORROW.\n\n🏢 Operator: ${op?.name||'?'}\n📅 ${tomorrowStr}\n\nBe ready to complete all test items.`,link:''});
           sendNotif(CU.name,`Service test tomorrow: ${op?.name||'?'}`,'Mention','Service Test');
           toast(`📅 Service test tomorrow: ${op?.name||''}`,'inf',8000);
         }
@@ -289,7 +289,7 @@ function startReminderChecker(){
             DB.tasks.unshift(newTask);
             nCreateTask(newTask,newTask.id).then(r=>{if(r?.id)newTask.id=r.id;});
             updateBadges();
-            notifyWA(CU.id,'default',{desc:`🧪 *Service Test Task Created*\n\nHi ${CU.name}! Your service test task for today is ready.\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 ${todayStr}\n\n✅ Test Items:\n${checks}\n\nOpen the app to complete your test.`,link:''});
+            notifyTG(CU.id,'default',{desc:`🧪 *Service Test Task Created*\n\nHi ${CU.name}! Your service test task for today is ready.\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 ${todayStr}\n\n✅ Test Items:\n${checks}\n\nOpen the app to complete your test.`,link:''});
             sendNotif(CU.name,`Service test task created: ${opName}`,'Mention','Service Test');
             toast(`🧪 Test task created: ${opName}`,'ok',8000);
           }
@@ -300,14 +300,14 @@ function startReminderChecker(){
           const key8=`8am_${s.id}_${todayStr}`;
           if(hr>=8&&hr<9&&!svcTestFired.has(key8)){
             svcTestFired.add(key8);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
-            notifyWA(CU.id,'default',{desc:`🌅 *Good Morning — Test Reminder*\n\nHi ${CU.name}!\n\nYou have a service test to complete today.\n\n🏢 Operator: ${opName}\n📅 ${todayStr}\n\nPlease complete all test items and submit for review.`,link:''});
+            notifyTG(CU.id,'default',{desc:`🌅 *Good Morning — Test Reminder*\n\nHi ${CU.name}!\n\nYou have a service test to complete today.\n\n🏢 Operator: ${opName}\n📅 ${todayStr}\n\nPlease complete all test items and submit for review.`,link:''});
             toast(`🧪 8am: Service test due today — ${opName}`,'inf',10000);
           }
           // 12pm reminder
           const key12=`12pm_${s.id}_${todayStr}`;
           if(hr>=12&&hr<13&&!svcTestFired.has(key12)){
             svcTestFired.add(key12);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
-            notifyWA(CU.id,'default',{desc:`⏰ *Noon Reminder — Test Pending*\n\nHi ${CU.name}! You still have a pending service test.\n\n🏢 Operator: ${opName}\n⏰ Please complete before end of day.`,link:''});
+            notifyTG(CU.id,'default',{desc:`⏰ *Noon Reminder — Test Pending*\n\nHi ${CU.name}! You still have a pending service test.\n\n🏢 Operator: ${opName}\n⏰ Please complete before end of day.`,link:''});
             toast(`⏰ 12pm: Test still pending — ${opName}`,'warn',10000);
           }
         }

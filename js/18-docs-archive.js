@@ -287,7 +287,7 @@ window.postTaskComment=async(taskId)=>{
       const m=DB.team.find(x=>x.id===uid);
       if(m){
         sendNotif(m.name,`${CU.name} commented on "${t.title}": ${text.slice(0,80)}`,'Comment',t.title);
-        notifyWA(uid,'default',{desc:`💬 New comment on task "${t.title}"\n\n${CU.name}: ${text.slice(0,200)}`,link:appLink('task-'+t.id)});
+        notifyTG(uid,'default',{desc:`💬 New comment on task "${t.title}"\n\n${CU.name}: ${text.slice(0,200)}`,link:appLink('task-'+t.id)});
       }
     }
   });
@@ -363,10 +363,10 @@ window.savePostMeetingAction=async(meetingId)=>{
   // Notify assignee and reviewer
   if(assigneeMember&&assigneeMember.name!==CU?.name){
     sendNotif(assigneeMember.name,`Action item from meeting "${m.title}": ${title}`,'Task Assigned',title);
-    notifyWA(assigneeMember.id,'task_assigned',{title:'Meeting Outcome: '+title,priority,due,link:appLink('task-'+t.id)});
+    notifyTG(assigneeMember.id,'task_assigned',{title:'Meeting Outcome: '+title,priority,due,link:appLink('task-'+t.id)});
   }
   if(reviewerMember&&reviewerMember.name!==CU?.name){
-    notifyWA(reviewerMember.id,'review_requested',{title:'Meeting Outcome: '+title,link:appLink('task-'+t.id)});
+    notifyTG(reviewerMember.id,'review_requested',{title:'Meeting Outcome: '+title,link:appLink('task-'+t.id)});
   }
   toast('Action item created ✓','ok');
   updateBadges();

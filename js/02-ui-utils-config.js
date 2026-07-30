@@ -31,18 +31,6 @@ function shareTaskCopy(){
     const el=document.createElement('textarea');el.value=lines;document.body.appendChild(el);el.select();document.execCommand('copy');el.remove();toast('Task details + link copied ✓','ok');
   }
 }
-
-function shareTaskWA(){
-  const url=window._share?.wa;
-  if(!url){toast('No WhatsApp number saved for this member','bad');return;}
-  window.open(url,'_blank');
-}
-
-function shareTaskEmail(){
-  const url=window._share?.email;
-  if(!url){toast('No email saved for this member','bad');return;}
-  window.open(url,'_blank');
-}
 function openSP(title,pills,body){
   document.getElementById('sp-ttl').textContent=title;
   document.getElementById('sp-pills').innerHTML=pills||'';
