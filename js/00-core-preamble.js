@@ -33,38 +33,29 @@
 // ║  §29  INIT — preload, clock, mobile menu  (~L9470)                 ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 
-// ══ SECURITY — Anti-inspection ══════════════════════════════════════
-(function(){
-  // 1. Disable right-click context menu
-  document.addEventListener('contextmenu',e=>e.preventDefault());
-
-  // 2. Block keyboard shortcuts that open DevTools or view source
-  document.addEventListener('keydown',e=>{
-    const k=e.key;
-    // F12
-    if(k==='F12'){e.preventDefault();return;}
-    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (DevTools)
-    if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(k)){e.preventDefault();return;}
-    // Ctrl+U (view source)
-    if(e.ctrlKey&&['U','u'].includes(k)){e.preventDefault();return;}
-    // Ctrl+S (save file)
-    if(e.ctrlKey&&['S','s'].includes(k)){e.preventDefault();return;}
-    // Ctrl+P (print / expose DOM)
-    if(e.ctrlKey&&['P','p'].includes(k)){e.preventDefault();}
-  });
-
-  // Clear any stuck blur/filter from previous sessions
-  document.body.style.filter='';
-  document.body.removeAttribute('data-locked');
-
-  // 3. Clear console continuously
-  setInterval(()=>{try{console.clear();}catch(e){}},1500);
-
-  // 4. Disable drag-select text on sensitive areas
-  document.addEventListener('selectstart',e=>{
-    if(e.target.closest('.lcard')){e.preventDefault();}
-  });
-})();
+// ══ SECURITY — real, not theater ═════════════════════════════════════
+// The old "anti-inspection" block (blocking right-click / F12 / Ctrl+P /
+// console.clear loop) provided zero actual security — all secrets are
+// still visible in page source regardless — and it broke the Ctrl+P
+// keyboard shortcut for the Reports page's "Export PDF" feature. Removed.
+//
+// escapeHtml() is the real fix: every place user-entered text (task
+// titles/descriptions, comments, todo/backlog text, HR messages,
+// announcements, library entries, meeting titles, member names/notes...)
+// gets interpolated into innerHTML, it should be run through this first
+// to prevent stored XSS. Usage: `${escapeHtml(t.title)}` instead of
+// `${t.title}` anywhere the value came from a text input/textarea.
+function escapeHtml(str){
+  if(str===null||str===undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+// Alias some code may reach for
+const esc=escapeHtml;
 
 // ══ EXTERNAL NOTIFICATIONS (EmailJS + Telegram Bot) ══════════════════
 const NOTIF_CFG_KEY='vas_notif_config';

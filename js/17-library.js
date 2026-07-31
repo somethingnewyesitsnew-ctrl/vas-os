@@ -107,7 +107,7 @@ function rLibrary(el){
             <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0">
               <div style="width:36px;height:36px;border-radius:10px;background:var(--al);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📖</div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:14px;font-weight:800;color:var(--tx);line-height:1.3;margin-bottom:3px">${it.topic}</div>
+                <div style="font-size:14px;font-weight:800;color:var(--tx);line-height:1.3;margin-bottom:3px">${escapeHtml(it.topic)}</div>
                 ${it.desc?`<div style="font-size:12px;color:var(--tx3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${it.desc}</div>`:''}
               </div>
             </div>
@@ -116,7 +116,7 @@ function rLibrary(el){
               <button onclick="deleteLibEntry('${it.id}')" style="width:26px;height:26px;border-radius:6px;background:var(--s2);border:1px solid var(--bd);color:var(--r);cursor:pointer;font-size:11px">✕</button>
             </div>`:''}
           </div>
-          ${it.notes?`<div style="background:var(--s2);border-left:3px solid var(--ac);padding:8px 10px;border-radius:0 7px 7px 0;font-size:11px;color:var(--tx2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${it.notes}</div>`:''}
+          ${it.notes?`<div style="background:var(--s2);border-left:3px solid var(--ac);padding:8px 10px;border-radius:0 7px 7px 0;font-size:11px;color:var(--tx2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(it.notes)}</div>`:''}
           ${it.link?`<div style="display:flex;align-items:center;gap:5px;color:var(--ac);font-size:11px;font-weight:600;overflow:hidden">🔗<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:3px">${it.link.replace(/^https?:\/\//, '').slice(0,50)}</span></div>`:''}
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:6px">
             ${proj?`<span style="background:var(--al);color:var(--ac);border:1px solid var(--ac)22;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◉ ${proj.name}</span>`:''}
@@ -141,7 +141,7 @@ function rLibrary(el){
       const proj=DB.projects.find(p=>p.id===it.projectId);
       const canEdit=isAdmin()||it.createdBy===CU?.name;
       h+=`<tr onclick="openLibEntry('${it.id}')" class="cl" style="cursor:pointer">
-        <td style="font-weight:700;min-width:140px"><div style="display:flex;align-items:center;gap:6px"><span>📖</span>${it.topic}</div></td>
+        <td style="font-weight:700;min-width:140px"><div style="display:flex;align-items:center;gap:6px"><span>📖</span>${escapeHtml(it.topic)}</div></td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2);font-size:11px">${it.desc||'—'}</td>
         <td>${it.link?`<a href="${it.link}" target="_blank" onclick="event.stopPropagation()" style="color:var(--ac);font-size:11px;font-weight:600;text-decoration:none">🔗 Link</a>`:'—'}</td>
         <td style="font-size:11px">${proj?.name||'—'}</td>
@@ -165,13 +165,13 @@ window.openLibEntry=(id)=>{
   const proj=DB.projects.find(p=>p.id===it.projectId);
   const svc=(DB.services||[]).find(s=>s.id===it.serviceId);
   const op=[...DB.operators,...DB.companies].find(o=>o.id===it.operatorId);
-  let body=`<div class="sph"><div class="spt">📖 ${it.topic}</div></div>`;
+  let body=`<div class="sph"><div class="spt">📖 ${escapeHtml(it.topic)}</div></div>`;
   body+=`<div class="sps">Details</div>`;
-  if(it.desc) body+=`<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:8px">${it.desc}</div>`;
+  if(it.desc) body+=`<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:8px">${escapeHtml(it.desc)}</div>`;
   if(it.link) body+=`<a href="${it.link}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--ac);font-size:12px;font-weight:600;margin-bottom:12px;text-decoration:none;word-break:break-all">🔗 ${it.link}</a>`;
   if(it.notes){
     body+=`<div class="sps">Notes</div>`;
-    body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tx2);white-space:pre-wrap;line-height:1.6;margin-bottom:12px">${it.notes}</div>`;
+    body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tx2);white-space:pre-wrap;line-height:1.6;margin-bottom:12px">${escapeHtml(it.notes)}</div>`;
   }
   if(proj||svc||op){
     body+=`<div class="sps">Linked To</div>`;

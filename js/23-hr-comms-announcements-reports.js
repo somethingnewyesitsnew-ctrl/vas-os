@@ -27,7 +27,7 @@ function rHrComs(el){
         h+=`<div style="background:var(--s);border:1px solid ${unread?'var(--ac)':'var(--bd)'};border-radius:12px;padding:14px 16px;margin-bottom:10px${unread?';box-shadow:0 0 0 2px var(--ac)15':''}">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:3px">${com.title}</div>
+              <div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:3px">${escapeHtml(com.title)}</div>
               <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
                 ${sender?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${sender.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${sender.av}</span><span style="font-size:11px;font-weight:600;color:var(--tx2)">${sender.name}</span></span>`:''}
                 <span style="font-size:10px;color:var(--tx3)">${fdt(com.at)}</span>
@@ -36,7 +36,7 @@ function rHrComs(el){
             </div>
             <span style="background:${statusCol}18;color:${statusCol};border:1px solid ${statusCol}30;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0">${com.status}</span>
           </div>
-          <div style="font-size:13px;color:var(--tx2);line-height:1.6;background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:${com.replies?.length?'10px':'0'}">${com.body}</div>
+          <div style="font-size:13px;color:var(--tx2);line-height:1.6;background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:${com.replies?.length?'10px':'0'}">${escapeHtml(com.body)}</div>
           ${(com.replies||[]).map(r=>{
             const rSender=DB.team.find(m=>m.id===r.fromId||m.name===r.fromName);
             const rIsHr=rSender?.role?.toLowerCase().includes('hr')||rSender?.access==='HR'||isAdmin();
@@ -45,7 +45,7 @@ function rHrComs(el){
                 ${rSender?`<span style="width:16px;height:16px;border-radius:50%;background:${rSender.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${rSender.av}</span><span style="font-size:11px;font-weight:700;color:${rIsHr?'var(--ac)':'var(--tx)'}">${rSender.name}${rIsHr?' (HR)':''}</span>`:''}
                 <span style="font-size:10px;color:var(--tx3);margin-left:auto">${fdt(r.at)}</span>
               </div>
-              <div style="font-size:12px;color:var(--tx2);line-height:1.5">${r.body}</div>
+              <div style="font-size:12px;color:var(--tx2);line-height:1.5">${escapeHtml(r.body)}</div>
             </div>`;
           }).join('')}
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px" onclick="event.stopPropagation()">
@@ -172,7 +172,7 @@ function rAnnouncements(el){
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap">
               <span style="font-size:14px">${prioIcon[a.priority]||'📢'}</span>
-              <span style="font-size:14px;font-weight:800;color:var(--tx)">${a.title}</span>
+              <span style="font-size:14px;font-weight:800;color:var(--tx)">${escapeHtml(a.title)}</span>
               ${isUnread?`<span style="background:${col};color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px">NEW</span>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -184,7 +184,7 @@ function rAnnouncements(el){
           </div>
           ${isAdmin()||isHR()?`<div onclick="event.stopPropagation();delAnnouncement('${a.id}')" style="color:var(--tx3);cursor:pointer;font-size:12px;padding:4px;border-radius:5px" title="Delete">🗑</div>`:''}
         </div>
-        <div style="font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap">${a.body}</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap">${escapeHtml(a.body)}</div>
         <div style="font-size:10px;color:var(--tx3);margin-top:8px">${(a.readBy||[]).length} member${(a.readBy||[]).length!==1?'s':''} read</div>
       </div>`;
     });

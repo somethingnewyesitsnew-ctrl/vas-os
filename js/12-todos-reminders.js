@@ -17,7 +17,7 @@ function rTodos(el){
         h+=`<div class="td-it">
           <div class="td-cb ${td.status==='Done'?'checked':''}" onclick="toggleTodo('${td.id}')">✓</div>
           <div style="flex:1;cursor:pointer;min-width:0" onclick="openTodo('${td.id}')">
-            <div class="td-txt ${td.status==='Done'?'done':''}">${td.title}</div>
+            <div class="td-txt ${td.status==='Done'?'done':''}">${escapeHtml(td.title)}</div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px">
               ${td.notes?`<span style="font-size:10px;color:var(--tx3)">${td.notes.slice(0,50)}${td.notes.length>50?'…':''}</span>`:''}
               ${td.due?`<span style="font-size:10px;color:${new Date(td.due)<new Date()&&td.status!=='Done'?'var(--r)':'var(--tx3)'}">📅 ${fd(td.due)}</span>`:''}
@@ -52,7 +52,7 @@ window.openTodo=(id)=>{
     <div class="spf"><div class="spl">Due Date</div><div class="spv" style="color:${td.due&&new Date(td.due)<new Date()&&td.status!=='Done'?'var(--r)':'var(--tx)'}">${fd(td.due)||'—'}</div></div>
     <div class="spf"><div class="spl">⏰ Reminder</div><div class="spv" style="color:${reminderFired?'var(--r)':td.reminder?'var(--ac)':'var(--tx3)'}">${td.reminder?fdt(td.reminder)+(reminderFired?' (passed)':''):'Not set'}</div></div>
   </div>
-  ${td.notes?`<div class="spf"><div class="spl">Notes</div><div class="spnote">${td.notes}</div></div>`:''}
+  ${td.notes?`<div class="spf"><div class="spl">Notes</div><div class="spnote">${escapeHtml(td.notes)}</div></div>`:''}
   <div class="spa">
     ${td.status!=='Done'?`<button class="btn bk bsm" onclick="toggleTodo('${td.id}');closeSP()">✓ Mark Done</button>`:`<button class="btn bg2 bsm" onclick="toggleTodo('${td.id}');closeSP()">↩ Reopen</button>`}
     <button class="btn bg2 bsm" onclick="openTodoModal('${td.id}')">✏ Edit</button>

@@ -57,7 +57,7 @@ function rMeetings(el){
       return`<div class="mc" onclick="openMeetingDetail('${m.id}')" style="margin-bottom:8px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px">
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:2px">${m.title}</div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:2px">${escapeHtml(m.title)}</div>
             <div style="font-size:10px;color:var(--tx3);display:flex;gap:10px;flex-wrap:wrap">
               <span>📅 ${fd(m.meeting_date)}</span>
               <span>🕐 ${m.meeting_time}</span>
@@ -121,7 +121,7 @@ window.openDayMeetings=(dateStr)=>{
         const col={Scheduled:'#2563eb',Started:'#15803d',Completed:'#64748b',Cancelled:'#dc2626'}[m.status]||'#2563eb';
         return`<div onclick="openMeetingDetail('${m.id}')" style="padding:9px 0;border-bottom:1px solid var(--bd);cursor:pointer;display:flex;align-items:center;gap:8px">
           <div style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></div>
-          <div><div style="font-weight:600;font-size:12px">${m.title}</div><div style="font-size:10px;color:var(--tx3)">${m.meeting_time} · ${m.duration_minutes}min · ${m.status}</div></div>
+          <div><div style="font-weight:600;font-size:12px">${escapeHtml(m.title)}</div><div style="font-size:10px;color:var(--tx3)">${m.meeting_time} · ${m.duration_minutes}min · ${m.status}</div></div>
         </div>`;
       }).join('');
     } else {
@@ -151,7 +151,7 @@ window.openMeetingDetail=(id)=>{
     <div class="spf"><div class="spl">Created by</div><div class="spv">${m.created_by}</div></div>
     ${m.location?`<div class="spf" style="grid-column:1/-1"><div class="spl">Location</div><div class="spv">${/^https?:\/\//i.test(m.location)?`<a href="${m.location}" target="_blank" style="color:var(--ac)">${m.location}</a>`:m.location}</div></div>`:''}
   </div>
-  ${m.description?`<div class="spf"><div class="spl">Agenda / Description</div><div class="spnote">${m.description}</div></div>`:''}`;
+  ${m.description?`<div class="spf"><div class="spl">Agenda / Description</div><div class="spnote">${escapeHtml(m.description)}</div></div>`:''}`;
 
   // Attendance section
   if(m.invitees?.length){
@@ -510,7 +510,7 @@ function rMeetingOutcomes(el){
     h+=`<div class="mc" style="margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:${outcomes||tasks.length?'10px':'0'}">
         <div style="flex:1">
-          <div style="font-size:14px;font-weight:800;margin-bottom:3px">${m.title}</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:3px">${escapeHtml(m.title)}</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--tx3)">
             <span>📅 ${dayName} ${fd(m.meeting_date)}</span>
             ${m.meeting_time?`<span>🕐 ${m.meeting_time}</span>`:''}

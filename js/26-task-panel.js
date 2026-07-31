@@ -50,10 +50,10 @@ window.openTask=(id)=>{
     ${t.actual!=null?`<div class="spf"><div class="spl">Actual</div><div class="spv" style="color:${t.est?Math.abs(t.actual-t.est)/t.est<=.2?'var(--g)':Math.abs(t.actual-t.est)/t.est<=.5?'var(--y)':'var(--r)':'var(--tx)'}">${t.actual}h${t.est?' ('+(Math.round((t.actual-t.est)/t.est*100)>0?'+':'')+Math.round((t.actual-t.est)/t.est*100)+'%)':''}</div></div>`:''}
   </div>`;
 
-  if(t.desc)body+=`<div class="spf"><div class="spl">Description</div><div class="spnote">${t.desc}</div></div>`;
-  if(t.what)body+=`<div class="spf"><div class="spl">What Was Done</div><div class="spnote">${t.what}</div></div>`;
-  if(t.tech)body+=`<div class="spf"><div class="spl">Technical Notes</div><div class="spnote">${t.tech}</div></div>`;
-  if(t.rejReason)body+=`<div class="spf"><div class="spl" style="color:var(--r)">Rejection Reason</div><div class="spnote" style="border-color:var(--rbr);background:var(--rb)">${t.rejReason}</div></div>`;
+  if(t.desc)body+=`<div class="spf"><div class="spl">Description</div><div class="spnote">${escapeHtml(t.desc)}</div></div>`;
+  if(t.what)body+=`<div class="spf"><div class="spl">What Was Done</div><div class="spnote">${escapeHtml(t.what)}</div></div>`;
+  if(t.tech)body+=`<div class="spf"><div class="spl">Technical Notes</div><div class="spnote">${escapeHtml(t.tech)}</div></div>`;
+  if(t.rejReason)body+=`<div class="spf"><div class="spl" style="color:var(--r)">Rejection Reason</div><div class="spnote" style="border-color:var(--rbr);background:var(--rb)">${escapeHtml(t.rejReason)}</div></div>`;
   if(t.rejections?.length>1){body+=`<div class="sps">Rejection History (${t.rejections.length})</div>`;t.rejections.forEach(r=>{const rb=DB.team.find(m=>m.id===r.by);body+=`<div style="background:var(--rb);border:1px solid var(--rbr);border-radius:8px;padding:8px;margin-bottom:5px;font-size:11px"><div style="color:var(--r);font-weight:600;margin-bottom:2px">${rb?rb.name:'Reviewer'} · ${fdt(r.at)}</div><div style="color:var(--tx2)">${r.reason}</div></div>`;});}
 
   // Re-estimate history
@@ -130,10 +130,10 @@ window.openTask=(id)=>{
         <span style="width:24px;height:24px;border-radius:50%;background:${cm?.color||'#64748b'};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px">${cm?.av||(c.byName||'?')[0].toUpperCase()}</span>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-            <span style="font-size:12px;font-weight:700">${c.byName||cm?.name||'?'}</span>
+            <span style="font-size:12px;font-weight:700">${escapeHtml(c.byName||cm?.name||'?')}</span>
             <span style="font-size:10px;color:var(--tx3)">${fdt(c.at)}</span>
           </div>
-          <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--tx2);white-space:pre-wrap;line-height:1.5">${c.text}</div>
+          <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--tx2);white-space:pre-wrap;line-height:1.5">${escapeHtml(c.text)}</div>
         </div>
       </div>`;
     });

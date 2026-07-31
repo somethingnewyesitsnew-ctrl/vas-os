@@ -48,13 +48,13 @@ function rComments(el){
           <span style="width:26px;height:26px;border-radius:50%;background:${author?.color||'#64748b'};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0">${author?.av||(c.byName||'?')[0].toUpperCase()}</span>
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span style="font-size:12px;font-weight:800;color:${isMe?'var(--ac)':'var(--tx)'}">${isMe?'You':c.byName||'?'}</span>
+              <span style="font-size:12px;font-weight:800;color:${isMe?'var(--ac)':'var(--tx)'}">${isMe?'You':escapeHtml(c.byName||'?')}</span>
               ${isUnread?`<span style="background:var(--ac);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:10px">NEW</span>`:''}
               <span style="font-size:10px;color:var(--tx3);margin-left:auto;white-space:nowrap">${fdt(c.at)}</span>
             </div>
           </div>
         </div>
-        <div style="font-size:13px;color:var(--tx);line-height:1.5;margin-bottom:8px;padding:8px 10px;background:var(--s);border-radius:8px;border-left:3px solid ${isMe?'var(--ac)':'var(--bd2)'}">${c.text}</div>
+        <div style="font-size:13px;color:var(--tx);line-height:1.5;margin-bottom:8px;padding:8px 10px;background:var(--s);border-radius:8px;border-left:3px solid ${isMe?'var(--ac)':'var(--bd2)'}">${escapeHtml(c.text)}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-size:10px;font-weight:600;color:var(--tx3)">on task:</span>
           <span style="display:inline-flex;align-items:center;gap:4px;background:var(--s);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--tx2);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">

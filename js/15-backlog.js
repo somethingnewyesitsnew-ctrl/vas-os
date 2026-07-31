@@ -3,11 +3,11 @@ function rBacklog(el){
   const cols=['New Idea','Under Review','Approved','Converted to Task','Parked','Rejected'];
   const cc={'New Idea':'#64748b','Under Review':'#ca8a04','Approved':'#16a34a','Converted to Task':'#2563eb','Parked':'#ea580c','Rejected':'#dc2626'};
   if(isAdmin()){
-    el.innerHTML=`<div class="kanban">`+cols.map(s=>{const items=DB.backlog.filter(b=>b.status===s);return`<div class="kb-col"><div class="kb-ch" style="color:${cc[s]}">${s}<span class="kb-cnt">${items.length}</span></div>${items.map(b=>`<div class="kb-card" onclick="openBacklog('${b.id}')"><div style="font-size:12px;font-weight:600;margin-bottom:5px;line-height:1.3">${b.title}</div><div style="display:flex;gap:4px;justify-content:space-between;align-items:center">${ppill(b.priority)}<div class="act-c" onclick="event.stopPropagation()"><div class="ib" onclick="convertBacklogToTask('${b.id}')" title="Convert to task" style="color:var(--ac);font-size:10px;font-weight:700">→T</div><div class="ib del" onclick="delItem('backlog','${b.id}','${b.title.replace(/'/g,"\\'")}')">🗑</div></div></div></div>`).join('')}</div>`;}).join('')+`</div>`;
+    el.innerHTML=`<div class="kanban">`+cols.map(s=>{const items=DB.backlog.filter(b=>b.status===s);return`<div class="kb-col"><div class="kb-ch" style="color:${cc[s]}">${s}<span class="kb-cnt">${items.length}</span></div>${items.map(b=>`<div class="kb-card" onclick="openBacklog('${b.id}')"><div style="font-size:12px;font-weight:600;margin-bottom:5px;line-height:1.3">${escapeHtml(b.title)}</div><div style="display:flex;gap:4px;justify-content:space-between;align-items:center">${ppill(b.priority)}<div class="act-c" onclick="event.stopPropagation()"><div class="ib" onclick="convertBacklogToTask('${b.id}')" title="Convert to task" style="color:var(--ac);font-size:10px;font-weight:700">→T</div><div class="ib del" onclick="delItem('backlog','${b.id}','${b.title.replace(/'/g,"\\'")}')">🗑</div></div></div></div>`).join('')}</div>`;}).join('')+`</div>`;
   } else {
     el.innerHTML=`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">Submit ideas below. Only managers can change status or convert to tasks.</div>
     <div class="tw"><table><thead><tr><th>Idea</th><th>Category</th><th>Priority</th><th>Status</th><th>By</th></tr></thead><tbody>`+
-    DB.backlog.map(b=>`<tr class="cl" onclick="openBacklog('${b.id}')"><td>${b.title}</td><td style="font-size:11px;color:var(--tx2)">${b.cat}</td><td>${ppill(b.priority)}</td><td><span style="background:${cc[b.status]}15;color:${cc[b.status]};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">${b.status}</span></td><td style="font-size:11px;color:var(--tx2)">${b.by}</td></tr>`).join('')+`</tbody></table></div>`;
+    DB.backlog.map(b=>`<tr class="cl" onclick="openBacklog('${b.id}')"><td>${escapeHtml(b.title)}</td><td style="font-size:11px;color:var(--tx2)">${b.cat}</td><td>${ppill(b.priority)}</td><td><span style="background:${cc[b.status]}15;color:${cc[b.status]};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">${b.status}</span></td><td style="font-size:11px;color:var(--tx2)">${b.by}</td></tr>`).join('')+`</tbody></table></div>`;
   }
 }
 
@@ -19,7 +19,7 @@ window.openBacklog=(id)=>{
   let body=`<div class="sp2"><div class="spf"><div class="spl">Category</div><div class="spv">${b.cat}</div></div><div class="spf"><div class="spl">By</div><div class="spv">${b.by}</div></div></div>
   <div class="spf"><div class="spl">Description</div><div class="spnote">${b.desc||'—'}</div></div>
   <div class="spf"><div class="spl">Why It Matters</div><div class="spnote">${b.why||'—'}</div></div>`;
-  if(b.notes)body+=`<div class="spf"><div class="spl">Admin Notes</div><div class="spnote">${b.notes}</div></div>`;
+  if(b.notes)body+=`<div class="spf"><div class="spl">Admin Notes</div><div class="spnote">${escapeHtml(b.notes)}</div></div>`;
   if(isAdmin()){
     body+=`<div class="spa">
       <select onchange="chBLStatus('${b.id}',this.value)" style="padding:5px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:11px;outline:none;cursor:pointer">

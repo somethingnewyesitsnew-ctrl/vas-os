@@ -156,7 +156,7 @@ function renderTasks(el,tasks,showMember){
           ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-chk" value="${tk.id}" style="width:14px;height:14px;cursor:pointer"></td>`:''}
           <td style="font-family:var(--fnm);font-size:12px;color:var(--tx3);font-weight:700">#${i+1}</td>
           <td style="max-width:200px">
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;${titleStyle}">${tk.title}</div>
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;${titleStyle}">${escapeHtml(tk.title)}</div>
             ${isMob&&assigneeHtml!=='<span style="color:var(--tx3);font-size:12px">—</span>'?`<div style="display:flex;align-items:center;gap:3px;margin-top:3px">${(()=>{const ids=tk.assignees?.length?tk.assignees:[tk.assignedTo].filter(Boolean);return ids.map(id=>DB.team.find(x=>x.id===id)).filter(Boolean).slice(0,2).map(mb=>`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:15px;height:15px;border-radius:50%;background:${mb.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${mb.av}</span><span style="font-size:10px;font-weight:600;color:var(--tx3)">${mb.name.split(' ')[0]}</span></span>`).join('<span style="color:var(--bd);font-size:9px;margin:0 1px">·</span>');})()}</div>`:``}
           </td>
           <td>${spill(tk.status)}</td><td>${ppill(tk.priority)}</td>
