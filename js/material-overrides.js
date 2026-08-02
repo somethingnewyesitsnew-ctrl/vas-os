@@ -1287,9 +1287,181 @@ async function nLog(e){
     }catch(err){}
     startHeartbeat();
     startDayReportChecker();
+    injectDailyReportNavItem();
     return r;
   };
 })();
+
+// ── Sidebar item: "Daily Report" (admin only) + routing ─────────────────
+function injectDailyReportNavItem(){
+  if(!isAdmin()) return;
+  if(document.querySelector('[data-p="dailyreport"]')) return;
+  const anchor=document.querySelector('[data-p="backlog"]')||document.querySelector('[data-p="team"]')||document.querySelector('[data-p="dash"]');
+  if(!anchor) return;
+  const item=document.createElement('div');
+  item.className='ni';
+  item.id='nav-dr';
+  item.setAttribute('data-p','dailyreport');
+  item.innerHTML='<span class="ni-i">📋</span>Daily Report';
+  item.addEventListener('click',()=>nav('dailyreport',item));
+  anchor.insertAdjacentElement('afterend',item);
+}
+
+(function(){
+  const _origNav=nav;
+  nav=function(p,el,f){
+    if(p==='dailyreport'){
+      page='dailyreport'; _editId=null; window._navF=f||null;
+      const ptEl=document.getElementById('page-title-display'); if(ptEl) ptEl.textContent='Daily Report';
+      document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+      if(el) el.classList.add('on');
+      const tbT=document.getElementById('tb-t'); if(tbT) tbT.textContent='Daily Report';
+      const btn=document.getElementById('tb-btn'); if(btn) btn.style.display='none';
+      if(typeof closeND==='function') closeND();
+      if(typeof closeSP==='function') closeSP();
+      const c=document.getElementById('content');
+      if(c){ c.innerHTML=''; rDailyReportPage(c); }
+      return;
+    }
+    return _origNav(p,el,f);
+  };
+})();
+
+function dayBoundsISO(dateStr){
+  const start=new Date(dateStr+'T00:00:00');
+  const end=new Date(start); end.setDate(end.getDate()+1);
+  return{start:start.toISOString(),end:end.toISOString()};
+}
+
+async function fetchActivityForDate(dateStr){
+  try{
+    const {start,end}=dayBoundsISO(dateStr);
+    const data=await sbQ('activity_log',`created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&action=in.(Heartbeat,Login)&order=created_at.asc&limit=5000`);
+    if(!Array.isArray(data)) return null;
+    const byMember={};
+    data.forEach(e=>{
+      const key=e.actor_name||'Unknown';
+      (byMember[key]=byMember[key]||{heartbeats:[],logins:[]});
+      if(e.action==='Heartbeat') byMember[key].heartbeats.push(e.created_at);
+      else if(e.action==='Login') byMember[key].logins.push(e.created_at);
+    });
+    return byMember;
+  }catch(e){ return null; }
+}
+
+function rDailyReportPage(el){
+  if(!isAdmin()){
+    el.innerHTML=`<div class="empty"><div class="ei">🔒</div><div class="et">Admin only</div></div>`;
+    return;
+  }
+  const today=new Date().toISOString().split('T')[0];
+  const selDate=window._drSelDate||today;
+  window._drSelDate=selDate;
+
+  el.innerHTML=`<div class="loading-sc"><div class="loader"></div><div class="loading-tx">Loading daily report…</div></div>`;
+  renderDailyReportPage();
+}
+
+async function renderDailyReportPage(){
+  const el=document.getElementById('content');
+  if(!el||page!=='dailyreport') return;
+  const selDate=window._drSelDate||new Date().toISOString().split('T')[0];
+  const isToday=selDate===new Date().toISOString().split('T')[0];
+  const activity=await fetchActivityForDate(selDate);
+  if(!el||page!=='dailyreport') return; // guard against a nav change while fetch was in flight
+
+  if(!activity){
+    el.innerHTML=`<div class="empty">
+      <div class="ei">🗄</div>
+      <div class="et">Activity Log table not set up yet</div>
+      <div class="es" style="max-width:420px;margin:0 auto">Daily Report reads from the same <code>activity_log</code> table as the System Log. Run its setup SQL once, then refresh.</div>
+    </div>`;
+    return;
+  }
+
+  const members=DB.team;
+  const rows=members.map(m=>{
+    const a=activity[m.name]||{heartbeats:[],logins:[]};
+    const doneOnDate=DB.tasks.filter(t=>t.status==='Done'&&t.tsReviewed&&t.tsReviewed.slice(0,10)===selDate&&(t.assignedTo===m.id||(t.assignees||[]).includes(m.id))).length;
+    const task=memberTaskSummary(m.id,m.name);
+    return{m,activeMin:computeActiveMinutes(a.heartbeats),loggedIn:a.logins.length>0,firstLogin:a.logins[0]||null,doneOnDate,...task};
+  });
+
+  const loggedInCount=rows.filter(r=>r.loggedIn).length;
+  const avgActive=rows.filter(r=>r.loggedIn).length?Math.round(rows.filter(r=>r.loggedIn).reduce((s,r)=>s+r.activeMin,0)/rows.filter(r=>r.loggedIn).length):0;
+  const totalDone=rows.reduce((s,r)=>s+r.doneOnDate,0);
+
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:20px;font-weight:500">📋 Daily Report</div>
+      <div style="font-size:12px;color:var(--tx3)">Attendance and activity, per member${isToday?' · live, updates as the day goes on':''}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="date" id="dr-date" value="${selDate}" max="${new Date().toISOString().split('T')[0]}" onchange="window._drSelDate=this.value;renderDailyReportPage()" style="padding:8px 12px;background:var(--s2);border:1px solid transparent;border-radius:10px;font-size:12.5px;outline:none;font-family:var(--fn)">
+      ${!isToday?`<button class="btn bg2 bsm" onclick="window._drSelDate=new Date().toISOString().split('T')[0];renderDailyReportPage()">Today</button>`:`<button class="btn bg2 bsm" onclick="renderDailyReportPage()">🔄 Refresh</button>`}
+    </div>
+  </div>`;
+
+  h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Logged In</div>
+      <div style="font-size:28px;font-weight:500;color:var(--ac);line-height:1">${loggedInCount}<span style="font-size:15px;color:var(--tx3);font-weight:500"> / ${members.length}</span></div>
+    </div>
+    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Avg Time In System</div>
+      <div style="font-size:28px;font-weight:500;color:var(--p);line-height:1">${fmtMinutes(avgActive)}</div>
+    </div>
+    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tasks Completed</div>
+      <div style="font-size:28px;font-weight:500;color:var(--g);line-height:1">${totalDone}</div>
+    </div>
+  </div>`;
+
+  h+=`<div class="card">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input id="dr-search" placeholder="🔍 Filter members…" oninput="filterDailyReportRows()" style="flex:1;min-width:160px;padding:8px 14px;background:var(--s2);border:1px solid transparent;border-radius:100px;font-size:12.5px;outline:none">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--tx2);cursor:pointer">
+        <input type="checkbox" id="dr-only-absent" onchange="filterDailyReportRows()"> Not logged in only
+      </label>
+    </div>
+    <div id="dr-table-wrap"></div>
+  </div>`;
+
+  el.innerHTML=h;
+  window._drRows=rows;
+  window._drIsToday=isToday;
+  window.filterDailyReportRows();
+}
+
+window.filterDailyReportRows=function(){
+  const wrap=document.getElementById('dr-table-wrap');
+  if(!wrap) return;
+  const q=(document.getElementById('dr-search')?.value||'').toLowerCase();
+  const onlyAbsent=document.getElementById('dr-only-absent')?.checked;
+  let rows=window._drRows||[];
+  if(q) rows=rows.filter(r=>r.m.name.toLowerCase().includes(q));
+  if(onlyAbsent) rows=rows.filter(r=>!r.loggedIn);
+
+  if(!rows.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:20px;font-size:12px;color:var(--tx3)">No members match</div>`;
+    return;
+  }
+
+  const isToday=window._drIsToday;
+  wrap.innerHTML=`<div class="tw"><table><thead><tr>
+    <th>Member</th><th>Role</th><th>Logged In</th><th>First Login</th>${isToday?'<th>Active Tasks</th><th>Overdue</th>':''}<th>Completed</th><th>Time In System</th>
+  </tr></thead><tbody>
+    ${rows.map(r=>`<tr class="cl" onclick="openMemberDetail('${r.m.id}')">
+      <td><span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:${r.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">${r.m.av}</span><span style="font-size:13px;font-weight:600">${r.m.name}</span></span></td>
+      <td style="font-size:12px;color:var(--tx3)">${r.m.role||'—'}</td>
+      <td>${r.loggedIn?`<span style="background:var(--gb);color:var(--g);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✓ Yes</span>`:`<span style="background:var(--rb);color:var(--r);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✗ No</span>`}</td>
+      <td style="font-size:11.5px;color:var(--tx2);font-family:var(--fnm)">${r.firstLogin?new Date(r.firstLogin).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}):'—'}</td>
+      ${isToday?`<td style="font-size:13px;font-weight:600">${r.active}</td><td style="${r.overdue?'color:var(--r);font-weight:700':'color:var(--tx3)'}">${r.overdue||'—'}</td>`:''}
+      <td style="color:var(--g);font-weight:600">${r.doneOnDate||'—'}</td>
+      <td style="font-size:12px;color:var(--tx2);font-weight:600">${r.loggedIn?fmtMinutes(r.activeMin):'—'}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+};
 
 // ══════════════════════════════════════════════════════════════════════
 // DAY REPORT — per-member end-of-day activity summary (task status,
