@@ -1,4 +1,22 @@
 // §26 ── TASK PANEL ──────────────────────────────────────────────────────
+
+// Sums up every "paused" interval on a task (time spent waiting on a Help
+// Request, or manually parked On Hold) so that work-hour calculations only
+// count time actually worked, not idle waiting time. Derived entirely from
+// the task's own timeline — no schema changes required.
+function getTaskPausedHours(t){
+  const tl=t.timeline||[];
+  let total=0;
+  tl.filter(e=>e.type==='help_requested').forEach(o=>{
+    const closeEv=tl.find(e=>e.type==='help_received'&&e.helpTaskId===o.helpTaskId);
+    if(closeEv){ const h=hb(o.at,closeEv.at); if(h) total+=h; }
+  });
+  tl.filter(e=>e.type==='on_hold_start').forEach(o=>{
+    const closeEv=tl.find(e=>e.type==='on_hold_end'&&e.at>o.at);
+    if(closeEv){ const h=hb(o.at,closeEv.at); if(h) total+=h; }
+  });
+  return Math.round(total*100)/100;
+}
 window.openTask=(id)=>{
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const ass=DB.team.find(m=>m.id===t.assignedTo),rev=DB.team.find(m=>m.id===t.reviewer);
@@ -274,80 +292,6 @@ window.confirmHelpRequest=async()=>{
   CM('m-help');toast(`Help request sent to ${helper?.name||'?'} ✓`,'ok');openTask(_pendTask);updateBadges();
 };
 
-// When help task is approved — mark parent task back to In Progress + show popup
-const _origApprove=window.approveTask;
-window.approveTask=async(id)=>{
-  const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
-  if(t.type==='Help Request'&&t.parentTaskId){
-    const parentId=t.parentTaskId;
-    const parent=DB.tasks.find(tk=>tk.id===parentId);
-    const helperName=DB.team.find(m=>m.id===t.assignedTo)?.name||'?';
-    const parentTitle=parent?.title||'your task';
-
-    // 1. Update parent in Supabase FIRST
-    if(parent){
-      parent.status='In Progress';
-      parent.timeline=parent.timeline||[];
-      parent.timeline.push({
-        event:`✅ Help received from ${helperName} — continuing task`,
-        at:now(),by:CU.name,
-        desc:`Help accepted. ${helperName} submitted: ${t.what||'(no notes)'}`,
-        type:'help_received',helperName,helpTaskId:id
-      });
-      // Direct Supabase write — skips scheduleSync queue
-      await sbUpdate('tasks', parent.id, {status:'In Progress', timeline:parent.timeline});
-      const parentAss=DB.team.find(m=>m.id===parent.assignedTo);
-      if(parentAss&&parentAss.id!==CU.id)
-        sendNotif(parentAss.name,`Help from ${helperName} accepted ✓. "${parentTitle}" is back In Progress.`,'Help Accepted',parentTitle);
-    }
-
-    // 2. Approve the help task (marks it Done) — this triggers scheduleSync
-    await _origApprove(id);
-
-    // 3. After scheduleSync fires and re-loads tasks from Supabase,
-    //    the parent will already have status='In Progress' in Supabase,
-    //    so it loads back correctly. Re-stamp in memory immediately too.
-    if(parent) parent.status='In Progress';
-
-    // 4. Re-save parent once more after a short delay to beat any race condition
-    setTimeout(async()=>{
-      await sbUpdate('tasks', parentId, {status:'In Progress'});
-      const freshParent=DB.tasks.find(tk=>tk.id===parentId);
-      if(freshParent) freshParent.status='In Progress';
-    }, 3000);
-
-    closeSP();
-
-    // 5. Popup
-    const ov=document.createElement('div');
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center';
-    ov.innerHTML=`<div style="background:var(--s);border-radius:16px;padding:28px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px #0005">
-      <div style="font-size:42px;margin-bottom:12px">✅</div>
-      <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:8px">Help Accepted!</div>
-      <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:12px"><strong>${helperName}</strong>'s contribution has been accepted and logged on the timeline.</div>
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:20px;text-align:left">
-        <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;margin-bottom:4px">What's next</div>
-        <div style="font-size:12px;color:#15803d;line-height:1.8">1. <strong>"${parentTitle}"</strong> is now <strong>In Progress</strong><br>2. Continue working on it normally<br>3. Submit for review when done</div>
-      </div>
-      <button id="_help-continue-btn" style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">▶ Open My Task & Continue</button>
-      <button onclick="this.closest('.help-ov').remove()" style="width:100%;padding:10px;background:transparent;color:var(--tx3);border:none;font-size:12px;cursor:pointer;margin-top:4px">Dismiss</button>
-    </div>`;
-    ov.classList.add('help-ov');
-    ov.querySelector('#_help-continue-btn').onclick=async()=>{
-      ov.remove();
-      // Force fresh load so parent task shows correct In Progress status
-      await sbUpdate('tasks', parentId, {status:'In Progress'});
-      const freshParent=DB.tasks.find(tk=>tk.id===parentId);
-      if(freshParent) freshParent.status='In Progress';
-      openTask(parentId);
-    };
-    document.body.appendChild(ov);
-    updateBadges();
-    return;
-  }
-  return _origApprove(id);
-};
-
 // ── ADMIN DELETE FOR COMMS ───────────────────────────────────────────────
 window.delHrCom=async(id)=>{
   if(!isAdmin())return;
@@ -416,8 +360,11 @@ window.confirmStart=async()=>{
 
 window.reqSubmit=(id)=>{
   _pendTask=id;const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
-  // Auto-calculate time spent from tsStarted to now
-  const autoH=t.tsStarted?Math.round((new Date()-new Date(t.tsStarted))/36000)/100:null;
+  // Auto-calculate time spent from tsStarted to now, minus any time spent
+  // waiting on a Help Request or parked On Hold (that isn't "work" time)
+  const rawAutoH=t.tsStarted?hb(t.tsStarted,now()):null;
+  const pausedPreview=getTaskPausedHours(t);
+  const autoH=rawAutoH!==null?Math.max(0,Math.round((rawAutoH-pausedPreview)*100)/100):null;
   const estEl=document.getElementById('sub-est-val');
   const autoEl=document.getElementById('sub-auto-h');
   const noteEl=document.getElementById('sub-auto-note');
@@ -443,9 +390,12 @@ window.confirmSubmit=async()=>{
   const what=document.getElementById('sub-what').value.trim();
   if(!what){toast('Describe what was done — this becomes a documentation entry','bad');return;}
   const t=DB.tasks.find(tk=>tk.id===_pendTask);if(!t)return;
-  // Auto-calculate actual hours from tsStarted to now (same as hb)
+  // Auto-calculate actual hours from tsStarted to now, excluding any time
+  // spent waiting on a Help Request or parked On Hold
   const submitTime=now();
-  const actual=hb(t.tsStarted,submitTime);
+  const rawActual=hb(t.tsStarted,submitTime);
+  const pausedAtSubmit=getTaskPausedHours(t);
+  const actual=rawActual!==null?Math.max(0,Math.round((rawActual-pausedAtSubmit)*100)/100):null;
   t.actual=actual;
   t.what=what; t.tech=document.getElementById('sub-tech').value;
   t.status='Pending Review'; t.tsSubmitted=submitTime;
@@ -464,7 +414,11 @@ window.confirmSubmit=async()=>{
 window.approveTask=async(id)=>{
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   t.status='Done'; t.tsReviewed=now(); t.tsArchived=now();
-  const rh=hb(t.tsCreated,t.tsOpened),wh=hb(t.tsStarted,t.tsSubmitted),rvh=hb(t.tsSubmitted,t.tsReviewed),ch=hb(t.tsCreated,t.tsArchived);
+  const rh=hb(t.tsCreated,t.tsOpened);
+  const rawWh=hb(t.tsStarted,t.tsSubmitted);
+  const pausedAtApprove=getTaskPausedHours(t);
+  const wh=rawWh!==null?Math.max(0,Math.round((rawWh-pausedAtApprove)*100)/100):null;
+  const rvh=hb(t.tsSubmitted,t.tsReviewed),ch=hb(t.tsCreated,t.tsArchived);
   t.respH=rh; t.workH=wh; t.revH=rvh; t.cycleH=ch;
 
   // Create archive entry
@@ -516,6 +470,84 @@ window.approveTask=async(id)=>{
   if(page==='toreview')nav('toreview',document.querySelector('.ni.on'));
 };
 
+
+// When a Help Request task is approved, mark the parent task back to
+// In Progress and show a confirmation popup. Wrapping the base approveTask
+// like this (defined AFTER it) is required so _origApprove below actually
+// captures the real implementation — previously this wrapper was declared
+// BEFORE the base function, silently overwritten by it, so this entire
+// help-accept flow never actually ran.
+const _origApprove=window.approveTask;
+window.approveTask=async(id)=>{
+  const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
+  if(t.type==='Help Request'&&t.parentTaskId){
+    const parentId=t.parentTaskId;
+    const parent=DB.tasks.find(tk=>tk.id===parentId);
+    const helperName=DB.team.find(m=>m.id===t.assignedTo)?.name||'?';
+    const parentTitle=parent?.title||'your task';
+
+    // 1. Update parent in Supabase FIRST
+    if(parent){
+      parent.status='In Progress';
+      parent.timeline=parent.timeline||[];
+      parent.timeline.push({
+        event:`✅ Help received from ${helperName} — continuing task`,
+        at:now(),by:CU.name,
+        desc:`Help accepted. ${helperName} submitted: ${t.what||'(no notes)'}`,
+        type:'help_received',helperName,helpTaskId:id
+      });
+      // Direct Supabase write — skips scheduleSync queue
+      await sbUpdate('tasks', parent.id, {status:'In Progress', timeline:parent.timeline});
+      const parentAss=DB.team.find(m=>m.id===parent.assignedTo);
+      if(parentAss&&parentAss.id!==CU.id)
+        sendNotif(parentAss.name,`Help from ${helperName} accepted ✓. "${parentTitle}" is back In Progress.`,'Help Accepted',parentTitle);
+    }
+
+    // 2. Approve the help task itself (marks it Done, archives it) — this
+    //    now correctly calls the real base implementation above
+    await _origApprove(id);
+
+    // 3. Re-stamp parent status in memory (Supabase already updated in step 1)
+    if(parent) parent.status='In Progress';
+
+    // 4. Re-save parent once more after a short delay to beat any race condition
+    setTimeout(async()=>{
+      await sbUpdate('tasks', parentId, {status:'In Progress'});
+      const freshParent=DB.tasks.find(tk=>tk.id===parentId);
+      if(freshParent) freshParent.status='In Progress';
+    }, 3000);
+
+    closeSP();
+
+    // 5. Popup
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center';
+    ov.innerHTML=`<div style="background:var(--s);border-radius:16px;padding:28px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px #0005">
+      <div style="font-size:42px;margin-bottom:12px">✅</div>
+      <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:8px">Help Accepted!</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:12px"><strong>${helperName}</strong>'s contribution has been accepted and logged on the timeline.</div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:20px;text-align:left">
+        <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;margin-bottom:4px">What's next</div>
+        <div style="font-size:12px;color:#15803d;line-height:1.8">1. <strong>"${parentTitle}"</strong> is now <strong>In Progress</strong><br>2. Continue working on it normally<br>3. Submit for review when done</div>
+      </div>
+      <button id="_help-continue-btn" style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">▶ Open My Task & Continue</button>
+      <button onclick="this.closest('.help-ov').remove()" style="width:100%;padding:10px;background:transparent;color:var(--tx3);border:none;font-size:12px;cursor:pointer;margin-top:4px">Dismiss</button>
+    </div>`;
+    ov.classList.add('help-ov');
+    ov.querySelector('#_help-continue-btn').onclick=async()=>{
+      ov.remove();
+      await sbUpdate('tasks', parentId, {status:'In Progress'});
+      const freshParent=DB.tasks.find(tk=>tk.id===parentId);
+      if(freshParent) freshParent.status='In Progress';
+      openTask(parentId);
+    };
+    document.body.appendChild(ov);
+    updateBadges();
+    return;
+  }
+  return _origApprove(id);
+};
+
 window.rejectTask=async(id)=>{
   const reason=prompt('Rejection reason (be specific so the member knows what to fix):');if(!reason)return;
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
@@ -536,9 +568,45 @@ window.rejectTask=async(id)=>{
 window.chStatus=async(id,status)=>{
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const old=t.status; t.status=status;
-  if(status==='In Progress'&&!t.tsStarted)t.tsStarted=now();
+  t.timeline=t.timeline||[];
+
+  // Track manual On Hold periods so they're excluded from work-hour totals,
+  // the same way Help Request waiting time already is.
+  if(status==='On Hold'&&old!=='On Hold'){
+    t.timeline.push({event:'⏸ Manually put On Hold',at:now(),by:CU.name,type:'on_hold_start'});
+  }
+  if(old==='On Hold'&&status!=='On Hold'){
+    t.timeline.push({event:'▶ Resumed from On Hold',at:now(),by:CU.name,type:'on_hold_end'});
+  }
+
+  // Moving INTO "In Progress": if this is a genuine restart (task was
+  // previously finished/rejected/cancelled), reset ALL the downstream
+  // timestamps too — otherwise old tsSubmitted/tsReviewed/tsArchived values
+  // from a PRIOR completion cycle stay attached, and the next time this task
+  // is marked Done its workH/cycleH get computed against stale data from
+  // months ago instead of this rework cycle. This was producing wildly
+  // inflated durations whenever an admin manually reopened a finished task.
+  if(status==='In Progress'){
+    if(!t.tsStarted || ['Done','Cancelled','Rejected'].includes(old)){
+      t.tsStarted=now();
+      t.tsSubmitted=null; t.tsReviewed=null; t.tsArchived=null;
+    }
+  }
   if(status==='Pending Review'&&!t.tsSubmitted)t.tsSubmitted=now();
-  if(status==='Done'){t.tsReviewed=now();t.tsArchived=now();}
+  if(status==='Done'){
+    t.tsReviewed=now();
+    t.tsArchived=now();
+    // Recompute every duration fresh and consistently — same formula and
+    // paused-time exclusion used by the normal submit/approve flow, so a
+    // task marked Done via this admin override reports identical, correct
+    // numbers instead of silently-wrong ones.
+    const rawWh=hb(t.tsStarted,t.tsSubmitted);
+    const pausedH=getTaskPausedHours(t);
+    t.respH=hb(t.tsCreated,t.tsOpened);
+    t.workH=rawWh!==null?Math.max(0,Math.round((rawWh-pausedH)*100)/100):null;
+    t.revH=hb(t.tsSubmitted,t.tsReviewed);
+    t.cycleH=hb(t.tsCreated,t.tsArchived);
+  }
   logAction('Status Changed',`${CU.name}: "${t.title}" → ${status}`,'Info',t.title,'');
   await nUpdateTask(t);
   const assMbr=DB.team.find(m=>m.id===t.assignedTo);
