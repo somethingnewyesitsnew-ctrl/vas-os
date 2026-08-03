@@ -62,14 +62,22 @@ async function nUpdateTask(t){
 
 async function nMember(m, lid){
   showSaving(true);
-  const r = await sbInsert('team', {name:m.name,role:m.role,dept:m.dept,access:m.access||'Member',status:'Active',email:m.email||'',telegram:m.telegram||'',color:m.color,av:m.av,username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||''});
+  const r = await sbInsert('team', {name:m.name,role:m.role,dept:m.dept,access:m.access||'Member',status:'Active',email:m.email||'',telegram:m.telegram||'',color:m.color,av:m.av,username:m.username||m.name.toLowerCase().split(' ')[0],member_type:m.memberType||''});
+  if(r?.id){
+    m.id=r.id;
+    // Password is hashed server-side — never sent as plaintext in the row insert above.
+    await sbRpc('set_member_password',{p_member_id:r.id,p_new_password:m.password||'abohamood@1.'});
+  }
   showSaving(false);
-  if(r?.id) m.id=r.id;
   return r;
 }
 async function nMemberUpd(m){
   showSaving(true);
-  const r = await sbUpdate('team', m.id, {name:m.name,role:m.role,dept:m.dept,access:m.access,email:m.email||'',telegram:m.telegram||'',username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||''});
+  const r = await sbUpdate('team', m.id, {name:m.name,role:m.role,dept:m.dept,access:m.access,email:m.email||'',telegram:m.telegram||'',username:m.username||m.name.toLowerCase().split(' ')[0],member_type:m.memberType||''});
+  // Only touch the password if the admin explicitly typed a new one (see mf-newpassword in the member modal).
+  if(m.newPassword){
+    await sbRpc('set_member_password',{p_member_id:m.id,p_new_password:m.newPassword});
+  }
   showSaving(false); return r;
 }
 
