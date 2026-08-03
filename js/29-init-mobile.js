@@ -58,9 +58,7 @@ loadVersionBadge();
     const lbtn=document.getElementById('lbtn')||document.querySelector('.lbtn');
     if(lbtn){lbtn.textContent='Loading…';lbtn.disabled=true;}
     try{
-      // team_public has no password column — safe to fetch before login.
-      // Actual credential checking happens server-side in verify_login().
-      const r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team_public?order=name',{
+      const r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team?order=name',{
         headers:{
           'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws',
           'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws'
@@ -71,7 +69,7 @@ loadVersionBadge();
         if(team&&team.length){
           DB.team=team.map(m=>({...m,color:m.color||mkColor(m.name),av:m.av||mkAv(m.name),
             username:m.username||(m.name.toLowerCase().split(' ')[0]),
-            lastLogin:m.last_login||null}));
+            password:m.password||'abohamood@1.',lastLogin:m.last_login||null}));
           setSync('live','🔄 Refresh');
         } else {
           // Tables exist but empty — load demo team so login works
@@ -90,17 +88,18 @@ loadVersionBadge();
     if(lbtn){lbtn.textContent='Sign In';lbtn.disabled=false;}
     loginEl.style.display='flex';
 
-    // "Remember me" only remembers the username now — passwords are never
-    // stored in the browser. Pre-fill username and let the person type
-    // their password to finish signing in.
+    // Restore saved credentials (remember me) — never block login
     try{
       const saved=JSON.parse(localStorage.getItem('vas_remember')||'null');
-      if(saved?.u){
+      if(saved?.u&&saved?.p&&DB.team.length>0){
         const luEl=document.getElementById('lu');
+        const lpEl=document.getElementById('lp');
         const rem=document.getElementById('l-remember');
         if(luEl) luEl.value=saved.u;
+        if(lpEl) lpEl.value=saved.p;
         if(rem)  rem.checked=true;
-        document.getElementById('lp')?.focus();
+        // Only auto-login if team loaded successfully
+        doLogin();
       }
     }catch(e){
       localStorage.removeItem('vas_remember');

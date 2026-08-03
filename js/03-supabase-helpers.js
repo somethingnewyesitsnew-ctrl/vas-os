@@ -34,16 +34,6 @@ async function sbDelete(table, id){
   }catch(e){ console.error('sbDelete',e.message); return false; }
 }
 
-// Call a Postgres function (RPC). Used for anything that must be verified
-// or hashed server-side instead of in the browser (e.g. login, passwords).
-async function sbRpc(fn, args={}){
-  try{
-    const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(args)});
-    if(!r.ok){ const e=await r.json().catch(()=>({})); console.error('sbRpc',fn,r.status,e.message); return null; }
-    return await r.json();
-  }catch(e){ console.error('sbRpc',fn,e.message); return null; }
-}
-
 function setSync(s,l){
   const el=document.getElementById('nsync');
   el.className='nsync'+(s==='live'?' live':s==='err'?' err':s==='syncing'?' syncing':'');

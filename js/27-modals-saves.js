@@ -53,10 +53,7 @@ function openMemberModal(id){
     mtEl.innerHTML='<option value="">— None —</option>'+types.map(t=>`<option value="${t.name}" ${m?.memberType===t.name?'selected':''}>${t.name}</option>`).join('');
   }
   if(document.getElementById('mf-username'))document.getElementById('mf-username').value=m?.username||'';
-  // Password is never sent to the browser — field is always blank.
-  // Leaving it blank on edit keeps the existing password; typing a new
-  // value here (or on create) sets it via the set_member_password RPC.
-  if(document.getElementById('mf-password'))document.getElementById('mf-password').value='';
+  if(document.getElementById('mf-password'))document.getElementById('mf-password').value=m?.password||'abohamood@1.';
   document.getElementById('mf-telegram').value=m?.telegram||'';
   // Apply saved lists to role/dept selects
   try{
@@ -229,16 +226,13 @@ window.saveMember=async()=>{
     m.telegram=document.getElementById('mf-telegram').value.trim();
     m.av=mkAv(name);
     if(document.getElementById('mf-username')?.value) m.username=document.getElementById('mf-username').value.trim().toLowerCase();
-    // Blank = keep existing password. Only set newPassword when the admin typed one.
-    const newPw=document.getElementById('mf-password')?.value.trim();
-    m.newPassword=newPw||null;
-    logAction('Member Updated',`${CU.name} updated "${name}"${newPw?' (password reset)':''}`,'Info',name,'');
-    await nMemberUpd(m); CM('m-mbr'); toast(newPw?'Member updated — password reset ✓':'Member updated ✓','ok');
+    if(document.getElementById('mf-password')?.value) m.password=document.getElementById('mf-password').value;
+    logAction('Member Updated',`${CU.name} updated "${name}"`,'Info',name,'');
+    await nMemberUpd(m); CM('m-mbr'); toast('Member updated ✓','ok');
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   } else {
     const colors=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626'];
-    const enteredPw=document.getElementById('mf-password')?.value.trim();
-    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:'',password:enteredPw||'abohamood@1.'};
+    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
     DB.team.push(m);
     logAction('Member Added',`${CU.name} added "${name}"`,'Success',name,'');
     const r=await nMember(m,m.id); if(r?.url)NID[m.id]=r.url;

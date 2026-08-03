@@ -1,33 +1,35 @@
 // §08 ── AUTH — LOGIN / LOGOUT / NAV ────────────────────────────────────
-// Login is verified server-side via the verify_login() RPC — the browser
-// never sees anyone's password hash, and passwords are never compared
-// in client-side JS. See SUPABASE_MIGRATION_password_security.sql.
-async function doLogin(){
+function doLogin(){
   const uname=document.getElementById('lu').value.trim().toLowerCase();
   const pass=document.getElementById('lp').value;
   const remember=document.getElementById('l-remember')?.checked;
   const errEl=document.getElementById('lerr');
-  const lbtn=document.getElementById('lbtn');
   errEl.style.display='none';
   if(!uname){errEl.textContent='Enter your username';errEl.style.display='block';return;}
   if(!pass){errEl.textContent='Enter your password';errEl.style.display='block';return;}
 
-  if(lbtn){lbtn.textContent='Signing in…';lbtn.disabled=true;}
-  const result=await sbRpc('verify_login',{p_identifier:uname,p_password:pass});
-  if(lbtn){lbtn.textContent='Sign In';lbtn.disabled=false;}
-
-  const found=Array.isArray(result)?result[0]:result;
+  const found=DB.team.find(m=>{
+    const u=(m.username||'').toLowerCase();
+    const firstName=m.name.toLowerCase().split(' ')[0];
+    const fullName=m.name.toLowerCase().replace(/\s+/g,'');
+    return u===uname || firstName===uname || fullName===uname || m.name.toLowerCase()===uname;
+  });
   if(!found){
-    errEl.textContent='Incorrect username or password';
+    errEl.textContent=`No user found for "${uname}". Try your first name`;
     errEl.style.display='block';return;
   }
-  // Save username only if remember me checked — never the password
+  const correctPass=found.password||'abohamood@1.';
+  if(pass!==correctPass){
+    errEl.textContent='Incorrect password';
+    errEl.style.display='block';return;
+  }
+  // Save credentials if remember me checked
   if(remember){
-    localStorage.setItem('vas_remember',JSON.stringify({u:uname}));
+    localStorage.setItem('vas_remember',JSON.stringify({u:uname,p:pass}));
   } else {
     localStorage.removeItem('vas_remember');
   }
-  CU={...found,color:found.color||mkColor(found.name),av:found.av||mkAv(found.name)};
+  CU={...found};
   if(FULL.includes(CU.name)||AROLES.includes(CU.role))CU.access='Admin';
   // Record last login time on the team member record
   CU.lastLogin=new Date().toISOString();
