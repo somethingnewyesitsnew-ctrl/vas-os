@@ -281,7 +281,7 @@ function startReminderChecker(){
               assignedTo:CU.id,assignees:[CU.id],reviewer:null,
               reqBy:'System',createdBy:'System',due:todayStr,est:2,actual:null,
               operator:s.operator_id,service:null,
-              desc:`🧪 Service Test Task\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ Test Items:\n${checks}\n\nComplete all items in Service Tests and submit when done.`,
+              desc:`🧪 Service Test Task\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ Test Items:\n${checks}\n\nClick ▶ Start below — it'll take you straight into the checklist for each service. Mark each item working or fail, add a note if something's broken. Any fails you flag get turned into tasks automatically.`,
               link:'',recur:null,tsCreated:now(),tsOpened:null,tsStarted:null,
               tsSubmitted:null,tsReviewed:null,tsArchived:null,
               what:'',tech:'',rejReason:'',rejections:[],comments:[]

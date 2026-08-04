@@ -37,6 +37,30 @@ function deltaChip(curr,prev,invert){
   return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:${color};background:${bg};padding:2px 9px;border-radius:100px;white-space:nowrap">${arrow} ${Math.abs(pct)}%</span>`;
 }
 
+// Records today's KPI values once per calendar day and hands back the most
+// recent PRIOR day's values, so dashboard stat boxes can show a real
+// day-over-day trend via deltaChip() without needing a server-side
+// history table. Keeps 14 days, all in localStorage (per-browser, not
+// synced across devices — fine for a glance-able trend indicator).
+function dashSnapshot(values){
+  const KEY='vas_kpi_hist';
+  let hist={};
+  try{ hist=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
+  const today=new Date().toISOString().split('T')[0];
+  const priorDate=Object.keys(hist).filter(d=>d<today).sort().pop();
+  const prior=priorDate?hist[priorDate]:null;
+  hist[today]={...(hist[today]||{}),...values};
+  const allDates=Object.keys(hist).sort();
+  if(allDates.length>14) allDates.slice(0,allDates.length-14).forEach(d=>delete hist[d]);
+  try{ localStorage.setItem(KEY,JSON.stringify(hist)); }catch(e){}
+  return prior; // {key:value,...} from the last day we had data, or null the first time
+}
+// dchip(): renders deltaChip only once we actually have a prior-day value to compare against
+function dchip(prior,key,curr,invert){
+  if(!prior||prior[key]===undefined||prior[key]===null) return '';
+  return deltaChip(curr,prior[key],invert);
+}
+
 function icon(name,size=14){
   const paths={
     building:'<path d="M3 21V7l7-4v18M14 21V11l7 4v6"/><path d="M9 9h.01M9 13h.01M9 17h.01"/>',
@@ -477,9 +501,6 @@ function rDash(el){
     }
     const {grade,color,icon,note}=perfNote(myRate,myOverdue.length,myRejected,mine.length,doneThisWeek.length);
 
-    // ── DAY REPORT (shown from 4:30pm onward each day) ──────────────
-    h+=`<div id="day-report-card"></div>`;
-
     // ── STAT CARDS ────────────────────────────────────────────────
     h+=`<div class="sg" style="margin-bottom:14px;overflow:hidden">
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div></div>
@@ -608,7 +629,6 @@ function rDash(el){
     }
 
     el.innerHTML=h;
-    loadDayReportCard();
     return;
   }
 
@@ -623,55 +643,74 @@ function rDash(el){
   const onHoldProj=DB.projects.filter(p=>p.status==='On Hold').length;
   const projHealth=DB.projects.length?Math.round((completedProj*1+activeProj*0.5)/Math.max(DB.projects.length,1)*100):null;
 
+  // Day-over-day trend — compares today's values against the most recent
+  // prior day we have a snapshot for (see dashSnapshot()).
+  const priorSnap=dashSnapshot({
+    completionRate:taskCompletionRate, overdueRate, projHealth, serviceHealth,
+    total:allTasks.length, newT:newTasks.length, inProgress:inProg.length,
+    review:pendingRev.length, done:doneTasks.length, rejected:rejected.length,
+    overdueCount:overdue.length,
+  });
+
   // ROW 1: KPI Cards
   h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
     <div onclick="navTo('alltasks')" style="background:linear-gradient(135deg,#1e40af,#2563eb);border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">📋</div>
-      <div style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Completion Rate</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+        <div style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.07em">Completion Rate</div>
+        ${dchip(priorSnap,'completionRate',taskCompletionRate,false)}
+      </div>
       <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${taskCompletionRate}%</div>
       <div style="font-size:12px;color:#bfdbfe">${doneTasks.length} done · ${activeTasks.length} active</div>
       <div style="height:3px;background:rgba(255,255,255,.2);border-radius:2px;margin-top:10px"><div style="height:100%;width:${taskCompletionRate}%;background:#60a5fa;border-radius:2px"></div></div>
     </div>
     <div onclick="navTo('alltasks','Overdue')" style="background:linear-gradient(135deg,${overdueRate>20?'#991b1b,#dc2626':overdueRate>5?'#92400e,#d97706':'#14532d,#16a34a'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">⚠</div>
-      <div style="font-size:11px;font-weight:700;color:${overdueRate>20?'#fca5a5':overdueRate>5?'#fcd34d':'#86efac'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Overdue Rate</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+        <div style="font-size:11px;font-weight:700;color:${overdueRate>20?'#fca5a5':overdueRate>5?'#fcd34d':'#86efac'};text-transform:uppercase;letter-spacing:.07em">Overdue Rate</div>
+        ${dchip(priorSnap,'overdueRate',overdueRate,true)}
+      </div>
       <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${overdueRate}%</div>
       <div style="font-size:12px;color:rgba(255,255,255,.8)">${overdue.length} tasks overdue</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${overdueRate<=5?'On Track':overdueRate<=20?'Watch':'Critical'}</div>
     </div>
     <div onclick="navTo('projects')" style="background:linear-gradient(135deg,${projHealth===null?'#374151,#4b5563':projHealth>=70?'#14532d,#15803d':projHealth>=40?'#92400e,#b45309':'#7f1d1d,#dc2626'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">◉</div>
-      <div style="font-size:11px;font-weight:700;color:${projHealth===null?'#9ca3af':projHealth>=70?'#86efac':projHealth>=40?'#fcd34d':'#fca5a5'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Projects Health</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+        <div style="font-size:11px;font-weight:700;color:${projHealth===null?'#9ca3af':projHealth>=70?'#86efac':projHealth>=40?'#fcd34d':'#fca5a5'};text-transform:uppercase;letter-spacing:.07em">Projects Health</div>
+        ${projHealth===null?'':dchip(priorSnap,'projHealth',projHealth,false)}
+      </div>
       <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${projHealth!==null?projHealth+'%':'—'}</div>
       <div style="font-size:12px;color:rgba(255,255,255,.8)">${activeProj} active · ${completedProj} done</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${projHealth===null?'No projects':projHealth>=70?'Healthy':projHealth>=40?'Monitor':'Attention'}</div>
     </div>
     <div onclick="navTo('svctest')" style="background:linear-gradient(135deg,${serviceHealth===null?'#374151,#4b5563':serviceHealth>=80?'#14532d,#15803d':serviceHealth>=60?'#92400e,#b45309':'#7f1d1d,#dc2626'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">🧪</div>
-      <div style="font-size:11px;font-weight:700;color:${serviceHealth===null?'#9ca3af':serviceHealth>=80?'#86efac':serviceHealth>=60?'#fcd34d':'#fca5a5'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Service Health</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+        <div style="font-size:11px;font-weight:700;color:${serviceHealth===null?'#9ca3af':serviceHealth>=80?'#86efac':serviceHealth>=60?'#fcd34d':'#fca5a5'};text-transform:uppercase;letter-spacing:.07em">Service Health</div>
+        ${serviceHealth===null?'':dchip(priorSnap,'serviceHealth',serviceHealth,false)}
+      </div>
       <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${serviceHealth!==null?serviceHealth+'%':'—'}</div>
       <div style="font-size:12px;color:rgba(255,255,255,.8)">${doneChecks.length} checks · ${passChecks.length} passed</div>
       <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${serviceHealth===null?'No tests':serviceHealth>=80?'All Good':serviceHealth>=60?'Some Issues':'Failing'}</div>
     </div>
   </div>`;
 
-  // ── TEAM DAY REPORT (admin — all members, end-of-day activity) ──────
-  h+=`<div id="team-day-report" style="margin-bottom:14px"></div>`;
-
   // ROW 2: Task Status (8 boxes — everything)
   h+=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-bottom:14px">
     ${[
-      {l:'Total',v:allTasks.length,c:'#64748b',click:"navTo('alltasks')"},
-      {l:'New',v:newTasks.length,c:'#94a3b8',click:"navTo('alltasks','New')"},
-      {l:'In Progress',v:inProg.length,c:'#2563eb',click:"navTo('alltasks','In Progress')"},
-      {l:'Review',v:pendingRev.length,c:'#7c3aed',click:"navTo('toreview')"},
-      {l:'Done',v:doneTasks.length,c:'#15803d',click:"navTo('alltasks','Done')"},
-      {l:'Rejected',v:rejected.length,c:'#dc2626',click:"navTo('alltasks','Rejected')"},
-      {l:'Overdue',v:overdue.length,c:overdue.length?'#dc2626':'#15803d',click:"navTo('alltasks','Overdue')"},
-      {l:'Done/7d',v:recentDone,c:'#0891b2',click:"navTo('alltasks','Done')"},
-    ].map(({l,v,c,click})=>`<div onclick="${click}" style="background:var(--s);border:1px solid var(--bd);border-top:3px solid ${c};border-radius:9px;padding:11px 8px;cursor:pointer;text-align:center;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='var(--shmd)'" onmouseleave="this.style.boxShadow=''">
+      {l:'Total',v:allTasks.length,c:'#64748b',click:"navTo('alltasks')",k:'total'},
+      {l:'New',v:newTasks.length,c:'#94a3b8',click:"navTo('alltasks','New')",k:'newT'},
+      {l:'In Progress',v:inProg.length,c:'#2563eb',click:"navTo('alltasks','In Progress')",k:'inProgress'},
+      {l:'Review',v:pendingRev.length,c:'#7c3aed',click:"navTo('toreview')",k:'review'},
+      {l:'Done',v:doneTasks.length,c:'#15803d',click:"navTo('alltasks','Done')",k:'done'},
+      {l:'Rejected',v:rejected.length,c:'#dc2626',click:"navTo('alltasks','Rejected')",k:'rejected'},
+      {l:'Overdue',v:overdue.length,c:overdue.length?'#dc2626':'#15803d',click:"navTo('alltasks','Overdue')",k:'overdueCount',invert:true},
+      {l:'Done/7d',v:recentDone,c:'#0891b2',click:"navTo('alltasks','Done')",k:null},
+    ].map(({l,v,c,click,k,invert})=>`<div onclick="${click}" style="background:var(--s);border:1px solid var(--bd);border-top:3px solid ${c};border-radius:9px;padding:11px 8px;cursor:pointer;text-align:center;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='var(--shmd)'" onmouseleave="this.style.boxShadow=''">
       <div style="font-size:22px;font-weight:800;color:${c};line-height:1;margin-bottom:3px">${v}</div>
-      <div style="font-size:10px;font-weight:600;color:var(--tx3)">${l}</div>
+      <div style="font-size:10px;font-weight:600;color:var(--tx3);margin-bottom:4px">${l}</div>
+      <div style="min-height:16px">${k?dchip(priorSnap,k,v,!!invert):''}</div>
     </div>`).join('')}
   </div>`;
 
@@ -1091,7 +1130,6 @@ function rDash(el){
 
   el.innerHTML=h;
   loadDashLoginWidget();
-  loadTeamDayReport();
 }
 
 async function loadDashLoginWidget(){
@@ -1285,397 +1323,9 @@ async function nLog(e){
         if(others.length) toast(`⚠ This device previously logged in as: ${others.join(', ')}`,'bad',9000);
       }
     }catch(err){}
-    startHeartbeat();
-    startDayReportChecker();
-    injectDailyReportNavItem();
     return r;
   };
 })();
-
-// ── Sidebar item: "Daily Report" (admin only) + routing ─────────────────
-function injectDailyReportNavItem(){
-  if(!isAdmin()) return;
-  if(document.querySelector('[data-p="dailyreport"]')) return;
-  const anchor=document.querySelector('[data-p="backlog"]')||document.querySelector('[data-p="team"]')||document.querySelector('[data-p="dash"]');
-  if(!anchor) return;
-  const item=document.createElement('div');
-  item.className='ni';
-  item.id='nav-dr';
-  item.setAttribute('data-p','dailyreport');
-  item.innerHTML='<span class="ni-i">📋</span>Daily Report';
-  item.addEventListener('click',()=>nav('dailyreport',item));
-  anchor.insertAdjacentElement('afterend',item);
-}
-
-(function(){
-  const _origNav=nav;
-  nav=function(p,el,f){
-    if(p==='dailyreport'){
-      page='dailyreport'; _editId=null; window._navF=f||null;
-      const ptEl=document.getElementById('page-title-display'); if(ptEl) ptEl.textContent='Daily Report';
-      document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-      if(el) el.classList.add('on');
-      const tbT=document.getElementById('tb-t'); if(tbT) tbT.textContent='Daily Report';
-      const btn=document.getElementById('tb-btn'); if(btn) btn.style.display='none';
-      if(typeof closeND==='function') closeND();
-      if(typeof closeSP==='function') closeSP();
-      const c=document.getElementById('content');
-      if(c){ c.innerHTML=''; rDailyReportPage(c); }
-      return;
-    }
-    return _origNav(p,el,f);
-  };
-})();
-
-function dayBoundsISO(dateStr){
-  const start=new Date(dateStr+'T00:00:00');
-  const end=new Date(start); end.setDate(end.getDate()+1);
-  return{start:start.toISOString(),end:end.toISOString()};
-}
-
-async function fetchActivityForDate(dateStr){
-  try{
-    const {start,end}=dayBoundsISO(dateStr);
-    const data=await sbQ('activity_log',`created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&action=in.(Heartbeat,Login)&order=created_at.asc&limit=5000`);
-    if(!Array.isArray(data)) return null;
-    const byMember={};
-    data.forEach(e=>{
-      const key=e.actor_name||'Unknown';
-      (byMember[key]=byMember[key]||{heartbeats:[],logins:[]});
-      if(e.action==='Heartbeat') byMember[key].heartbeats.push(e.created_at);
-      else if(e.action==='Login') byMember[key].logins.push(e.created_at);
-    });
-    return byMember;
-  }catch(e){ return null; }
-}
-
-function rDailyReportPage(el){
-  if(!isAdmin()){
-    el.innerHTML=`<div class="empty"><div class="ei">🔒</div><div class="et">Admin only</div></div>`;
-    return;
-  }
-  const today=new Date().toISOString().split('T')[0];
-  const selDate=window._drSelDate||today;
-  window._drSelDate=selDate;
-
-  el.innerHTML=`<div class="loading-sc"><div class="loader"></div><div class="loading-tx">Loading daily report…</div></div>`;
-  renderDailyReportPage();
-}
-
-async function renderDailyReportPage(){
-  const el=document.getElementById('content');
-  if(!el||page!=='dailyreport') return;
-  const selDate=window._drSelDate||new Date().toISOString().split('T')[0];
-  const isToday=selDate===new Date().toISOString().split('T')[0];
-  const activity=await fetchActivityForDate(selDate);
-  if(!el||page!=='dailyreport') return; // guard against a nav change while fetch was in flight
-
-  if(!activity){
-    el.innerHTML=`<div class="empty">
-      <div class="ei">🗄</div>
-      <div class="et">Activity Log table not set up yet</div>
-      <div class="es" style="max-width:420px;margin:0 auto">Daily Report reads from the same <code>activity_log</code> table as the System Log. Run its setup SQL once, then refresh.</div>
-    </div>`;
-    return;
-  }
-
-  const members=DB.team;
-  const rows=members.map(m=>{
-    const a=activity[m.name]||{heartbeats:[],logins:[]};
-    const doneOnDate=DB.tasks.filter(t=>t.status==='Done'&&t.tsReviewed&&t.tsReviewed.slice(0,10)===selDate&&(t.assignedTo===m.id||(t.assignees||[]).includes(m.id))).length;
-    const task=memberTaskSummary(m.id,m.name);
-    return{m,activeMin:computeActiveMinutes(a.heartbeats),loggedIn:a.logins.length>0,firstLogin:a.logins[0]||null,doneOnDate,...task};
-  });
-
-  const loggedInCount=rows.filter(r=>r.loggedIn).length;
-  const avgActive=rows.filter(r=>r.loggedIn).length?Math.round(rows.filter(r=>r.loggedIn).reduce((s,r)=>s+r.activeMin,0)/rows.filter(r=>r.loggedIn).length):0;
-  const totalDone=rows.reduce((s,r)=>s+r.doneOnDate,0);
-
-  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <div>
-      <div style="font-size:20px;font-weight:500">📋 Daily Report</div>
-      <div style="font-size:12px;color:var(--tx3)">Attendance and activity, per member${isToday?' · live, updates as the day goes on':''}</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input type="date" id="dr-date" value="${selDate}" max="${new Date().toISOString().split('T')[0]}" onchange="window._drSelDate=this.value;renderDailyReportPage()" style="padding:8px 12px;background:var(--s2);border:1px solid transparent;border-radius:10px;font-size:12.5px;outline:none;font-family:var(--fn)">
-      ${!isToday?`<button class="btn bg2 bsm" onclick="window._drSelDate=new Date().toISOString().split('T')[0];renderDailyReportPage()">Today</button>`:`<button class="btn bg2 bsm" onclick="renderDailyReportPage()">🔄 Refresh</button>`}
-    </div>
-  </div>`;
-
-  h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Logged In</div>
-      <div style="font-size:28px;font-weight:500;color:var(--ac);line-height:1">${loggedInCount}<span style="font-size:15px;color:var(--tx3);font-weight:500"> / ${members.length}</span></div>
-    </div>
-    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Avg Time In System</div>
-      <div style="font-size:28px;font-weight:500;color:var(--p);line-height:1">${fmtMinutes(avgActive)}</div>
-    </div>
-    <div style="background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tasks Completed</div>
-      <div style="font-size:28px;font-weight:500;color:var(--g);line-height:1">${totalDone}</div>
-    </div>
-  </div>`;
-
-  h+=`<div class="card">
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input id="dr-search" placeholder="🔍 Filter members…" oninput="filterDailyReportRows()" style="flex:1;min-width:160px;padding:8px 14px;background:var(--s2);border:1px solid transparent;border-radius:100px;font-size:12.5px;outline:none">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--tx2);cursor:pointer">
-        <input type="checkbox" id="dr-only-absent" onchange="filterDailyReportRows()"> Not logged in only
-      </label>
-    </div>
-    <div id="dr-table-wrap"></div>
-  </div>`;
-
-  el.innerHTML=h;
-  window._drRows=rows;
-  window._drIsToday=isToday;
-  window.filterDailyReportRows();
-}
-
-window.filterDailyReportRows=function(){
-  const wrap=document.getElementById('dr-table-wrap');
-  if(!wrap) return;
-  const q=(document.getElementById('dr-search')?.value||'').toLowerCase();
-  const onlyAbsent=document.getElementById('dr-only-absent')?.checked;
-  let rows=window._drRows||[];
-  if(q) rows=rows.filter(r=>r.m.name.toLowerCase().includes(q));
-  if(onlyAbsent) rows=rows.filter(r=>!r.loggedIn);
-
-  if(!rows.length){
-    wrap.innerHTML=`<div style="text-align:center;padding:20px;font-size:12px;color:var(--tx3)">No members match</div>`;
-    return;
-  }
-
-  const isToday=window._drIsToday;
-  wrap.innerHTML=`<div class="tw"><table><thead><tr>
-    <th>Member</th><th>Role</th><th>Logged In</th><th>First Login</th>${isToday?'<th>Active Tasks</th><th>Overdue</th>':''}<th>Completed</th><th>Time In System</th>
-  </tr></thead><tbody>
-    ${rows.map(r=>`<tr class="cl" onclick="openMemberDetail('${r.m.id}')">
-      <td><span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:${r.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">${r.m.av}</span><span style="font-size:13px;font-weight:600">${r.m.name}</span></span></td>
-      <td style="font-size:12px;color:var(--tx3)">${r.m.role||'—'}</td>
-      <td>${r.loggedIn?`<span style="background:var(--gb);color:var(--g);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✓ Yes</span>`:`<span style="background:var(--rb);color:var(--r);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✗ No</span>`}</td>
-      <td style="font-size:11.5px;color:var(--tx2);font-family:var(--fnm)">${r.firstLogin?new Date(r.firstLogin).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}):'—'}</td>
-      ${isToday?`<td style="font-size:13px;font-weight:600">${r.active}</td><td style="${r.overdue?'color:var(--r);font-weight:700':'color:var(--tx3)'}">${r.overdue||'—'}</td>`:''}
-      <td style="color:var(--g);font-weight:600">${r.doneOnDate||'—'}</td>
-      <td style="font-size:12px;color:var(--tx2);font-weight:600">${r.loggedIn?fmtMinutes(r.activeMin):'—'}</td>
-    </tr>`).join('')}
-  </tbody></table></div>`;
-};
-
-// ══════════════════════════════════════════════════════════════════════
-// DAY REPORT — per-member end-of-day activity summary (task status,
-// time last logged in, time spent in the system today), visible on the
-// member's own dashboard from 4:30pm onward, and on the admin dashboard
-// for every member at any time. Built entirely on top of the activity_log
-// table already set up for the System Log — no further setup needed.
-// ══════════════════════════════════════════════════════════════════════
-const HEARTBEAT_MIN=3;          // how often we ping while the tab is visible
-const DAY_REPORT_CUTOFF_H=16;   // 4:30pm
-const DAY_REPORT_CUTOFF_M=30;
-
-let _heartbeatTimer=null;
-function startHeartbeat(){
-  if(_heartbeatTimer||!CU) return;
-  const ping=async()=>{
-    if(document.visibilityState!=='visible'||!CU) return;
-    try{
-      await fetch(`${SB_URL}/rest/v1/activity_log`,{
-        method:'POST',
-        headers:{...SB_HEADERS,'Prefer':'return=minimal'},
-        body:JSON.stringify({
-          actor_id:CU.id||'', actor_name:CU.name||'', actor_role:CU.role||'',
-          action:'Heartbeat', event:'', target:'', details:'',
-          severity:'Info', device_id:getDeviceId(), user_agent:navigator.userAgent, meta:{}
-        })
-      });
-    }catch(e){ /* silent — table may not be set up yet */ }
-  };
-  ping();
-  _heartbeatTimer=setInterval(ping,HEARTBEAT_MIN*60*1000);
-}
-
-function isPastDayReportCutoff(){
-  const n=new Date();
-  return n.getHours()>DAY_REPORT_CUTOFF_H || (n.getHours()===DAY_REPORT_CUTOFF_H && n.getMinutes()>=DAY_REPORT_CUTOFF_M);
-}
-
-// One toast the moment 4:30pm passes while the tab is open, so members
-// don't have to be looking at the dashboard already to notice.
-let _dayReportCheckerTimer=null;
-function startDayReportChecker(){
-  if(_dayReportCheckerTimer) return;
-  const key='vas_day_report_shown_'+(CU?.id||'guest')+'_'+new Date().toISOString().split('T')[0];
-  const check=()=>{
-    if(isPastDayReportCutoff() && !localStorage.getItem(key)){
-      localStorage.setItem(key,'1');
-      toast('📋 Your Day Report is ready — check your dashboard','inf',7000);
-      if(page==='dash') nav('dash',document.querySelector('[data-p="dash"]'));
-    }
-  };
-  check();
-  _dayReportCheckerTimer=setInterval(check,60000);
-}
-
-function todayStartISO(){
-  const d=new Date(); d.setHours(0,0,0,0);
-  return d.toISOString();
-}
-
-// Sum up real "active" minutes from a sorted list of heartbeat timestamps —
-// gaps larger than 2x the heartbeat interval mean the tab was closed/hidden
-// and don't count as active time.
-function computeActiveMinutes(timestamps){
-  if(!timestamps.length) return 0;
-  let total=Math.min(HEARTBEAT_MIN,5);
-  for(let i=1;i<timestamps.length;i++){
-    const gapMin=(new Date(timestamps[i])-new Date(timestamps[i-1]))/60000;
-    if(gapMin>0 && gapMin<=HEARTBEAT_MIN*2) total+=gapMin;
-  }
-  return Math.round(total);
-}
-
-function fmtMinutes(min){
-  if(min<1) return 'less than a minute';
-  if(min<60) return min+'m';
-  const h=Math.floor(min/60), m=min%60;
-  return h+'h'+(m?' '+m+'m':'');
-}
-
-// One shared fetch: every Login + Heartbeat event across the WHOLE team
-// since midnight today, grouped by member — avoids one query per member.
-async function fetchTodayActivityAll(){
-  try{
-    const since=todayStartISO();
-    const data=await sbQ('activity_log',`created_at=gte.${encodeURIComponent(since)}&action=in.(Heartbeat,Login)&order=created_at.asc&limit=5000`);
-    if(!Array.isArray(data)) return null;
-    const byMember={};
-    data.forEach(e=>{
-      const key=e.actor_name||'Unknown';
-      (byMember[key]=byMember[key]||{heartbeats:[],logins:[]});
-      if(e.action==='Heartbeat') byMember[key].heartbeats.push(e.created_at);
-      else if(e.action==='Login') byMember[key].logins.push(e.created_at);
-    });
-    return byMember;
-  }catch(e){ return null; }
-}
-
-// Most recent Login for a member strictly BEFORE today — i.e. their last
-// session prior to today's, so we can say "you were last active on...".
-async function fetchLastLoginBeforeToday(memberName){
-  try{
-    const since=todayStartISO();
-    const rows=await sbQ('activity_log',`action=eq.Login&actor_name=eq.${encodeURIComponent(memberName)}&created_at=lt.${encodeURIComponent(since)}&order=created_at.desc&limit=1`);
-    return Array.isArray(rows)&&rows.length?rows[0].created_at:null;
-  }catch(e){ return null; }
-}
-
-function memberTaskSummary(memberId,memberName){
-  const mine=DB.tasks.filter(t=>t.assignedTo===memberId||(t.assignees||[]).includes(memberId)||(t.assignedTo||'').toLowerCase()===(memberName||'').toLowerCase());
-  const active=mine.filter(t=>!['Done','Cancelled'].includes(t.status));
-  const overdue=active.filter(t=>getDueStatus(t).key==='overdue');
-  const doneToday=mine.filter(t=>t.status==='Done'&&t.tsReviewed&&t.tsReviewed.slice(0,10)===new Date().toISOString().split('T')[0]);
-  return{active:active.length,overdue:overdue.length,doneToday:doneToday.length};
-}
-
-async function loadDayReportCard(){
-  const box=document.getElementById('day-report-card');
-  if(!box||!CU) return;
-  if(!isPastDayReportCutoff()){ box.innerHTML=''; return; }
-  try{
-    const [allActivity,lastLoginBefore]=await Promise.all([
-      fetchTodayActivityAll(),
-      fetchLastLoginBeforeToday(CU.name)
-    ]);
-    if(!allActivity){ box.innerHTML=''; return; }
-    const mine=allActivity[CU.name]||{heartbeats:[],logins:[]};
-    const activeMin=computeActiveMinutes(mine.heartbeats);
-    const task=memberTaskSummary(CU.id,CU.name);
-    const lastLoginText=lastLoginBefore?fr(lastLoginBefore):null;
-
-    box.innerHTML=`<div style="background:linear-gradient(135deg,#1A2B6B,#3762E4);border-radius:16px;padding:18px 20px;margin-bottom:14px;color:#fff">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:18px">📋</span>
-        <span style="font-size:14px;font-weight:700">Day Report — ${CU.name}</span>
-        <span style="margin-left:auto;font-size:10.5px;color:#C7D6FF;font-weight:600">as of ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px">
-          <div style="font-size:10px;font-weight:700;color:#C7D6FF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Task Status</div>
-          <div style="font-size:13px;font-weight:600">${task.active} active${task.overdue?` · <span style="color:#FCA5A5">${task.overdue} overdue</span>`:''}</div>
-          <div style="font-size:11px;color:#C7D6FF;margin-top:2px">${task.doneToday} completed today</div>
-        </div>
-        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px">
-          <div style="font-size:10px;font-weight:700;color:#C7D6FF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Previous Login</div>
-          <div style="font-size:13px;font-weight:600">${lastLoginText?lastLoginText:'No earlier session found'}</div>
-        </div>
-        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px">
-          <div style="font-size:10px;font-weight:700;color:#C7D6FF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Time In System Today</div>
-          <div style="font-size:13px;font-weight:600">${fmtMinutes(activeMin)}</div>
-        </div>
-      </div>
-    </div>`;
-  }catch(err){ box.innerHTML=''; }
-}
-
-async function loadTeamDayReport(){
-  const box=document.getElementById('team-day-report');
-  if(!box) return;
-  try{
-    const allActivity=await fetchTodayActivityAll();
-    if(!allActivity){
-      box.innerHTML='';
-      return;
-    }
-    const members=DB.team;
-    const rowsData=members.map(m=>{
-      const a=allActivity[m.name]||{heartbeats:[],logins:[]};
-      const task=memberTaskSummary(m.id,m.name);
-      return{m,activeMin:computeActiveMinutes(a.heartbeats),loggedInToday:a.logins.length>0,...task};
-    });
-
-    box.innerHTML=`<div class="card">
-      <div class="ct"><span class="ct-t">📋 Team Day Report</span><span style="font-size:11px;color:var(--tx3);font-weight:500">today's activity, per member</span></div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input id="tdr-search" placeholder="🔍 Filter members…" oninput="renderTeamDayReportRows()" style="flex:1;min-width:160px;padding:7px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;font-size:12px;outline:none">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);cursor:pointer">
-          <input type="checkbox" id="tdr-only-inactive" onchange="renderTeamDayReportRows()"> Not logged in today only
-        </label>
-      </div>
-      <div id="tdr-table-wrap"></div>
-    </div>`;
-
-    window._tdrRows=rowsData;
-    window.renderTeamDayReportRows=function(){
-      const wrap=document.getElementById('tdr-table-wrap');
-      if(!wrap) return;
-      const q=(document.getElementById('tdr-search')?.value||'').toLowerCase();
-      const onlyInactive=document.getElementById('tdr-only-inactive')?.checked;
-      let rows=window._tdrRows||[];
-      if(q) rows=rows.filter(r=>r.m.name.toLowerCase().includes(q));
-      if(onlyInactive) rows=rows.filter(r=>!r.loggedInToday);
-
-      if(!rows.length){
-        wrap.innerHTML=`<div style="text-align:center;padding:16px;font-size:12px;color:var(--tx3)">No members match</div>`;
-        return;
-      }
-
-      wrap.innerHTML=`<div class="tw"><table><thead><tr>
-        <th>Member</th><th>Logged In Today</th><th>Active Tasks</th><th>Overdue</th><th>Done Today</th><th>Time In System</th>
-      </tr></thead><tbody>
-        ${rows.map(r=>`<tr class="cl" onclick="openMemberDetail('${r.m.id}')">
-          <td><span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:${r.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">${r.m.av}</span><span style="font-size:13px;font-weight:600">${r.m.name}</span></span></td>
-          <td>${r.loggedInToday?`<span style="background:var(--gb);color:var(--g);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✓ Yes</span>`:`<span style="background:var(--rb);color:var(--r);font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">✗ No</span>`}</td>
-          <td style="font-size:13px;font-weight:600">${r.active}</td>
-          <td style="${r.overdue?'color:var(--r);font-weight:700':'color:var(--tx3)'}">${r.overdue||'—'}</td>
-          <td style="color:var(--g);font-weight:600">${r.doneToday||'—'}</td>
-          <td style="font-size:12px;color:var(--tx2);font-weight:600">${r.loggedInToday?fmtMinutes(r.activeMin):'—'}</td>
-        </tr>`).join('')}
-      </tbody></table></div>`;
-    };
-    window.renderTeamDayReportRows();
-  }catch(err){ if(box) box.innerHTML=''; }
-}
 
 /* ════════════════════════════════════════════════════════════════════
    ONE-TIME SUPABASE SETUP — run this once in your Supabase SQL editor

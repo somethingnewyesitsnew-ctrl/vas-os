@@ -172,6 +172,7 @@ function renderTasks(el,tasks,showMember){
           <td style="font-family:var(--fnm);font-size:12px;color:var(--tx2);font-weight:600">${tk.cycleH!=null?tk.cycleH+'h':'—'}</td>`:''}
           <td onclick="event.stopPropagation()"><div class="act-c">
             <div class="ib edt" onclick="openTaskModal('${tk.id}')" title="Edit">✏</div>
+            <div class="ib" onclick="duplicateTask('${tk.id}')" title="Duplicate — same assignee/service/operator/reviewer, new name">⎘</div>
             <div class="ib del" onclick="delItem('tasks','${tk.id}','${tk.title.replace(/'/g,"\'")}')">🗑</div>
           </div></td>
         </tr>`;

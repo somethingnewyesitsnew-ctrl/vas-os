@@ -449,6 +449,15 @@ window.completeSession=window.completeSessionFlow=async(sid)=>{
   logAction('Service Test Completed',`${s.tester_name} completed service test for ${s.operator_name} — ${s.passed_checks}/${s.total_checks} passed`,'Success',s.operator_name,`Failed: ${s.failed_checks}`,{operatorName:s.operator_name,memberName:s.tester_name,memberId:s.tester_id});
   toast('Test complete — '+s.passed_checks+'✓ '+s.failed_checks+'✗','ok',5000);
   window._chkSession=null;
+
+  // Close out the auto-created "Service Test" task this session belongs to,
+  // if one exists — otherwise it would sit open in the assignee's My Tasks forever.
+  const linkedTask=DB.tasks.find(t=>t.type==='Service Test'&&t.operator===s.operator_id&&(t.assignedTo===s.tester_id||(t.assignees||[]).includes(s.tester_id))&&t.due===s.test_date&&!['Done','Cancelled'].includes(t.status));
+  if(linkedTask){
+    linkedTask.what=`Completed service test for ${s.operator_name}: ${s.passed_checks} passed, ${s.failed_checks} failed out of ${s.total_checks} checks.${s.failed_checks>0?' Failures were converted to tasks.':''}`;
+    await approveTask(linkedTask.id);
+  }
+
   // Stay on the page — show the completed service list
   openServiceList(sid);
 };
@@ -488,6 +497,56 @@ window.convertServiceFails=async(sessionId,serviceName)=>{
   for(const c of fails) await convertFailToTask(c.id).then(()=>count++).catch(()=>{});
   toast(count+' task'+(count>1?'s':'')+' created ✓','ok');
   openServiceChecklist(sessionId,serviceName);
+};
+
+// Turns one failed check into a Bug Fix task, so it shows up in the normal
+// task workflow instead of just sitting flagged in the Failed tab.
+window.convertFailToTask=async(checkId)=>{
+  const c=DB.testChecks.find(x=>x.id===checkId);
+  if(!c) throw new Error('Check not found');
+  if(c.converted_to_task) return c.task_id;
+
+  const svc=DB.services.find(s=>s.id===c.service_id||s.name===c.service_name);
+  const op=[...DB.operators,...DB.companies].find(o=>o.name===c.operator_name);
+  const tester=DB.team.find(m=>m.name===c.tester_name);
+
+  const t={
+    id:'t'+gid(), title:`🧪 Service Test Fail: ${c.check_name} — ${c.service_name}`,
+    status:'New', priority:c.priority||'High', type:'Bug Fix',
+    assignedTo:tester?.id||'', assignees:tester?[tester.id]:[],
+    reviewer:'', service:svc?.id||'', operator:op?.id||'',
+    reqBy:c.tester_name||CU?.name||'', createdBy:CU?.name||'',
+    due:null, est:null, recur:null,
+    desc:`Found during service testing on ${fd(c.test_date)} by ${c.tester_name||'?'}.\n\n🏢 Operator: ${c.operator_name}\n📡 Service: ${c.service_name}\n✗ Check: ${c.check_name}${c.tester_note?`\n\n📝 Tester notes:\n${c.tester_note}`:''}`,
+    link:'', tsCreated:now(), tsOpened:null, tsStarted:null,
+    tsSubmitted:null, tsReviewed:null, tsArchived:null,
+    actual:null, what:'', tech:'', rejReason:'', rejections:[], comments:[],
+  };
+  DB.tasks.unshift(t);
+  const r=await nCreateTask(t,t.id);
+  if(r?.id) t.id=r.id;
+
+  c.converted_to_task=true; c.task_id=t.id;
+  await sbMarkCheckConverted(checkId,t.id);
+
+  if(tester&&tester.name!==CU?.name){
+    sendNotif(tester.name,`Test failure converted to task: "${c.check_name}" (${c.service_name})`,'Task Assigned',t.title);
+    notifyTG(tester.id,'task_assigned',{title:t.title,priority:t.priority,due:'Not set',desc:t.desc,link:appLink('task-'+t.id)});
+  }
+  logAction('Task Created',`Service test failure converted to task: "${t.title}"`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title});
+  updateBadges();
+  return t.id;
+};
+
+// Bulk-converts every not-yet-converted failure across all sessions (Failed tab button)
+window.convertAllFailed=async()=>{
+  const fails=DB.testChecks.filter(c=>c.result==='fail'&&!c.converted_to_task);
+  if(!fails.length){toast('Nothing to convert','inf');return;}
+  toast(`Converting ${fails.length} failure${fails.length>1?'s':''}…`,'inf',4000);
+  let count=0;
+  for(const c of fails){ try{ await convertFailToTask(c.id); count++; }catch(e){} }
+  toast(`${count} task${count!==1?'s':''} created ✓`,'ok');
+  nav('svctest',document.querySelector('[data-p="svctest"]'));
 };
 function buildTestReports(){
   if(!DB.testChecks) return '<div class="empty"><div class="ei">📊</div><div class="et">No test data yet</div></div>';

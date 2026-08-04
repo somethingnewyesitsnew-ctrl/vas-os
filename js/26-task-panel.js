@@ -195,6 +195,7 @@ window.openTask=(id)=>{
     }
     if(isAdmin()){
       body+=`<button class="btn bg2 bsm" onclick="openTaskModal('${t.id}');closeSP()">✏ Edit</button>`;
+      body+=`<button class="btn bg2 bsm" onclick="duplicateTask('${t.id}')" title="Create a new task with the same assignee/service/operator/reviewer">⎘ Duplicate</button>`;
       body+=`<select onchange="chStatus('${t.id}',this.value)" style="padding:5px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:11px;outline:none;cursor:pointer">
         ${['New','In Progress','Pending Help','Pending Review','Done','Rejected','On Hold','Cancelled'].map(s=>`<option ${t.status===s?'selected':''} value="${s}">${s}</option>`).join('')}
       </select>`;
@@ -208,7 +209,37 @@ window.openTask=(id)=>{
 // ══════════════════════════════════════════════════════
 // TASK LIFECYCLE ACTIONS
 // ══════════════════════════════════════════════════════
-window.reqStart=(id)=>{_pendTask=id;const t=DB.tasks.find(tk=>tk.id===id);document.getElementById('est-h').value=t.est||'';OM('m-est');};
+window.reqStart=(id)=>{
+  const t=DB.tasks.find(tk=>tk.id===id);
+  if(t?.type==='Service Test'){ startServiceTestTask(id); return; }
+  _pendTask=id;document.getElementById('est-h').value=t?.est||'';OM('m-est');
+};
+
+// Service Test tasks are auto-created when a scheduled test day arrives.
+// Starting one skips the normal "set an estimate" step (already pre-set)
+// and drops the member straight into the checklist for that operator's
+// services, so they can mark each item working/fail and add notes.
+window.startServiceTestTask=async(taskId)=>{
+  const t=DB.tasks.find(tk=>tk.id===taskId);if(!t)return;
+  if(t.status==='New'){
+    t.status='In Progress'; t.tsStarted=now();
+    logAction('Task Started',`${CU.name} started "${t.title}"`,'Success',t.title,'',{taskId:t.id,taskTitle:t.title});
+    await nUpdateTask(t);
+    updateBadges();
+  }
+  closeSP();
+  const todayStr=new Date().toISOString().split('T')[0];
+  const op=[...DB.operators,...DB.companies].find(o=>o.id===t.operator);
+  let session=DB.testSessions.find(s=>s.test_date===todayStr&&(s.tester_id===CU.id||s.tester_name===CU.name)&&s.operator_name===op?.name&&s.status!=='Cancelled');
+  navTo('svctest');
+  if(session){
+    openServiceList(session.id);
+  } else if(op){
+    await startTestSession(t.operator,CU.id);
+  } else {
+    toast('This test task has no operator linked — open Service Tests to start manually','bad');
+  }
+};
 
 // ── RE-ESTIMATE ──────────────────────────────────────────────────────────
 window.reqReEstimate=(id)=>{

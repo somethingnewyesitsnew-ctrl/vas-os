@@ -80,7 +80,7 @@
 <div id="sb-toggle" class="sb-open" onclick="toggleSidebar()" title="Toggle sidebar">☰</div>
 <nav class="sb" id="sb-nav">
   <div class="sb-brand">
-    <div style="display:flex;align-items:baseline;gap:6px"><div class="sb-logo" id="sys-name-display">VAS OS</div><span id="sb-version-badge" title="Click to view this commit on GitHub" style="cursor:pointer;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:.06em;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px">v…</span></div>
+    <div style="display:flex;align-items:baseline;gap:6px"><div class="sb-logo" id="sys-name-display">VAS OS</div></div>
     <div class="nsync" id="nsync" onclick="refreshData()" title="Click to sync now"><div class="nsd"></div><span id="nsync-lbl">Loading</span></div>
   </div>
   <div class="sb-user"><div class="sav" id="sav" style="width:26px;height:26px;font-size:9px">AZ</div><div><div class="sun" id="sun">-</div><div class="sur" id="sur">-</div></div></div>
@@ -115,7 +115,10 @@
   <div class="ni" data-p="archive" onclick="nav('archive',this)" id="nav-arc" style="display:none"><span class="ni-i">🗄</span>Archive</div>
   <div class="ni" data-p="settings" onclick="nav('settings',this)" id="nav-st" style="display:none"><span class="ni-i">⚙</span>Settings</div>
   <div class="ni" data-p="syslog" onclick="nav('syslog',this)" id="nav-sl" style="display:none"><span class="ni-i">▤</span>System Log</div>
-  <div class="sb-ft"><div class="ni" onclick="doLogout()" style="color:var(--tx3)"><span class="ni-i">←</span>Sign Out</div></div>
+  <div class="sb-ft">
+    <div style="text-align:center;padding:2px 0 6px"><span id="sb-version-badge" title="Click to view this commit on GitHub" style="cursor:pointer;font-size:9px;font-weight:600;color:var(--tx3);letter-spacing:.04em">v…</span></div>
+    <div class="ni" onclick="doLogout()" style="color:var(--tx3)"><span class="ni-i">←</span>Sign Out</div>
+  </div>
 </nav>
 <div class="main">
   <div class="topbar" style="padding-left:48px">

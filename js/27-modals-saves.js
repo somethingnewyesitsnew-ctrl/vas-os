@@ -37,6 +37,32 @@ function openTaskModal(id, presetProjectId){
   OM('m-task');
 }
 
+// Quick "same task, different name" — pre-fills the Create modal from an
+// existing task so the assignee, reviewer, service, operator, company,
+// project, priority and type all carry over. Title/description come along
+// too as a starting point (edit as needed); due date is left blank since
+// it's almost always different for a duplicate.
+window.duplicateTask=(id)=>{
+  const src=DB.tasks.find(t=>t.id===id);
+  if(!src){toast('Task not found','bad');return;}
+  openTaskModal(null, src.projectId);
+  document.getElementById('tf-title').value=src.title||'';
+  document.getElementById('tf-desc').value=src.desc||'';
+  document.getElementById('tf-priority').value=src.priority||'High';
+  document.getElementById('tf-type').value=src.type||'Feature';
+  document.getElementById('tf-reviewer').value=src.reviewer||'';
+  document.getElementById('tf-service').value=src.service||'';
+  document.getElementById('tf-operator').value=src.operator||'';
+  if(document.getElementById('tf-company')) document.getElementById('tf-company').value=src.company2||'';
+  if(document.getElementById('tf-est')) document.getElementById('tf-est').value=src.est||'';
+  if(document.getElementById('tf-recur')) document.getElementById('tf-recur').value=src.recur||'';
+  document.getElementById('tf-reqby').value=src.reqBy||CU.name;
+  initAssignPicker(src.assignees?.length?src.assignees:(src.assignedTo?[src.assignedTo]:[]));
+  const titleEl=document.getElementById('tf-title');
+  titleEl.focus(); titleEl.select();
+  toast('Duplicated — adjust the title/description, set a due date, and save','inf',5000);
+};
+
 function openMemberModal(id){
   _editId=id; const m=id?DB.team.find(x=>x.id===id):null;
   document.getElementById('m-mbr-t').textContent=m?'Edit Team Member':'Add Team Member';
