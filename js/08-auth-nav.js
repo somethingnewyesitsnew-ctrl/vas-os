@@ -138,6 +138,11 @@ async function startApp(){
   startReminderChecker();
   autoBackupIfNeeded();
   startAutoReload();
+  // Push notifications — register the service worker, then (if this
+  // device hasn't been asked before) show a soft one-time prompt.
+  if(typeof registerPushSW==='function'){
+    registerPushSW().then(()=>{ if(typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1500); });
+  }
 }
 
 // ── Smart auto-reload ─────────────────────────────────────────────────

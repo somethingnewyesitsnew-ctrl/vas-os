@@ -7,6 +7,10 @@
 <meta name="version" content="v4.3.0">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#2563eb">
 </head>
 <body>
 <div class="ts-stk" id="ts-stk"></div>
@@ -426,6 +430,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <!-- App scripts — split into modules for maintainability, loaded in dependency order -->
 <script src="js/00-core-preamble.js"></script>
+<script src="js/01-push-notifications.js"></script>
 <script src="js/02-ui-utils-config.js"></script>
 <script src="js/03-supabase-helpers.js"></script>
 <script src="js/04-member-types-perms.js"></script>

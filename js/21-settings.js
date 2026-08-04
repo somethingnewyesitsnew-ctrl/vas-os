@@ -146,13 +146,26 @@ function rSettings(el){
             ℹ️ Unlike phone numbers, a Telegram Chat ID only works for messages sent <em>by your bot</em> — there's no "click to open chat" link an admin can share, since the ID isn't a public handle.
           </div>
         </div>
-        <div style="margin-bottom:10px">
+        <div style="margin-bottom:16px">
           <label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Your Telegram Chat ID (for test)</label>
           <div style="display:flex;gap:7px">
             <input id="cfg-tg-test-id" placeholder="e.g. 123456789" value="${CU?.telegram||''}" style="flex:1;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none">
             <button class="btn bp bsm" onclick="testTGDirect()">🧪 Test</button>
           </div>
         </div>
+
+        <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Push Notifications
+          <span style="margin-left:auto;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #bae6fd">Per-device, no setup for members</span>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--tx3);line-height:1.8">
+          Native browser/OS notifications — arrive even when VAS OS isn't open. Every member enables it once per device (button below, or the prompt on first login); no chat ID or phone number to collect.
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+            ℹ️ One-time setup for <strong style="color:var(--tx)">you as admin</strong>: run <code style="background:var(--s);padding:1px 4px;border-radius:3px">SUPABASE_MIGRATION_push_subscriptions.sql</code> and deploy <code style="background:var(--s);padding:1px 4px;border-radius:3px">supabase/functions/send-push</code> (see that folder's README in the repo). Nothing else to configure per member.
+          </div>
+        </div>
+        <div id="push-status-box" style="margin-bottom:10px">${(typeof pushToggleHTML==='function')?'Loading…':''}</div>
 
         <button class="btn bp" style="width:100%;padding:10px" onclick="saveNotifConfig()">💾 Save Email Settings</button>
       </div>
@@ -231,7 +244,10 @@ function rSettings(el){
     const el2=document.getElementById('sb-status-check');
     if(el2)el2.innerHTML=r!==null?'<span style="color:var(--g)">✓ Connected</span>':'<span style="color:var(--r)">✗ Error</span>';
   });
-  
+
+  // Push notification toggle box — reflects this device's actual subscription state
+  if(typeof updatePushToggleUI==='function') updatePushToggleUI();
+
   // Store lists reference for add/remove
   window._currentLists=getLists;
   window._saveLists=saveLists;
