@@ -100,8 +100,13 @@ const SYS=()=>localStorage.getItem('vas_sys_name')||'VAS OS';
 //            | 'announcement' | 'hr_reply' | 'review_requested'
 async function notifyTG(memberId, eventType, data={}){
   const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
-  if(!member||!member.telegram) return;
+  if(!member) return;
   if(member.name===CU?.name) return; // never notify yourself
+  // Push notification — independent of Telegram being configured. Fires
+  // for every event/member regardless of whether member.telegram is set,
+  // since push only needs a push_subscriptions row (see 01-push-notifications.js).
+  if (typeof sendPushToMember === 'function') sendPushToMember(memberId, eventType, data).catch?.(()=>{});
+  if(!member.telegram) return; // no Telegram chat id — skip Telegram send only
   const sys=SYS();
   const by=CU?.name||'System';
   const link=data.link||'';
@@ -157,10 +162,6 @@ async function notifyTG(memberId, eventType, data={}){
       msg=`🔔 *${sys}*\n\nHi ${member.name}! ${data.desc||'You have a new notification.'}${link?'\n\n🔗 '+link:''}`;
   }
   await sendTG(member, msg);
-  // Push notification — same event, same data, delivered natively to any
-  // device that has enabled push (works even with VAS OS closed). Defined
-  // in js/01-push-notifications.js; no-ops silently if not deployed yet.
-  if (typeof sendPushToMember === 'function') sendPushToMember(memberId, eventType, data).catch?.(()=>{});
 }
 
 // ── Email (unchanged) ─────────────────────────────────────────────────
