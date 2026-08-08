@@ -261,8 +261,8 @@ window.confirmReEstimate=async()=>{
   t.reEstimates.push({oldEst,newEst,reason,at:now(),by:CU.name});
   t.est=newEst;
   logAction('Re-Estimated',`${CU.name} re-estimated "${t.title}" from ${oldEst}h to ${newEst}h — ${reason}`,'Warning',t.title,'');
-  notifyAdmins(`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title);
-  if(t.reviewer){const rv=DB.team.find(m=>m.id===t.reviewer);if(rv)sendNotif(rv.name,`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title);}
+  notifyAdmins(`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title,{taskId:t.id});
+  if(t.reviewer){const rv=DB.team.find(m=>m.id===t.reviewer);if(rv)sendNotif(rv.name,`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title,false,{taskId:t.id});}
   await nUpdateTask(t);
   CM('m-reest');toast(`Estimate updated to ${newEst}h ✓`,'ok');openTask(_pendTask);
 };
@@ -315,8 +315,8 @@ window.confirmHelpRequest=async()=>{
   const r=await nCreateTask(helpTask,helpTask.id);
   if(r?.id)helpTask.id=r.id;
   DB.tasks.unshift(helpTask);
-  if(helper)sendNotif(helper.name,`${CU.name} needs your help with "${t.title}". Please review and submit when done.`,'Help Request',helpTask.title);
-  notifyAdmins(`${CU.name} requested help from ${helper?.name||'?'} on "${t.title}"`,'Help Request',t.title);
+  if(helper)sendNotif(helper.name,`${CU.name} needs your help with "${t.title}". Please review and submit when done.`,'Help Request',helpTask.title,false,{taskId:helpTask.id});
+  notifyAdmins(`${CU.name} requested help from ${helper?.name||'?'} on "${t.title}"`,'Help Request',t.title,{taskId:t.id});
   if(helper) notifyTG(helper.id,'help_requested',{title:t.title,desc,link:appLink('task-'+helpTask.id)});
   notifyAdminsWA(`🤝 Help Request\n\n${CU.name} requested help from ${helper?.name||'?'}\nTask: "${t.title}"`,appLink('task-'+t.id));
   logAction('Help Requested',`${CU.name} requested help from ${helper?.name||'?'} for "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:helper?.id,memberName:helper?.name});
@@ -369,7 +369,7 @@ window.confirmRemind=async()=>{
     DB.reminders=DB.reminders||[];
     DB.reminders.unshift({id:row.id,fromId:CU.id,fromName:CU.name,toId:m.id,toName:m.name,taskId:t.id,taskTitle:t.title,msg:row.msg,read:false,at:row.at});
   }
-  sendNotif(m.name,msg||defaultMsg,'Reminder',t.title);
+  sendNotif(m.name,msg||defaultMsg,'Reminder',t.title,false,{taskId:t.id});
   notifyTG(m.id,'reminder',{desc:`⏰ *Reminder from ${CU.name}*\n\n${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
   logAction('Reminder Sent',`${CU.name} reminded ${m.name} about "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:m.id,memberName:m.name});
   CM('m-remind');toast(`Reminder sent to ${m.name} ✓`,'ok');
@@ -382,8 +382,8 @@ window.confirmStart=async()=>{
   t.est=h; t.status='In Progress'; t.tsStarted=now();
   logAction('Task Started',`${CU.name} started "${t.title}" — ${h}h estimate`,'Success',t.title,'',{taskId:t.id,taskTitle:t.title});
   const revMember=DB.team.find(m=>m.id===t.reviewer);
-  if(revMember) sendNotif(revMember.name,`${CU.name} started "${t.title}" (Est: ${h}h) — awaiting review when done`,'Task Started',t.title);
-  notifyAdmins(`${CU.name} started task: "${t.title}" — ${h}h estimated`,'Task Started',t.title);
+  if(revMember) sendNotif(revMember.name,`${CU.name} started "${t.title}" (Est: ${h}h) — awaiting review when done`,'Task Started',t.title,false,{taskId:t.id});
+  notifyAdmins(`${CU.name} started task: "${t.title}" — ${h}h estimated`,'Task Started',t.title,{taskId:t.id});
   notifyAdminsWA(`▶ Task Started\n\n${CU.name} started working on "${t.title}"\nEstimate: ${h}h`,appLink('task-'+t.id));
   await nUpdateTask(t);
   CM('m-est'); toast(`Started — ${h}h estimated ✓`,'ok'); openTask(_pendTask); updateBadges();
@@ -433,8 +433,8 @@ window.confirmSubmit=async()=>{
   t.workH=actual;
   logAction('Task Submitted',`${CU.name} submitted "${t.title}" — ${actual?actual+'h actual':'time not tracked'}`,'Success',t.title,'');
   const revMember2=DB.team.find(m=>m.id===t.reviewer);
-  if(revMember2) sendNotif(revMember2.name,`Review needed: "${t.title}" — ${actual?actual+'h actual':'auto-timed'} by ${CU.name}`,'Review Needed',t.title);
-  notifyAdmins(`${CU.name} submitted "${t.title}" for review (${actual?actual+'h':' time auto-tracked'})`,'Task Submitted',t.title);
+  if(revMember2) sendNotif(revMember2.name,`Review needed: "${t.title}" — ${actual?actual+'h actual':'auto-timed'} by ${CU.name}`,'Review Needed',t.title,false,{taskId:t.id});
+  notifyAdmins(`${CU.name} submitted "${t.title}" for review (${actual?actual+'h':' time auto-tracked'})`,'Task Submitted',t.title,{taskId:t.id});
   if(revMember2) notifyTG(revMember2.id,'task_submitted',{title:t.title,priority:t.priority,link:appLink('task-'+t.id)});
   notifyAdminsWA(`📤 Task Submitted for Review\n\n${CU.name} submitted "${t.title}"\n${actual?'Actual: '+actual+'h':''}\nReviewer: ${revMember2?.name||'Not set'}`,appLink('task-'+t.id));
   logAction('Task Submitted',`${CU.name} submitted "${t.title}" for review`,'Info',t.title,actual?`Actual: ${actual}h`:'',{taskId:t.id,taskTitle:t.title,memberId:revMember2?.id,memberName:revMember2?.name});
@@ -468,8 +468,8 @@ window.approveTask=async(id)=>{
   logAction('Task Approved',`${CU.name} approved "${t.title}"`,'Success',t.title,`Cycle: ${ch}h`);
   await nUpdateTask(t);
   const assMember=DB.team.find(m=>m.id===t.assignedTo);
-  if(assMember) sendNotif(assMember.name,`Your task "${t.title}" was APPROVED by ${CU.name} — archived + doc created`,'Task Approved',t.title);
-  notifyAdmins(`${CU.name} approved "${t.title}" — cycle time: ${ch?ch+'h':'unknown'}`,'Task Approved',t.title);
+  if(assMember) sendNotif(assMember.name,`Your task "${t.title}" was APPROVED by ${CU.name} — archived + doc created`,'Task Approved',t.title,false,{taskId:t.id});
+  notifyAdmins(`${CU.name} approved "${t.title}" — cycle time: ${ch?ch+'h':'unknown'}`,'Task Approved',t.title,{taskId:t.id});
   if(assMember) notifyTG(assMember.id,'task_approved',{title:t.title,link:appLink('task-'+t.id)});
   logAction('Task Approved',`${CU.name} approved "${t.title}"`, 'Success', t.title, `Cycle: ${ch?ch+'h':'?'}`,{taskId:t.id,taskTitle:t.title,memberId:assMember?.id,memberName:assMember?.name});
 
@@ -492,7 +492,7 @@ window.approveTask=async(id)=>{
     DB.tasks.unshift(recurTask);
     const rr=await nCreateTask(recurTask,recurTask.id);
     if(rr?.id) recurTask.id=rr.id;
-    if(assMember) sendNotif(assMember.name,`🔁 Recurring task created: "${recurTask.title}" — due ${fd(nextDue)}`,'Task Assigned',recurTask.title);
+    if(assMember) sendNotif(assMember.name,`🔁 Recurring task created: "${recurTask.title}" — due ${fd(nextDue)}`,'Task Assigned',recurTask.title,false,{taskId:recurTask.id});
     toast(`Approved ✓ · 🔁 Next recurrence created — due ${fd(nextDue)}`,'ok',5000);
   } else {
     toast('Approved — archived + doc created ✓','ok');
@@ -531,7 +531,7 @@ window.approveTask=async(id)=>{
       await sbUpdate('tasks', parent.id, {status:'In Progress', timeline:parent.timeline});
       const parentAss=DB.team.find(m=>m.id===parent.assignedTo);
       if(parentAss&&parentAss.id!==CU.id)
-        sendNotif(parentAss.name,`Help from ${helperName} accepted ✓. "${parentTitle}" is back In Progress.`,'Help Accepted',parentTitle);
+        sendNotif(parentAss.name,`Help from ${helperName} accepted ✓. "${parentTitle}" is back In Progress.`,'Help Accepted',parentTitle,false,{taskId:parent.id});
     }
 
     // 2. Approve the help task itself (marks it Done, archives it) — this
@@ -588,8 +588,8 @@ window.rejectTask=async(id)=>{
   logAction('Task Rejected',`${CU.name} rejected "${t.title}"`,'Warning',t.title,reason);
   await nUpdateTask(t);
   const assMember2=DB.team.find(m=>m.id===t.assignedTo);
-  if(assMember2) sendNotif(assMember2.name,`Your task "${t.title}" was REJECTED by ${CU.name}. Reason: ${reason}`,'Task Rejected',t.title);
-  notifyAdmins(`${CU.name} rejected "${t.title}" — reason: ${reason}`,'Task Rejected',t.title);
+  if(assMember2) sendNotif(assMember2.name,`Your task "${t.title}" was REJECTED by ${CU.name}. Reason: ${reason}`,'Task Rejected',t.title,false,{taskId:t.id});
+  notifyAdmins(`${CU.name} rejected "${t.title}" — reason: ${reason}`,'Task Rejected',t.title,{taskId:t.id});
   if(assMember2) notifyTG(assMember2.id,'task_rejected',{title:t.title,reason,link:appLink('task-'+t.id)});
   logAction('Task Rejected',`${CU.name} rejected "${t.title}" — ${reason}`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:assMember2?.id,memberName:assMember2?.name});
   toast('Rejected — member notified ✓','ok'); closeSP(); updateBadges();
@@ -641,8 +641,8 @@ window.chStatus=async(id,status)=>{
   logAction('Status Changed',`${CU.name}: "${t.title}" → ${status}`,'Info',t.title,'');
   await nUpdateTask(t);
   const assMbr=DB.team.find(m=>m.id===t.assignedTo);
-  if(assMbr&&assMbr.name!==CU?.name) sendNotif(assMbr.name,`Your task "${t.title}" status changed to: ${status} (by ${CU.name})`,'Status Changed',t.title);
-  notifyAdmins(`${CU.name} changed "${t.title}" → ${status}`,'Status Changed',t.title);
+  if(assMbr&&assMbr.name!==CU?.name) sendNotif(assMbr.name,`Your task "${t.title}" status changed to: ${status} (by ${CU.name})`,'Status Changed',t.title,false,{taskId:t.id});
+  notifyAdmins(`${CU.name} changed "${t.title}" → ${status}`,'Status Changed',t.title,{taskId:t.id});
   toast(`Status → ${status}`,'ok'); openTask(id); updateBadges();
 };
 
