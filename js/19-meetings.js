@@ -428,7 +428,7 @@ window.saveMeeting=async()=>{
     logAction('Meeting Created',`${CU.name} created meeting "${title}" on ${fd(date)} at ${time}`,'Info',title,`Invitees: ${invitees.join(', ')||'None'}`,{meetingId:m.id,memberName:CU.name});
     invitees.forEach(name=>{
       if(name!==CU.name){
-        sendNotif(name,`You're invited to: "${title}" on ${fd(date)} at ${time}${recur?` · repeats ${recur}`:''}`, 'Mention', title);
+        sendNotif(name,`You're invited to: "${title}" on ${fd(date)} at ${time}${recur?` · repeats ${recur}`:''}`, 'Mention', title, false, {meetingId:m.id});
         const inv=DB.team.find(x=>x.name===name);
         if(inv) notifyTG(inv.id,'meeting_invited',{title,date:fd(date),time,location:data.location||'',link:appLink('meetings')});
       }
