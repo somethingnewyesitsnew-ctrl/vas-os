@@ -100,7 +100,7 @@ window.submitHrCom=async()=>{
     DB.hrComs=DB.hrComs||[];
     DB.hrComs.unshift({id:row.id,fromId:CU.id,fromName:CU.name,title,body,status:'Pending',readByHR:false,memberRead:false,replies:[],at:row.at});
     DB.team.filter(m=>m.role?.toLowerCase().includes('hr')||m.access==='HR').forEach(m=>{
-      sendNotif(m.name,`${CU.name} sent an HR message: "${title}"`,'HR Message',title);
+      sendNotif(m.name,`${CU.name} sent an HR message: "${title}"`,'HR Message',title,false,{hrComId:row.id});
       notifyTG(m.id,'default',{desc:`💬 *New HR Communication*\n\nFrom: ${CU.name}\nTitle: "${title}"\n\n${body.slice(0,200)}`,link:appLink('hrcoms')});
     });
     // Also notify admins
@@ -117,7 +117,7 @@ window.submitHrCom=async()=>{
     if(com.fromId!==CU.id){
       const sender=DB.team.find(m=>m.id===com.fromId);
       if(sender){
-        sendNotif(sender.name,`HR replied to your message: "${com.title}"`,'HR Reply',com.title);
+        sendNotif(sender.name,`HR replied to your message: "${com.title}"`,'HR Reply',com.title,false,{hrComId:com.id});
         notifyTG(sender.id,'hr_reply',{title:com.title,link:appLink('hrcoms')});
       }
     }
@@ -133,7 +133,7 @@ window.setHrComStatus=async(comId,status)=>{
   await sbCommsUpdate('hr_communications',comId,{status,read_by_hr:true});
   const sender=DB.team.find(m=>m.id===com.fromId);
   if(sender){
-    sendNotif(sender.name,`Your HR message "${com.title}" is now: ${status}`,'HR Update',com.title);
+    sendNotif(sender.name,`Your HR message "${com.title}" is now: ${status}`,'HR Update',com.title,false,{hrComId:com.id});
     notifyTG(sender.id,'hr_reply',{title:`Your HR message status updated to: ${status} — "${com.title}"`,link:appLink('hrcoms')});
   }
   toast(`Status updated to ${status}`,'ok');
@@ -226,7 +226,7 @@ window.submitAnnouncement=async()=>{
   logAction('Announcement Posted',`${CU.name} posted "${title}" (${priority}) to ${row.audience==='all'?'everyone':audienceNames.join(', ')||'selected members'}`,'Info',title,'',{memberName:CU.name});
   const recipients=isAll?DB.team:DB.team.filter(m=>audienceIds.includes(m.id));
   recipients.filter(m=>m.id!==CU.id).forEach(m=>{
-    sendNotif(m.name,`New ${priority} announcement: "${title}"`,`${priority} Announcement`,title);
+    sendNotif(m.name,`New ${priority} announcement: "${title}"`,`${priority} Announcement`,title,false,{annId:row.id});
     notifyTG(m.id,'announcement',{title,desc:body.slice(0,300),link:appLink('announcements')});
   });
   CM('m-ann'); toast(`Announcement published to ${isAll?'everyone':audienceNames.join(', ')} ✓`,'ok');
