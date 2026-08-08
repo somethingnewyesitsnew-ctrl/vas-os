@@ -107,33 +107,7 @@ async function startApp(){
   if(hash.startsWith('#task-')){
     const tid=hash.replace('#task-','');
     // Wait long enough for DB to be fully populated
-    setTimeout(()=>{
-      const t=DB.tasks.find(x=>x.id===tid);
-      if(!t){toast('Task not found','bad');return;}
-
-      // Access check — compare by id AND name to handle both storage formats
-      const myId=CU.id, myName=(CU.name||'').toLowerCase();
-      const isAssigned=t.assignedTo===myId||((t.assignedTo||'').toLowerCase()===myName)
-        ||(t.assignees||[]).some(a=>a===myId||((a||'').toLowerCase()===myName));
-      const isReviewer=t.reviewer===myId||((t.reviewer||'').toLowerCase()===myName);
-      const allowed=isAdmin()||isAssigned||isReviewer;
-
-      if(!allowed){
-        nav('dash',document.querySelector('[data-p="dash"]'));
-        setTimeout(()=>openSP('Access Denied','',`
-          <div style="text-align:center;padding:40px 20px">
-            <div style="font-size:40px;margin-bottom:12px">🔒</div>
-            <div style="font-size:15px;font-weight:700;margin-bottom:8px">You don't have access to this task</div>
-            <div style="font-size:12px;color:var(--tx3);line-height:1.6">This link is only accessible to the assigned member and admins.</div>
-          </div>`),100);
-        return;
-      }
-
-      // Navigate to All Tasks then open the task panel
-      const atEl=document.querySelector('[data-p="alltasks"]');
-      nav('alltasks', atEl);
-      setTimeout(()=>openTask(tid), 300);
-    }, 800);
+    setTimeout(()=>openTaskDeepLink(tid), 800);
   }
   startReminderChecker();
   autoBackupIfNeeded();
@@ -150,7 +124,46 @@ async function startApp(){
     });
   }
   if(typeof renderPushStatusPill==='function') renderPushStatusPill();
+  // Self-heal the team.push_enabled flag against this device's actual
+  // subscription state — fixes Team cards showing "Off" for members who
+  // are genuinely subscribed but did so before push_enabled existed, or
+  // whose browser silently re-subscribed them.
+  if(typeof syncPushEnabledState==='function') syncPushEnabledState();
 }
+
+// Opens a #task-{id} deep link (from an OS push notification, an in-app
+// notification, or a shared link) — access-checked, then routes to All
+// Tasks and opens the task panel. Shared by the initial page-load hash
+// handler above and by the "app already open" postMessage handler in
+// 01-push-notifications.js, so both paths behave identically.
+function openTaskDeepLink(tid){
+  const t=DB.tasks.find(x=>x.id===tid);
+  if(!t){toast('Task not found','bad');return;}
+
+  // Access check — compare by id AND name to handle both storage formats
+  const myId=CU.id, myName=(CU.name||'').toLowerCase();
+  const isAssigned=t.assignedTo===myId||((t.assignedTo||'').toLowerCase()===myName)
+    ||(t.assignees||[]).some(a=>a===myId||((a||'').toLowerCase()===myName));
+  const isReviewer=t.reviewer===myId||((t.reviewer||'').toLowerCase()===myName);
+  const allowed=isAdmin()||isAssigned||isReviewer;
+
+  if(!allowed){
+    nav('dash',document.querySelector('[data-p="dash"]'));
+    setTimeout(()=>openSP('Access Denied','',`
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:40px;margin-bottom:12px">🔒</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px">You don't have access to this task</div>
+        <div style="font-size:12px;color:var(--tx3);line-height:1.6">This link is only accessible to the assigned member and admins.</div>
+      </div>`),100);
+    return;
+  }
+
+  // Navigate to All Tasks then open the task panel
+  const atEl=document.querySelector('[data-p="alltasks"]');
+  nav('alltasks', atEl);
+  setTimeout(()=>openTask(tid), 300);
+}
+window.openTaskDeepLink=openTaskDeepLink;
 
 // ── Smart auto-reload ─────────────────────────────────────────────────
 // Reloads data every 15 min, but only when tab is visible and user is idle
