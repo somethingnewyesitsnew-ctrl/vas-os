@@ -4,26 +4,32 @@ async function loadNotifs(){
   const params = `order=created_at.desc&limit=40&or=(to_name.eq.${CU.name},admins_only.eq.true)`;
   const data = await sbQ('notifications', params);
   if(Array.isArray(data)){
-    notifs = data.map(n=>({...n, readBy: n.read_by||[], time: n.created_at}));
+    notifs = data.map(n=>({...n, readBy: n.read_by||[], time: n.created_at, linkType: n.link_type||null, linkId: n.link_id||null}));
   } else {
     notifs = JSON.parse(localStorage.getItem('v8_notifs_local')||'[]');
   }
   renderNotifs(); updateBadges();
 }
 
-async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false){
+// NOTE: sendNotif/notifyAdmins are redeclared (with link_type/link_id
+// support) later in 27-modals-saves.js, which loads after this file and
+// wins at runtime — kept here only for source consistency in case this
+// file is ever loaded standalone. Keep both in sync.
+async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false, meta={}){
   if(!toName&&!adminsOnly) return;
-  const n={id:'n'+gid(),to:toName||'',from:CU?.name||'',text,type,taskTitle,adminsOnly,readBy:[],time:now()};
+  const linkType=meta?.taskId?'task':meta?.meetingId?'meeting':meta?.hrComId?'hrcom':meta?.annId?'announcement':null;
+  const linkId=meta?.taskId||meta?.meetingId||meta?.hrComId||meta?.annId||null;
+  const n={id:'n'+gid(),to:toName||'',from:CU?.name||'',text,type,taskTitle,linkType,linkId,adminsOnly,readBy:[],time:now()};
   notifs.unshift(n); notifs=notifs.slice(0,60);
   if(n.to===CU?.name||(n.adminsOnly&&isAdmin())) renderNotifs();
   updateBadges();
-  // Write to Supabase async
-  sbInsert('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[]}).then(r=>{ if(r?.id) n.id=r.id; }).catch(()=>{});
+  // Write to Supabase async (silent — never toast on failure for this)
+  (typeof sbInsertSilent==='function'?sbInsertSilent:sbInsert)('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[],link_type:linkType,link_id:linkId}).then(r=>{ if(r?.id) n.id=r.id; }).catch(()=>{});
   localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
 }
 
-function notifyAdmins(text, type='Mention', taskTitle=''){
-  sendNotif('', text, type, taskTitle, true);
+function notifyAdmins(text, type='Mention', taskTitle='', meta={}){
+  sendNotif('', text, type, taskTitle, true, meta);
 }
 
 // ── External notify sheet (Telegram auto-sent + Email manual link) ────
