@@ -70,7 +70,14 @@ Deno.serve(async (req) => {
           keys: { p256dh: s.p256dh, auth: s.auth },
         };
         try {
-          await webpush.sendNotification(subscription, payload);
+          // urgency:'high' + a real TTL matter most for waking a device
+          // that's in Doze/battery-saver — without them, Chrome/Android
+          // may defer delivery until the screen is next turned on. This
+          // does NOT fix iOS: Safari only delivers background/lock-screen
+          // push to a PWA that's been "Added to Home Screen" and only on
+          // iOS 16.4+ — a plain browser-tab subscription on iOS cannot
+          // wake the device, and no server-side setting changes that.
+          await webpush.sendNotification(subscription, payload, { TTL: 86400, urgency: 'high' });
           sent++;
         } catch (err: any) {
           // 404/410 = subscription no longer valid (revoked, uninstalled, expired)
