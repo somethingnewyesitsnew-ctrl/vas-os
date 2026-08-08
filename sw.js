@@ -45,7 +45,13 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          client.navigate(targetUrl).catch(() => {});
+          // The app is already open — tell it to navigate in place via
+          // postMessage instead of client.navigate(). navigate() only
+          // changes the URL bar; the running single-page app never gets
+          // told about it (no hashchange handling), so nothing actually
+          // loads. The page listens for this message and does the real
+          // in-app navigation itself.
+          try { client.postMessage({ type: 'push-notification-click', url: targetUrl }); } catch (e) {}
           return client.focus();
         }
       }
