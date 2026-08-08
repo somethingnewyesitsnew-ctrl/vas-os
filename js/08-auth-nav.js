@@ -138,11 +138,18 @@ async function startApp(){
   startReminderChecker();
   autoBackupIfNeeded();
   startAutoReload();
-  // Push notifications — register the service worker, then (if this
-  // device hasn't been asked before) show a soft one-time prompt.
+  // Push notifications — always register the service worker. The soft
+  // one-time enable prompt itself is only auto-fired here for returning
+  // users (tutorial already completed); first-time users get it chained
+  // right after the tutorial finishes instead (see 25-tutorial.js), so
+  // the tutorial and the notification prompt never fight for the screen.
   if(typeof registerPushSW==='function'){
-    registerPushSW().then(()=>{ if(typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1500); });
+    registerPushSW().then(()=>{
+      const tutorialAlreadyDone=!!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest'));
+      if(tutorialAlreadyDone&&typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1200);
+    });
   }
+  if(typeof renderPushStatusPill==='function') renderPushStatusPill();
 }
 
 // ── Smart auto-reload ─────────────────────────────────────────────────
