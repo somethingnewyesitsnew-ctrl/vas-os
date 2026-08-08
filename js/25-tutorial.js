@@ -12,7 +12,15 @@ let _tutFiltered=[];
 window.startTutorial=()=>{ _tutStep=0; _tutFiltered=getTutorialSteps(); localStorage.removeItem('vas_tut_done_'+(CU?.id||'guest')); showTutStep(); };
 window.tutNext=()=>{ _tutStep++; showTutStep(); };
 window.tutPrev=()=>{ if(_tutStep>0){_tutStep--;showTutStep();} };
-window.skipTutorial=window.endTutorial=()=>{ document.getElementById('tut-overlay')?.remove(); document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl')); localStorage.setItem('vas_tut_done_'+(CU?.id||'guest'),'1'); };
+window.skipTutorial=window.endTutorial=()=>{
+  document.getElementById('tut-overlay')?.remove();
+  document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'));
+  localStorage.setItem('vas_tut_done_'+(CU?.id||'guest'),'1');
+  // First-login flow: tutorial → THEN ask about notifications (once the
+  // overlay is fully gone, not on top of it). No-ops if already granted,
+  // denied, or previously dismissed — see maybeShowPushPrompt.
+  if(typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,500);
+};
 
 function showTutStep(){
   document.getElementById('tut-overlay')?.remove();
