@@ -188,7 +188,7 @@ window.postponeMeeting=async(id)=>{
     await nMeetingUpd(m);
     // Notify invitees
     m.invitees?.forEach(name=>{
-      if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" rescheduled from ${fd(oldDate)} ${oldTime} → ${fd(newDate)} ${newTime}`,'Mention',m.title);
+      if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" rescheduled from ${fd(oldDate)} ${oldTime} → ${fd(newDate)} ${newTime}`,'Mention',m.title,false,{meetingId:m.id});
     });
     toast('Meeting rescheduled ✓','ok');
     closeSP();nav('meetings',document.querySelector('[data-p="meetings"]'));
@@ -196,7 +196,7 @@ window.postponeMeeting=async(id)=>{
     // Member: send postpone request
     const reason=prompt('Reason for postponement request:');
     if(reason===null)return;
-    sendNotif(m.created_by,`${CU.name} requests to postpone "${m.title}" — Reason: ${reason||'Not specified'}`,'Mention',m.title);
+    sendNotif(m.created_by,`${CU.name} requests to postpone "${m.title}" — Reason: ${reason||'Not specified'}`,'Mention',m.title,false,{meetingId:m.id});
     toast('Postponement request sent to '+m.created_by,'ok');
   }
 };
@@ -210,12 +210,12 @@ window.cancelMeetingFull=async(id)=>{
     if(reason===null)return;
     m.status='Cancelled';m.cancelled_at=new Date().toISOString();if(reason)m.cancel_reason=reason;
     await nMeetingUpd(m);
-    m.invitees?.forEach(name=>{if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" was cancelled${reason?' — '+reason:''}. `,'Mention',m.title);});
+    m.invitees?.forEach(name=>{if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" was cancelled${reason?' — '+reason:''}. `,'Mention',m.title,false,{meetingId:m.id});});
     toast('Meeting cancelled','ok');closeSP();nav('meetings',document.querySelector('[data-p="meetings"]'));
   } else {
     const reason=prompt('Reason for cancellation request:');
     if(reason===null)return;
-    sendNotif(m.created_by,`${CU.name} requests to cancel "${m.title}" — Reason: ${reason||'Not specified'}`,'Mention',m.title);
+    sendNotif(m.created_by,`${CU.name} requests to cancel "${m.title}" — Reason: ${reason||'Not specified'}`,'Mention',m.title,false,{meetingId:m.id});
     toast('Cancellation request sent to '+m.created_by,'ok');
   }
 };
@@ -288,7 +288,7 @@ window.postTaskComment=async(taskId)=>{
     if(uid!==CU.id){
       const m=DB.team.find(x=>x.id===uid);
       if(m){
-        sendNotif(m.name,`${CU.name} commented on "${t.title}": ${text.slice(0,80)}`,'Comment',t.title);
+        sendNotif(m.name,`${CU.name} commented on "${t.title}": ${text.slice(0,80)}`,'Comment',t.title,false,{taskId:t.id});
         notifyTG(uid,'default',{desc:`💬 New comment on task "${t.title}"\n\n${CU.name}: ${text.slice(0,200)}`,link:appLink('task-'+t.id)});
       }
     }
@@ -364,7 +364,7 @@ window.savePostMeetingAction=async(meetingId)=>{
   if(r?.id){t.id=r.id;}
   // Notify assignee and reviewer
   if(assigneeMember&&assigneeMember.name!==CU?.name){
-    sendNotif(assigneeMember.name,`Action item from meeting "${m.title}": ${title}`,'Task Assigned',title);
+    sendNotif(assigneeMember.name,`Action item from meeting "${m.title}": ${title}`,'Task Assigned',title,false,{taskId:t.id});
     notifyTG(assigneeMember.id,'task_assigned',{title:'Meeting Outcome: '+title,priority,due,link:appLink('task-'+t.id)});
   }
   if(reviewerMember&&reviewerMember.name!==CU?.name){
@@ -510,7 +510,7 @@ window.confirmEndMeeting=async(id)=>{
     if(r?.id){
       t.id=r.id;
       if(assigneeMember&&assigneeMember.name!==CU?.name)
-        sendNotif(assigneeMember.name,`New action item from meeting "${m.title}": ${ai.title}`,'Task Assigned',ai.title);
+        sendNotif(assigneeMember.name,`New action item from meeting "${m.title}": ${ai.title}`,'Task Assigned',ai.title,false,{taskId:t.id});
       created++;
     }
   }
