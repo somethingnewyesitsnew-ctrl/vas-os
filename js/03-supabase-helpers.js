@@ -27,6 +27,27 @@ async function sbUpdate(table, id, data){
   }catch(e){ console.error('sbUpdate',e.message); return null; }
 }
 
+// Same as sbInsert/sbUpdate but never surfaces a toast on failure — for
+// best-effort metadata (e.g. optional columns that may not exist yet on
+// a given deployment until its SQL migration has been run). The write
+// silently no-ops instead of showing "column not found" to every user.
+async function sbInsertSilent(table, data){
+  try{
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
+    if(!r.ok){ console.warn('sbInsertSilent',table,r.status); return null; }
+    const d=await r.json();
+    return Array.isArray(d)?d[0]:d;
+  }catch(e){ console.warn('sbInsertSilent',e.message); return null; }
+}
+async function sbUpdateSilent(table, id, data){
+  try{
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:SB_HEADERS, body:JSON.stringify(data)});
+    if(!r.ok){ console.warn('sbUpdateSilent',table,r.status); return null; }
+    const d=await r.json();
+    return Array.isArray(d)?d[0]:d;
+  }catch(e){ console.warn('sbUpdateSilent',e.message); return null; }
+}
+
 async function sbDelete(table, id){
   try{
     const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'DELETE', headers:{...SB_HEADERS, 'Prefer':''}});
