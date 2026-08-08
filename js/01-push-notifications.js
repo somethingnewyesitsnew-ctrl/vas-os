@@ -92,6 +92,7 @@ async function subscribeToPush() {
     if (saved) {
       localStorage.setItem('vas_push_enabled_' + (CU.id || CU.name), '1');
       toast('Push notifications enabled ✓', 'ok');
+      markMemberPushEnabled(true);
       updatePushToggleUI();
       return true;
     }
@@ -145,11 +146,26 @@ async function unsubscribeFromPush() {
     }
     localStorage.removeItem('vas_push_enabled_' + (CU?.id || CU?.name));
     toast('Push notifications disabled', 'ok');
+    markMemberPushEnabled(false);
     updatePushToggleUI();
   } catch (e) {
     console.warn('unsubscribeFromPush error:', e);
     toast('Could not disable push notifications', 'bad');
   }
+}
+
+// Records enabled/disabled on the member's `team` row so admins can see,
+// at a glance on Team cards, who has push turned on — without needing to
+// query every device's subscription. Best-effort: uses the silent
+// writer so it never surfaces an error toast if the column isn't there
+// yet (run the SQL migration — see README / commit message).
+function markMemberPushEnabled(on) {
+  if (!CU) return;
+  const patch = { push_enabled: !!on, push_updated_at: new Date().toISOString() };
+  if (CU.id) sbUpdateSilent('team', CU.id, patch).catch?.(() => {});
+  CU.push_enabled = !!on;
+  const dbm = DB.team?.find((m) => m.id === CU.id);
+  if (dbm) dbm.push_enabled = !!on;
 }
 
 async function isPushSubscribedHere() {
@@ -160,10 +176,52 @@ async function isPushSubscribedHere() {
 
 function updatePushToggleUI() {
   const el = document.getElementById('push-status-box');
-  if (!el) return;
-  isPushSubscribedHere().then((on) => {
-    el.innerHTML = pushToggleHTML(on);
-  });
+  if (el) {
+    isPushSubscribedHere().then((on) => {
+      el.innerHTML = pushToggleHTML(on);
+    });
+  }
+  renderPushStatusPill();
+}
+
+// §01b.5 ── Persistent header pill (all users, every page) ──────────────
+// Unlike the Settings toggle (admin-only page) or the one-time dismissible
+// prompt bar, this lives in #page-header next to the page title and is
+// always visible/always accurate — members without Settings access still
+// get a clear "notifications are off" nudge with a one-tap fix.
+async function renderPushStatusPill() {
+  const host = document.getElementById('push-status-pill');
+  if (!host || !CU) return;
+  if (!pushSupported()) { host.style.display = 'none'; return; }
+
+  const perm = Notification.permission;
+  const on = perm === 'granted' && (await isPushSubscribedHere());
+  host.style.display = 'inline-flex';
+
+  if (on) {
+    host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #86efac;white-space:nowrap">🔔 Notifications on</span>`;
+    return;
+  }
+  const blocked = perm === 'denied';
+  host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#b45309;font-size:11px;font-weight:700;padding:3px 6px 3px 10px;border-radius:20px;border:1px solid #fcd34d;white-space:nowrap">
+    🔕 ${blocked ? 'Notifications blocked' : 'Notifications off'}
+    <button onclick="${blocked ? "toast('Enable notifications for this site in your browser settings, then reload the page','inf',7000)" : 'subscribeToPush()'}" style="background:#b45309;color:#fff;border:none;border-radius:14px;padding:2px 10px;font-size:10px;font-weight:800;cursor:pointer">${blocked ? 'Fix' : 'Enable'}</button>
+  </span>`;
+}
+
+// §01b.6 ── Team-card badge — who has push on/off ────────────────────────
+// Reads the member's `push_enabled` column (kept in sync by
+// markMemberPushEnabled above). Falls back to a neutral "unknown" pill
+// for members who've never touched the setting so it never looks like a
+// false "off" for someone who simply predates this feature.
+function pushBadgeHTML(member) {
+  if (member?.push_enabled === true) {
+    return `<span title="Push notifications enabled" style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">🔔 On</span>`;
+  }
+  if (member?.push_enabled === false) {
+    return `<span title="Push notifications not enabled" style="background:var(--s2);color:var(--tx3);border:1px solid var(--bd);font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">🔕 Off</span>`;
+  }
+  return `<span title="Notification status unknown — not yet set up" style="background:var(--s2);color:var(--tx3);border:1px solid var(--bd);font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">🔕 Not set up</span>`;
 }
 
 function pushToggleHTML(isOn) {
