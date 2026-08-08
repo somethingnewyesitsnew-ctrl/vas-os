@@ -168,6 +168,51 @@ function markMemberPushEnabled(on) {
   if (dbm) dbm.push_enabled = !!on;
 }
 
+// Self-heals team.push_enabled against this device's actual subscription
+// state. Covers members who subscribed under an older build (before
+// push_enabled existed) or whose browser silently re-subscribed them —
+// without this, Team cards can show "Off" for someone who is genuinely
+// receiving pushes. Called once per app load from startApp(); cheap and
+// harmless to call again if already in sync.
+async function syncPushEnabledState(){
+  if(!CU || !pushSupported()) return;
+  try{
+    const actuallyOn = Notification.permission==='granted' && await isPushSubscribedHere();
+    if(!!CU.push_enabled !== actuallyOn){
+      markMemberPushEnabled(actuallyOn);
+      renderPushStatusPill();
+    }
+  }catch(e){ console.warn('syncPushEnabledState error:', e); }
+}
+
+// §01b.7 ── Handle notification taps while the app is already open ──────
+// sw.js posts this message instead of calling client.navigate() (which
+// only changes the URL bar — the running single-page app never notices,
+// so nothing actually loads). This listener does the real in-app
+// navigation, so a notification click lands you on the right screen
+// whether VAS OS was already open or not.
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (data.type !== 'push-notification-click') return;
+    if (!CU) return; // not logged in yet — the normal hash handling on next login covers it
+
+    let hash = '';
+    try { hash = new URL(data.url, location.href).hash; }
+    catch (e) { hash = data.url && data.url.includes('#') ? '#' + data.url.split('#')[1] : ''; }
+
+    if (hash.startsWith('#task-') && typeof openTaskDeepLink === 'function') {
+      openTaskDeepLink(hash.replace('#task-', ''));
+    } else if (hash === '#meetings' && typeof navTo === 'function') {
+      navTo('meetings');
+    } else if (hash === '#hrcoms' && typeof navTo === 'function') {
+      navTo('hrcoms');
+    } else if (hash === '#announcements' && typeof navTo === 'function') {
+      navTo('announcements');
+    }
+  });
+}
+
 async function isPushSubscribedHere() {
   if (!pushSupported()) return false;
   const sub = await getExistingPushSubscription();
