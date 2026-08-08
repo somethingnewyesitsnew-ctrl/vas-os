@@ -92,7 +92,7 @@ function rDash(el){
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div><div class="st-sub">${myOverdue.length?'needs attention':'all on track ✓'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('toreview')"><div class="st-bar" style="background:#7c3aed"></div><div class="st-lbl">To Review</div><div class="st-val" style="color:#7c3aed">${myRev.length}</div><div class="st-sub">${myRev.length?'awaiting your review':'nothing pending'}</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#15803d"></div><div class="st-lbl">Completion Rate</div><div class="st-val" style="color:#15803d">${myRate}%</div><div class="st-sub">${grade}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('alltasks')"><div class="st-bar" style="background:#15803d"></div><div class="st-lbl">Completion Rate</div><div class="st-val" style="color:#15803d">${myRate}%</div><div class="st-sub">${grade}</div></div>
     </div>`;
 
     // ── PERFORMANCE NOTE ─────────────────────────────────────────
@@ -174,8 +174,8 @@ function rDash(el){
       <div class="card" style="min-width:0;overflow:hidden">
         <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
-          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:12px;text-align:center">
+          ${[{l:'Today',v:doneToday.length,c:'#2563eb',day:'today'},{l:'This Week',v:doneThisWeek.length,c:'#15803d',day:'week'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed',day:'month'}].map(({l,v,c,day})=>`
+          <div onclick="window._navF='Done';window._navDay='${day}';navTo('alltasks')" style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:12px;text-align:center;cursor:pointer" onmouseenter="this.style.filter='brightness(.96)'" onmouseleave="this.style.filter=''">
             <div style="font-size:26px;font-weight:800;color:${c};line-height:1">${v}</div>
             <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
           </div>`).join('')}
