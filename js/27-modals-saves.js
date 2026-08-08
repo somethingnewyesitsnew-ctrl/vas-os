@@ -504,38 +504,57 @@ window.saveTodo=async()=>{
 // ══════════════════════════════════════════════════════
 // NOTIFICATIONS — Notion-backed, visible to all users
 // ══════════════════════════════════════════════════════
-async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false){
+// meta: optional {taskId, meetingId, hrComId, annId} — whichever is set
+// determines where clicking this notification (in the bell drawer) takes
+// the user. Falls back to the old taskTitle-match behaviour when no meta
+// is given, so existing call sites keep working unchanged.
+function _linkFromMeta(meta){
+  if(!meta) return {type:null,id:null};
+  if(meta.taskId)    return {type:'task',id:meta.taskId};
+  if(meta.meetingId) return {type:'meeting',id:meta.meetingId};
+  if(meta.hrComId)   return {type:'hrcom',id:meta.hrComId};
+  if(meta.annId)     return {type:'announcement',id:meta.annId};
+  return {type:null,id:null};
+}
+
+async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false, meta={}){
   if(!toName&&!adminsOnly)return;
+  const {type:linkType,id:linkId}=_linkFromMeta(meta);
   const n={
     id:gid(),nid:null,
     to:toName||'',from:CU?.name||'',
     text,type,taskTitle,
+    linkType,linkId,
     adminsOnly,readBy:[],time:now()
   };
   notifs.unshift(n);notifs=notifs.slice(0,60);
   // Show immediately for current user if relevant
   if(n.to===CU?.name||(n.adminsOnly&&isAdmin()))renderNotifs();
   updateBadges();
-  // Persist to Supabase async (non-blocking)
-  sbInsert('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[]}).then(r=>{if(r?.id)n.id=r.id;}).catch(()=>{});
+  // Persist to Supabase async (non-blocking). link_type/link_id use the
+  // silent writer since those columns are an additive migration — older
+  // deployments that haven't run it yet degrade to no-link (not an error
+  // toast) instead of failing every single notification.
+  sbInsertSilent('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[],link_type:linkType,link_id:linkId}).then(r=>{if(r?.id)n.id=r.id;}).catch(()=>{});
   // Also always keep in localStorage as fast cache
   localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
 }
 
 // Send to all admins
-function notifyAdmins(text, type='Mention', taskTitle=''){
+function notifyAdmins(text, type='Mention', taskTitle='', meta={}){
   // Store as admins-only notification
-  sendNotif('', text, type, taskTitle, true);
+  sendNotif('', text, type, taskTitle, true, meta);
 }
 
 // Send to both assignee and all admins
 function notifyTaskEvent(task, text, type){
+  const meta={taskId:task?.id};
   const ass=DB.team.find(m=>m.id===task.assignedTo);
   const rev=DB.team.find(m=>m.id===task.reviewer);
-  if(ass&&ass.name!==CU?.name) sendNotif(ass.name, text, type, task.title, false);
-  if(rev&&rev.name!==CU?.name&&rev.name!==ass?.name) sendNotif(rev.name, text, type, task.title, false);
+  if(ass&&ass.name!==CU?.name) sendNotif(ass.name, text, type, task.title, false, meta);
+  if(rev&&rev.name!==CU?.name&&rev.name!==ass?.name) sendNotif(rev.name, text, type, task.title, false, meta);
   // Always notify admins (as an admin-only broadcast)
-  sendNotif('', text, type, task.title, true);
+  sendNotif('', text, type, task.title, true, meta);
 }
 
 function renderNotifs(){
@@ -565,18 +584,40 @@ window.clickNotif=(id)=>{
   if(!n.readBy.includes(CU?.name)){
     n.readBy.push(CU.name);
     localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
-    // Update read_by in Supabase async
+    // Update read_by in Supabase async (silent — same reasoning as the
+    // insert: never surface an error toast for background sync)
     if(n.id&&!n.id.startsWith('n')){
-      sbUpdate('notifications', n.id, {read_by: n.readBy}).catch(()=>{});
+      sbUpdateSilent('notifications', n.id, {read_by: n.readBy}).catch(()=>{});
     }
     renderNotifs();
   }
-  // Navigate to task if taskTitle matches
+  closeND();
+  // Route to whatever this notification is actually about. Prefer the
+  // explicit link (works for meetings/HR/announcements, and for tasks
+  // even when multiple tasks share a title); fall back to the legacy
+  // title-match for older notifications sent before this existed.
+  const lt=n.linkType||n.link_type, lid=n.linkId||n.link_id;
+  if(lt==='task'&&lid){
+    const openIt=()=>{ if(DB.tasks.find(tk=>tk.id===lid)) openTask(lid); else toast('Task not found — it may have been deleted','bad'); };
+    if(page!=='alltasks'&&page!=='mytasks'){ navTo('alltasks'); setTimeout(openIt,150); }
+    else openIt();
+    return;
+  }
+  if(lt==='meeting'&&lid){
+    navTo('meetings');
+    setTimeout(()=>{ if(typeof openMeetingDetail==='function') openMeetingDetail(lid); },150);
+    return;
+  }
+  if(lt==='hrcom'&&lid){ navTo('hrcoms'); return; }
+  if(lt==='announcement'&&lid){ navTo('announcements'); return; }
+  // Legacy fallback — match by task title (old notifications only)
   if(n.taskTitle){
     const t=DB.tasks.find(tk=>tk.title===n.taskTitle);
-    if(t)openTask(t.id);
+    if(t){
+      if(page!=='alltasks'&&page!=='mytasks'){ navTo('alltasks'); setTimeout(()=>openTask(t.id),150); }
+      else openTask(t.id);
+    }
   }
-  closeND();
 };
 
 window.markAllRead=()=>{
