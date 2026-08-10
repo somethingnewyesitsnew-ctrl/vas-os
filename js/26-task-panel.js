@@ -17,6 +17,64 @@ function getTaskPausedHours(t){
   });
   return Math.round(total*100)/100;
 }
+// ── @Mention autocomplete for task comments ──────────────────────────
+// The plain <textarea id="task-comment-ta"> needs cursor-position-aware
+// "@partial" detection — the existing tag pickers (tf-assign-search,
+// mf-inv-search) are separate dedicated <input> fields with their own
+// wrapper markup and don't apply to free-form textarea text, so this is
+// new logic (it borrows the general filter/dropdown-render style from
+// those, but the detection itself has to work off selectionStart).
+function getMentionQuery(textarea){
+  const val=textarea.value;
+  const pos=textarea.selectionStart;
+  const upToCursor=val.slice(0,pos);
+  const m=upToCursor.match(/(?:^|\s)@([a-zA-Z][\w' -]*)$/);
+  if(!m)return null;
+  return{query:m[1],start:pos-m[1].length-1}; // start includes the leading @
+}
+
+function filterMentionDrop(ev){
+  const ta=ev.target;
+  const drop=document.getElementById('task-comment-mention-drop');
+  if(!drop)return;
+  const hit=getMentionQuery(ta);
+  if(!hit){drop.style.display='none';return;}
+  const q=hit.query.toLowerCase();
+  const matches=DB.team.filter(m=>m.name.toLowerCase().includes(q));
+  if(!matches.length){drop.style.display='none';return;}
+  drop.style.display='block';
+  drop.innerHTML=matches.slice(0,8).map(m=>
+    `<div onmousedown="event.preventDefault();insertMention('${m.name.replace(/'/g,"\\'")}',${hit.start})" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
+      <span style="width:20px;height:20px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
+      <span style="font-weight:600">${m.name}</span>
+    </div>`
+  ).join('');
+}
+
+function insertMention(name,atIndex){
+  const ta=document.getElementById('task-comment-ta');
+  if(!ta)return;
+  const val=ta.value;
+  const cursor=ta.selectionStart;
+  const before=val.slice(0,atIndex);
+  const after=val.slice(cursor);
+  const insertedText='@'+name+' ';
+  ta.value=before+insertedText+after;
+  const newPos=(before+insertedText).length;
+  hideMentionDrop();
+  ta.focus();
+  ta.setSelectionRange(newPos,newPos);
+}
+
+function hideMentionDrop(){
+  const drop=document.getElementById('task-comment-mention-drop');
+  if(drop)drop.style.display='none';
+}
+
+function mentionKeydown(ev){
+  if(ev.key==='Escape')hideMentionDrop();
+}
+
 window.openTask=(id)=>{
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const ass=DB.team.find(m=>m.id===t.assignedTo),rev=DB.team.find(m=>m.id===t.reviewer);
@@ -159,7 +217,10 @@ window.openTask=(id)=>{
     body+=`<div style="font-size:12px;color:var(--tx3);font-style:italic;padding:6px 0 10px">No comments yet.</div>`;
   }
   body+=`<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:14px">
-    <textarea id="task-comment-ta" placeholder="Add a comment…" rows="2" style="flex:1;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:13px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="flex:1;position:relative">
+      <textarea id="task-comment-ta" placeholder="Add a comment… (@ to mention someone)" rows="2" oninput="filterMentionDrop(event)" onkeydown="mentionKeydown(event)" onblur="setTimeout(hideMentionDrop,200)" style="width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:var(--fn);font-size:13px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+      <div id="task-comment-mention-drop" style="display:none;position:absolute;bottom:100%;left:0;right:0;margin-bottom:4px;z-index:300;background:var(--s);border:1px solid var(--bd);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:160px;overflow-y:auto"></div>
+    </div>
     <button class="btn bp bsm" onclick="postTaskComment('${t.id}')" style="flex-shrink:0;height:36px">Post</button>
   </div>`;
 
