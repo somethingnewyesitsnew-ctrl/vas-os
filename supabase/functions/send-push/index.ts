@@ -1,5 +1,5 @@
-// ══════════════════════════════════════════════════════════════════════
-// send-push — Supabase Edge Function
+// ======================================================================
+// send-push - Supabase Edge Function
 //
 // The one server-side piece Web Push requires: signing outgoing pushes
 // with the VAPID *private* key, which must never be shipped to the
@@ -12,9 +12,9 @@
 //
 // Looks up every push_subscriptions row for that member (they may have
 // several devices), sends to each, and prunes subscriptions the push
-// service reports as gone (404/410 — user revoked permission, uninstalled,
-// etc.) so the table doesn't accumulate dead rows.
-// ══════════════════════════════════════════════════════════════════════
+// service reports as gone (404/410 - user revoked permission, uninstalled,
+// etc.) so the table does not accumulate dead rows.
+// ======================================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
@@ -70,13 +70,14 @@ Deno.serve(async (req) => {
           keys: { p256dh: s.p256dh, auth: s.auth },
         };
         try {
-          // urgency:'high' + a real TTL matter most for waking a device
-          // that's in Doze/battery-saver — without them, Chrome/Android
-          // may defer delivery until the screen is next turned on. This
-          // does NOT fix iOS: Safari only delivers background/lock-screen
-          // push to a PWA that's been "Added to Home Screen" and only on
-          // iOS 16.4+ — a plain browser-tab subscription on iOS cannot
-          // wake the device, and no server-side setting changes that.
+          // urgency high and a real TTL matter most for waking a
+          // device that is in Doze / battery-saver mode - without them,
+          // Chrome/Android may defer delivery until the screen is next
+          // turned on. This does NOT fix iOS: Safari only delivers
+          // background/lock-screen push to a PWA that has been "Added
+          // to Home Screen", and only on iOS 16.4+. A plain browser-tab
+          // subscription on iOS cannot wake the device, and no
+          // server-side setting changes that.
           await webpush.sendNotification(subscription, payload, { TTL: 86400, urgency: 'high' });
           sent++;
         } catch (err: any) {
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
           if (err?.statusCode === 404 || err?.statusCode === 410) {
             dead.push(s.endpoint);
           }
-          // Other errors (network blip, etc.) are left alone — not fatal to the batch
+          // Other errors (network blip, etc.) are left alone - not fatal to the batch
         }
       })
     );
