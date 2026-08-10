@@ -158,6 +158,9 @@ async function notifyTG(memberId, eventType, data={}){
     case 'task_overdue':
       msg=`🚨 *${sys}* — Overdue\n\nHi ${member.name}! A task is overdue.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n📅 Was due: ${data.due||'?'}${link?'\n\n🔗 '+link:''}`;
       break;
+    case 'mention':
+      msg=`💬 *${sys}*\n\nHi ${member.name}! ${by} mentioned you in a comment on "${data.title||'a task'}".\n\n${data.text?'"'+data.text.slice(0,200)+'"':''}${link?'\n\n🔗 '+link:''}`;
+      break;
     default:
       msg=`🔔 *${sys}*\n\nHi ${member.name}! ${data.desc||'You have a new notification.'}${link?'\n\n🔗 '+link:''}`;
   }
