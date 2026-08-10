@@ -145,7 +145,12 @@ function openTaskDeepLink(tid){
   const isAssigned=t.assignedTo===myId||((t.assignedTo||'').toLowerCase()===myName)
     ||(t.assignees||[]).some(a=>a===myId||((a||'').toLowerCase()===myName));
   const isReviewer=t.reviewer===myId||((t.reviewer||'').toLowerCase()===myName);
-  const allowed=isAdmin()||isAssigned||isReviewer;
+  // A member who was @mentioned in a comment on this task should also be
+  // able to follow the notification link in, even if they're not otherwise
+  // assigned/reviewing/admin — otherwise the mention notification points
+  // straight at an Access Denied wall.
+  const isMentioned=(t.comments||[]).some(c=>(c.mentions||[]).includes(CU.id));
+  const allowed=isAdmin()||isAssigned||isReviewer||isMentioned;
 
   if(!allowed){
     nav('dash',document.querySelector('[data-p="dash"]'));
