@@ -273,15 +273,32 @@ window.endMeetingWithOutcomes=async(id)=>{
   openSP('End Meeting: '+m.title,'',body);
 };
 
+// Finds @Name mentions in comment text against DB.team full names.
+// Matches longest name first so e.g. "Al Khateeb" is matched whole rather
+// than a shorter name that happens to be a prefix of it being matched
+// instead. Case-insensitive, deduped by member id.
+function extractMentions(text){
+  if(!text)return[];
+  const candidates=[...DB.team].filter(m=>m.name).sort((a,b)=>b.name.length-a.name.length);
+  const lower=text.toLowerCase();
+  const found=new Set();
+  candidates.forEach(m=>{
+    if(lower.includes('@'+m.name.toLowerCase()))found.add(m.id);
+  });
+  return[...found];
+}
+
 window.postTaskComment=async(taskId)=>{
   const ta=document.getElementById('task-comment-ta');
   const text=ta?.value?.trim();
   if(!text){toast('Write something first','bad');return;}
   const t=DB.tasks.find(x=>x.id===taskId);if(!t)return;
   if(!t.comments)t.comments=[];
-  const c={id:'c'+gid(),by:CU.id,byName:CU.name,text,at:now(),taskId,taskTitle:t.title};
+  const mentionIds=extractMentions(text).filter(id=>id!==CU.id);
+  const c={id:'c'+gid(),by:CU.id,byName:CU.name,text,at:now(),taskId,taskTitle:t.title,mentions:mentionIds};
   t.comments.push(c);
   ta.value='';
+  hideMentionDrop?.();
   await nUpdateTask(t);
   // Notify task assignee and reviewer (not the commenter)
   [t.assignedTo, t.reviewer].filter(Boolean).forEach(uid=>{
@@ -292,6 +309,17 @@ window.postTaskComment=async(taskId)=>{
         notifyTG(uid,'default',{desc:`💬 New comment on task "${t.title}"\n\n${CU.name}: ${text.slice(0,200)}`,link:appLink('task-'+t.id)});
       }
     }
+  });
+  // Explicit @mention pings — separate from the assignee/reviewer notify
+  // above, since a mentioned person may be neither (e.g. someone pulled
+  // into the discussion). Deliberately still fires even if the mentioned
+  // person is also the assignee/reviewer — a direct @mention is a
+  // stronger signal worth its own ping alongside the general comment one.
+  mentionIds.forEach(uid=>{
+    const m=DB.team.find(x=>x.id===uid);
+    if(!m)return;
+    sendNotif(m.name,`${CU.name} mentioned you in a comment on "${t.title}": ${text.slice(0,80)}`,'Mention',t.title,false,{taskId:t.id});
+    notifyTG(uid,'mention',{title:t.title,text,link:appLink('task-'+t.id)});
   });
   notifyAdminsWA(`💬 New Comment\n\n${CU.name} commented on "${t.title}"\n\n"${text.slice(0,150)}"`,appLink('task-'+t.id));
   logAction('Comment Posted',`${CU.name} commented on "${t.title}"`, 'Info', t.title, text.slice(0,100),{taskId:t.id,taskTitle:t.title});
