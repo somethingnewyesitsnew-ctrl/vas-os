@@ -46,4 +46,16 @@ const SB_URL = 'https://duglbebwhtuijnduwmvz.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws';
 const SB_HEADERS = {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
 
+// Realtime client — separate from the raw REST helpers below (sbQ/sbInsert/
+// etc.), which stay as-is. Only used for live subscriptions (see
+// startRealtimeNotifs in 07-notify-log.js); every normal read/write still
+// goes through the REST helpers unchanged. Guarded because it depends on
+// the @supabase/supabase-js CDN script tag loading before this file — if
+// that ever fails (offline CDN, ad blocker, etc.) the rest of the app must
+// keep working exactly as it did before Realtime existed, just without live push.
+const sbClient = (typeof window.supabase !== 'undefined' && window.supabase.createClient)
+  ? window.supabase.createClient(SB_URL, SB_KEY)
+  : null;
+if(!sbClient) console.warn('Supabase Realtime client unavailable — live updates disabled, REST calls unaffected.');
+
 // Supabase REST helpers
