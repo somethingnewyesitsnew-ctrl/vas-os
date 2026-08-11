@@ -1,3 +1,65 @@
+// ── Realtime — live delivery for notifications ───────────────────────
+// Subscribes to INSERT events on the `notifications` table (not raw
+// `tasks` changes, which would be noisy) so a submit-for-review, an
+// approval/rejection, a mention, or a help request shows up without
+// anyone needing to click Refresh or reload the page. This is what was
+// actually missing before — sendNotif()/notifyAdmins() only rendered
+// live on the *sender's own* screen (an optimistic local render), never
+// on anyone else's, including admins watching 'Task Submitted' broadcasts:
+// their session had no way to find out short of loadNotifs() re-running
+// at next login/manual refresh. Realtime fixes that for every open
+// session, admin or not, since Postgres delivers the INSERT to all
+// subscribed clients and each one decides locally whether it's relevant.
+const REALTIME_NOTIF_TYPES=['Task Assigned','Task Started','Task Submitted','Review Needed','Task Approved','Task Rejected','Status Changed','Re-Estimate','Help Request','Help Accepted','Mention','Reminder'];
+let _rtChannel=null;
+
+function startRealtimeNotifs(){
+  if(!sbClient||!CU||_rtChannel)return; // no client loaded, not logged in, or already subscribed this session
+  _rtChannel=sbClient
+    .channel('notifications-inserts')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications'},handleRealtimeNotif)
+    .subscribe();
+}
+
+function stopRealtimeNotifs(){
+  if(_rtChannel&&sbClient){ sbClient.removeChannel(_rtChannel); _rtChannel=null; }
+}
+
+async function handleRealtimeNotif(payload){
+  const row=payload?.new;
+  if(!row||!CU)return;
+  if(!REALTIME_NOTIF_TYPES.includes(row.type))return;
+  const isRelevant=row.to_name===CU.name||(row.admins_only&&isAdmin());
+  if(!isRelevant)return;
+  // Skip the echo of our own action — sendNotif() already rendered it
+  // locally on the sender's own screen the instant they performed the
+  // action, so processing the server echo too would just duplicate it.
+  if(row.from_name===CU.name)return;
+  if(notifs.some(n=>n.id===row.id))return; // already have it somehow
+
+  const n={
+    id:row.id, to:row.to_name||'', from:row.from_name||'',
+    text:row.message, type:row.type, taskTitle:row.task_title||'',
+    linkType:row.link_type||null, linkId:row.link_id||null,
+    adminsOnly:row.admins_only, readBy:row.read_by||[], time:row.created_at
+  };
+  notifs.unshift(n); notifs=notifs.slice(0,60);
+  renderNotifs();
+
+  // If this points at a task, pull the fresh row right now so whatever
+  // gets opened next (via the bell, or an already-open panel) reflects
+  // the actual current state — the submit/comment/status change that
+  // just happened, not what was cached in memory beforehand.
+  if(n.linkType==='task'&&n.linkId&&typeof fetchAndUpsertTask==='function'){
+    await fetchAndUpsertTask(n.linkId);
+  }
+
+  updateBadges();
+  if(['dash','mytasks','alltasks','toreview','helprequests'].includes(page)){
+    smartRerender(page, document.getElementById('content'));
+  }
+}
+
 // §07 ── NOTIFICATIONS & LOGGING ────────────────────────────────────────
 async function loadNotifs(){
   if(!CU)return;
