@@ -129,6 +129,10 @@ async function startApp(){
   // are genuinely subscribed but did so before push_enabled existed, or
   // whose browser silently re-subscribed them.
   if(typeof syncPushEnabledState==='function') syncPushEnabledState();
+  // Live delivery for notifications (submits, approvals, mentions, help
+  // requests, etc.) — see startRealtimeNotifs in 07-notify-log.js for why
+  // this exists and what it's scoped to.
+  if(typeof startRealtimeNotifs==='function') startRealtimeNotifs();
 }
 
 // Opens a #task-{id} deep link (from an OS push notification, an in-app
@@ -136,7 +140,12 @@ async function startApp(){
 // Tasks and opens the task panel. Shared by the initial page-load hash
 // handler above and by the "app already open" postMessage handler in
 // 01-push-notifications.js, so both paths behave identically.
-function openTaskDeepLink(tid){
+// Always fetches the current row from Supabase first (rather than trusting
+// whatever's already in local DB.tasks) — this is what actually fixes a
+// notification click landing on a stale copy of the task, where a submit
+// or a new comment silently isn't there until a manual refresh.
+async function openTaskDeepLink(tid){
+  if(typeof fetchAndUpsertTask==='function') await fetchAndUpsertTask(tid);
   const t=DB.tasks.find(x=>x.id===tid);
   if(!t){toast('Task not found','bad');return;}
 
@@ -349,7 +358,7 @@ function startReminderChecker(){
   setInterval(checkReminders, 30000);
 }
 
-function doLogout(){logAction('Logout',`${CU.name} logged out`,'Info');CU=null;document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='flex';}
+function doLogout(){logAction('Logout',`${CU.name} logged out`,'Info');if(typeof stopRealtimeNotifs==='function')stopRealtimeNotifs();CU=null;document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='flex';}
 
 // ══════════════════════════════════════════════════════
 // DEMO DATA (fallback when offline)
