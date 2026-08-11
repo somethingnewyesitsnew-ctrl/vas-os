@@ -1,3 +1,71 @@
+// Maps a raw Supabase `tasks` row into the shape the rest of the app
+// expects (snake_case DB columns -> camelCase fields, resolved display
+// names from already-loaded lookups). Extracted out of loadFromNotion's
+// bulk mapping so a single fresh row (e.g. after a notification click,
+// or a Realtime insert) can be mapped and upserted into DB.tasks the
+// exact same way, without needing a full reload.
+function mapTaskRow(t){
+  const ass  = DB.team.find(m=>m.id===t.assigned_to);
+  const rev  = DB.team.find(m=>m.id===t.reviewer);
+  const svc  = DB.services.find(s=>s.id===t.service_id);
+  const co   = [...DB.operators,...DB.companies].find(c=>c.id===t.company_id);
+  const proj = DB.projects.find(p=>p.id===t.project_id);
+  return {
+    ...t,
+    assignedTo:   t.assigned_to,
+    assignees:    t.assignees||[],
+    reviewer:     t.reviewer,
+    service:      t.service_id,
+    operator:     t.company_id,
+    company2:     t.company_id2||null,
+    projectId:    t.project_id,
+    link:         t.link||'',
+    assigneeName: ass?.name||'',
+    reviewerName: rev?.name||'',
+    serviceName:  svc?.name||'',
+    operatorName: co?.name||'',
+    company2Name: DB.companies.find(c=>c.id===t.company_id2)?.name||'',
+    projectName:  proj?.name||'',
+    tsCreated:    t.created_at,
+    tsStarted:    t.ts_started,
+    tsSubmitted:  t.ts_submitted,
+    meetingId:    t.meeting_id||null,
+    parentTaskId: t.parent_task_id||null,
+    reEstimates:  t.re_estimates||[],
+    timeline:     t.timeline||[],
+    tsReviewed:   t.ts_reviewed,
+    tsArchived:   t.ts_archived,
+    tsOpened:     t.ts_opened,
+    est: t.est, actual: t.actual,
+    what: t.what||'', tech: t.tech||'', desc: t.description||'',
+    rejReason: t.rej_reason||'',
+    respH: t.resp_h, workH: t.work_h, revH: t.rev_h, cycleH: t.cycle_h,
+    reqBy: t.req_by||'',
+    createdBy: t.created_by||'',
+    rejections: t.rejections||[],
+    comments: t.comments||[],
+  };
+}
+
+// Fetches one fresh task row from Supabase and upserts it into DB.tasks,
+// mapped the same way as the bulk load. Used anywhere we're about to show
+// a task in response to an external event (notification click, deep link,
+// Realtime push) so the panel never displays stale local state — this is
+// what actually fixes "clicked the notification but the submit/comment
+// isn't there yet", independent of whether a live push already delivered it.
+async function fetchAndUpsertTask(id){
+  if(!id)return null;
+  try{
+    const rows=await sbQ('tasks',`id=eq.${id}`);
+    const row=Array.isArray(rows)?rows[0]:null;
+    if(!row)return null;
+    const mapped=mapTaskRow(row);
+    const idx=DB.tasks.findIndex(t=>t.id===mapped.id);
+    if(idx>=0) DB.tasks[idx]=mapped; else DB.tasks.unshift(mapped);
+    return mapped;
+  }catch(e){ console.warn('fetchAndUpsertTask failed',e); return null; }
+}
+
 // §05 ── DATA LOAD ───────────────────────────────────────────────────────
 async function loadFromNotion(){ // kept as loadFromNotion for compatibility
   setSync('syncing','Loading…');
@@ -35,49 +103,7 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
       sbQ('test_checks','order=created_at.desc&limit=1000'),
     ]);
 
-    DB.tasks = (tasks||[]).map(t=>{
-      // Resolve names from already-loaded lookups
-      const ass  = DB.team.find(m=>m.id===t.assigned_to);
-      const rev  = DB.team.find(m=>m.id===t.reviewer);
-      const svc  = DB.services.find(s=>s.id===t.service_id);
-      const co   = [...DB.operators,...DB.companies].find(c=>c.id===t.company_id);
-      const proj = DB.projects.find(p=>p.id===t.project_id);
-      return {
-        ...t,
-        assignedTo:   t.assigned_to,
-        assignees:    t.assignees||[],
-        reviewer:     t.reviewer,
-        service:      t.service_id,
-        operator:     t.company_id,
-        company2:     t.company_id2||null,
-        projectId:    t.project_id,
-        link:         t.link||'',
-        assigneeName: ass?.name||'',
-        reviewerName: rev?.name||'',
-        serviceName:  svc?.name||'',
-        operatorName: co?.name||'',
-        company2Name: DB.companies.find(c=>c.id===t.company_id2)?.name||'',
-        projectName:  proj?.name||'',
-        tsCreated:    t.created_at,
-        tsStarted:    t.ts_started,
-        tsSubmitted:  t.ts_submitted,
-        meetingId:    t.meeting_id||null,
-        parentTaskId: t.parent_task_id||null,
-        reEstimates:  t.re_estimates||[],
-        timeline:     t.timeline||[],
-        tsReviewed:   t.ts_reviewed,
-        tsArchived:   t.ts_archived,
-        tsOpened:     t.ts_opened,
-        est: t.est, actual: t.actual,
-        what: t.what||'', tech: t.tech||'', desc: t.description||'',
-        rejReason: t.rej_reason||'',
-        respH: t.resp_h, workH: t.work_h, revH: t.rev_h, cycleH: t.cycle_h,
-        reqBy: t.req_by||'',
-        createdBy: t.created_by||'',
-        rejections: t.rejections||[],
-        comments: t.comments||[],
-      };
-    });
+    DB.tasks = (tasks||[]).map(mapTaskRow);
 
     DB.backlog = (bl||[]).map(b=>({...b, 
   by: b.by_name||'', 
