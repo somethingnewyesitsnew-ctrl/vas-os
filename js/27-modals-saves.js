@@ -579,7 +579,7 @@ function renderNotifs(){
   updateBadges();
 }
 
-window.clickNotif=(id)=>{
+window.clickNotif=async(id)=>{
   const n=notifs.find(no=>no.id===id);if(!n)return;
   if(!n.readBy.includes(CU?.name)){
     n.readBy.push(CU.name);
@@ -598,6 +598,10 @@ window.clickNotif=(id)=>{
   // title-match for older notifications sent before this existed.
   const lt=n.linkType||n.link_type, lid=n.linkId||n.link_id;
   if(lt==='task'&&lid){
+    // Fetch the current row before opening rather than trusting whatever
+    // is already in local DB.tasks — otherwise a submit or a new comment
+    // that happened elsewhere silently isn't there until a manual refresh.
+    if(typeof fetchAndUpsertTask==='function') await fetchAndUpsertTask(lid);
     const openIt=()=>{ if(DB.tasks.find(tk=>tk.id===lid)) openTask(lid); else toast('Task not found — it may have been deleted','bad'); };
     if(page!=='alltasks'&&page!=='mytasks'){ navTo('alltasks'); setTimeout(openIt,150); }
     else openIt();
