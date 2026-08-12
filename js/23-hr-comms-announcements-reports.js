@@ -492,7 +492,12 @@ function rReports(el){
 window.openMemberReport=(memberId)=>{
   const m=DB.team.find(x=>x.id===memberId);if(!m)return;
   const PERIODS={week:{label:'Last 7 Days',days:7},month:{label:'Last 30 Days',days:30},q:{label:'Last 3 Months',days:90},half:{label:'Last 6 Months',days:180},year:{label:'Last Year',days:365}};
-  let selPeriod=window._mrPeriod||'month';
+  // Always open on the past week by default — that's the window people
+  // actually want to see first when checking in on someone. Deliberately
+  // ignores any previously-remembered period from a different member's
+  // report; period-switch buttons within the report still update
+  // window._mrPeriod as before.
+  let selPeriod='week';
 
   function renderReport(period){
     window._mrPeriod=period;
@@ -714,12 +719,33 @@ window.openMemberReport=(memberId)=>{
   }
 };
 
-// Internal: does actual render into sp-bd
-function openMemberReport_render(m,period,PERIODS){
+// Internal: does actual render into sp-bd. Async because it needs to pull
+// this specific member's notification history from Supabase — the local
+// `notifs` array only ever holds notifications for whoever is currently
+// logged in (the person viewing this report), never for the member being
+// reported on, so whether THEY were actually notified — and whether they
+// read it — has to be fetched fresh each time this report opens or the
+// period is switched.
+async function openMemberReport_render(m,period,PERIODS){
   const {label,days}=PERIODS[period];
   const from=new Date(Date.now()-days*864e5);
   const to=new Date();
   const inR=(ts)=>{if(!ts)return false;const d=new Date(ts);return d>=from&&d<=to;};
+
+  const spLoading=document.getElementById('sp-bd');
+  if(spLoading) spLoading.innerHTML='<div class="loading-sc" style="height:160px"><div class="loader"></div><div class="loading-tx">Loading report…</div></div>';
+
+  let memberNotifs=[];
+  try{
+    const rows=await sbQ('notifications', `to_name=eq.${encodeURIComponent(m.name)}&created_at=gte.${from.toISOString()}&order=created_at.desc&limit=150`);
+    if(Array.isArray(rows)) memberNotifs=rows.map(r=>({
+      id:r.id, type:r.type||'Mention', message:r.message||'', taskTitle:r.task_title||'',
+      linkType:r.link_type||null, linkId:r.link_id||null,
+      at:r.created_at, read:Array.isArray(r.read_by)&&r.read_by.includes(m.name)
+    }));
+  }catch(e){ console.warn('member report notification fetch failed',e); }
+  const notifsRead=memberNotifs.filter(n=>n.read).length;
+  const NOTIF_ICONS={'Task Assigned':'📬','Task Started':'▶️','Task Submitted':'📤','Task Approved':'✅','Task Rejected':'🔴','Review Needed':'🔍','Status Changed':'🔄','Re-Estimate':'⏱','Mention':'💬','Comment':'💬','Reminder':'🔔','Help Request':'🤝','Help Accepted':'✅','Meeting Created':'📅','Meeting Started':'🔔','Meeting Ended':'✅','Meeting Cancelled':'❌','Meeting Rescheduled':'📆','Service Test Completed':'🧪'};
 
   const myTasks=DB.tasks.filter(t=>t.assignedTo===m.id||(t.assignees||[]).includes(m.id));
   const periodTasks=myTasks.filter(t=>inR(t.tsCreated));
@@ -768,7 +794,23 @@ function openMemberReport_render(m,period,PERIODS){
     ${ST('📋','Assigned',periodTasks.length,'#2563eb')}${ST('✅','Done',periodDone.length,'#15803d')}${ST('⚠️','Overdue',overdueNow.length,overdueNow.length?'#dc2626':'#15803d')}
     ${ST('⏱','Hours',workHours+'h','#0891b2')}${ST('📐','Est Var',variance!==null?(variance>0?'+':'')+variance+'%':'—',variance===null?'#64748b':Math.abs(variance)<=20?'#15803d':Math.abs(variance)<=50?'#d97706':'#dc2626')}${ST('🔄','Cycle',avgCycle?avgCycle+'h':'—','#7c3aed')}
     ${ST('🔍','Reviewed',reviewedByMe.length,'#2563eb')}${ST('📅','Meetings',myMeetings.length,'#2563eb')}${ST('🔐','Logins',loginEvents.length,'#64748b')}
+    ${ST('🔔','Notified',memberNotifs.length,memberNotifs.length?'#2563eb':'#64748b')}${ST('👁','Read',notifsRead,memberNotifs.length&&notifsRead===memberNotifs.length?'#15803d':memberNotifs.length?'#d97706':'#64748b')}${ST('◌','Unread',memberNotifs.length-notifsRead,(memberNotifs.length-notifsRead)>0?'#dc2626':'#15803d')}
   </div>
+
+  ${SP('🔔 Notifications Sent to '+m.name.split(' ')[0]+' ('+memberNotifs.length+' · '+notifsRead+' read)')}
+  ${memberNotifs.length?`<div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;margin-bottom:4px">
+  ${memberNotifs.map(n=>{
+    const icon=NOTIF_ICONS[n.type]||'🔔';
+    return`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:var(--s2);border-radius:7px">
+      <span style="font-size:13px;flex-shrink:0;line-height:1.4">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--tx);line-height:1.4">${n.message}</div>
+        <div style="font-size:9px;color:var(--tx3);margin-top:2px">${n.type}${n.taskTitle?' · '+n.taskTitle:''} · ${fdt(n.at)}</div>
+      </div>
+      <span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap;background:${n.read?'#f0fdf4':'#fffbeb'};color:${n.read?'#15803d':'#b45309'};border:1px solid ${n.read?'#86efac':'#fde68a'}">${n.read?'✓ Read':'◌ Unread'}</span>
+    </div>`;
+  }).join('')}
+  </div>`:`<div style="font-size:12px;color:var(--tx3);padding:8px 0;margin-bottom:4px">No notifications were sent to ${m.name} in this period.</div>`}
 
   ${periodTasks.length?SP('📋 Tasks ('+periodTasks.length+')'):''}
   ${periodTasks.length?`<div class="tw" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>Task</th><th>Status</th><th>Est</th><th>Actual</th><th>Var</th></tr></thead><tbody>
