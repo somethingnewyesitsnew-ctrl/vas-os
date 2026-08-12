@@ -66,6 +66,41 @@ async function fetchAndUpsertTask(id){
   }catch(e){ console.warn('fetchAndUpsertTask failed',e); return null; }
 }
 
+// Fetches one fresh meeting row and upserts it into DB.meetings — same
+// idea as fetchAndUpsertTask above, for meeting-linked notifications
+// (created/started/ended/cancelled/rescheduled) so the meetings page and
+// dashboard's "Today's Meetings" reflect the real current state.
+async function fetchAndUpsertMeeting(id){
+  if(!id)return null;
+  try{
+    const rows=await sbQ('meetings',`id=eq.${id}`);
+    const row=Array.isArray(rows)?rows[0]:null;
+    if(!row)return null;
+    const mapped={...row, invitees:row.invitees||[], attendance:row.attendance||{}};
+    const idx=DB.meetings.findIndex(x=>x.id===mapped.id);
+    if(idx>=0) DB.meetings[idx]=mapped; else DB.meetings.unshift(mapped);
+    return mapped;
+  }catch(e){ console.warn('fetchAndUpsertMeeting failed',e); return null; }
+}
+
+// Fetches one fresh test_sessions row plus its test_checks rows and
+// upserts both into DB.testSessions/DB.testChecks — for service-test
+// completion notifications, so the Service Tests page and its pass/fail
+// counts reflect the real current state without a full reload.
+async function fetchAndUpsertTestSession(id){
+  if(!id)return null;
+  try{
+    const rows=await sbQ('test_sessions',`id=eq.${id}`);
+    const row=Array.isArray(rows)?rows[0]:null;
+    if(!row)return null;
+    const idx=DB.testSessions.findIndex(x=>x.id===row.id);
+    if(idx>=0) DB.testSessions[idx]=row; else DB.testSessions.unshift(row);
+    const checks=await sbQ('test_checks',`session_id=eq.${id}`);
+    if(Array.isArray(checks)) DB.testChecks=DB.testChecks.filter(c=>c.session_id!==id).concat(checks);
+    return row;
+  }catch(e){ console.warn('fetchAndUpsertTestSession failed',e); return null; }
+}
+
 // §05 ── DATA LOAD ───────────────────────────────────────────────────────
 async function loadFromNotion(){ // kept as loadFromNotion for compatibility
   setSync('syncing','Loading…');
