@@ -190,6 +190,8 @@ window.postponeMeeting=async(id)=>{
     m.invitees?.forEach(name=>{
       if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" rescheduled from ${fd(oldDate)} ${oldTime} → ${fd(newDate)} ${newTime}`,'Mention',m.title,false,{meetingId:m.id});
     });
+    notifyAdmins(`${CU.name} rescheduled "${m.title}" — ${fd(oldDate)} ${oldTime} → ${fd(newDate)} ${newTime}`,'Meeting Rescheduled',m.title,{meetingId:m.id});
+    notifyAdminsTG(`📆 Meeting Rescheduled\n\n${CU.name} moved "${m.title}"\n${fd(oldDate)} ${oldTime} → ${fd(newDate)} ${newTime}`,appLink('meetings'));
     toast('Meeting rescheduled ✓','ok');
     closeSP();nav('meetings',document.querySelector('[data-p="meetings"]'));
   } else {
@@ -211,6 +213,8 @@ window.cancelMeetingFull=async(id)=>{
     m.status='Cancelled';m.cancelled_at=new Date().toISOString();if(reason)m.cancel_reason=reason;
     await nMeetingUpd(m);
     m.invitees?.forEach(name=>{if(name!==CU.name)sendNotif(name,`Meeting "${m.title}" was cancelled${reason?' — '+reason:''}. `,'Mention',m.title,false,{meetingId:m.id});});
+    notifyAdmins(`${CU.name} cancelled meeting "${m.title}"${reason?' — '+reason:''}`,'Meeting Cancelled',m.title,{meetingId:m.id});
+    notifyAdminsTG(`❌ Meeting Cancelled\n\n${CU.name} cancelled "${m.title}"${reason?'\nReason: '+reason:''}`,appLink('meetings'));
     toast('Meeting cancelled','ok');closeSP();nav('meetings',document.querySelector('[data-p="meetings"]'));
   } else {
     const reason=prompt('Reason for cancellation request:');
@@ -321,7 +325,12 @@ window.postTaskComment=async(taskId)=>{
     sendNotif(m.name,`${CU.name} mentioned you in a comment on "${t.title}": ${text.slice(0,80)}`,'Mention',t.title,false,{taskId:t.id});
     notifyTG(uid,'mention',{title:t.title,text,link:appLink('task-'+t.id)});
   });
-  notifyAdminsWA(`💬 New Comment\n\n${CU.name} commented on "${t.title}"\n\n"${text.slice(0,150)}"`,appLink('task-'+t.id));
+  // Admin broadcast — in-app row via notifyAdmins() (carries proper
+  // meta.taskId, unlike the old notifyAdminsWA path, so clicking it goes
+  // somewhere and it's realtime-deliverable) plus the Telegram side via
+  // notifyAdminsTG(), same split used across the rest of the task lifecycle.
+  notifyAdmins(`${CU.name} commented on "${t.title}": ${text.slice(0,150)}`,'Comment',t.title,{taskId:t.id});
+  notifyAdminsTG(`💬 New Comment\n\n${CU.name} commented on "${t.title}"\n\n"${text.slice(0,150)}"`,appLink('task-'+t.id));
   logAction('Comment Posted',`${CU.name} commented on "${t.title}"`, 'Info', t.title, text.slice(0,100),{taskId:t.id,taskTitle:t.title});
   toast('Comment posted ✓','ok');
   updateBadges();
@@ -545,6 +554,11 @@ window.confirmEndMeeting=async(id)=>{
 
   const msg=created>0?`Meeting ended · ${created} task${created>1?'s':''} created ✓`:'Meeting ended ✓';
   toast(msg,'ok',5000);
+
+  const presentCount=Object.values(m.attendance||{}).filter(v=>v==='present').length;
+  const invitedCount=Object.keys(m.attendance||{}).length;
+  notifyAdmins(`${CU.name} ended meeting "${m.title}" — ${presentCount}/${invitedCount} attended${created>0?' · '+created+' action item'+(created>1?'s':'')+' created':''}`,'Meeting Ended',m.title,{meetingId:m.id});
+  notifyAdminsTG(`✅ Meeting Ended\n\n${CU.name} ended "${m.title}"\nAttendance: ${presentCount}/${invitedCount}${created>0?'\nAction items: '+created:''}`,appLink('meetings'));
 
   // Notify external assignees
   const extIds=[...new Set(items.filter(ai=>ai.assignee).map(ai=>{
