@@ -608,8 +608,15 @@ window.clickNotif=async(id)=>{
     return;
   }
   if(lt==='meeting'&&lid){
+    if(typeof fetchAndUpsertMeeting==='function') await fetchAndUpsertMeeting(lid);
     navTo('meetings');
     setTimeout(()=>{ if(typeof openMeetingDetail==='function') openMeetingDetail(lid); },150);
+    return;
+  }
+  if(lt==='testsession'&&lid){
+    if(typeof fetchAndUpsertTestSession==='function') await fetchAndUpsertTestSession(lid);
+    navTo('svctest');
+    setTimeout(()=>{ if(typeof openServiceList==='function') openServiceList(lid); },150);
     return;
   }
   if(lt==='hrcom'&&lid){ navTo('hrcoms'); return; }
