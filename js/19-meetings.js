@@ -302,6 +302,15 @@ window.startMeeting=async(id)=>{
   const m=DB.meetings.find(x=>x.id===id);if(!m)return;
   m.status='Started';m.started_at=new Date().toISOString();
   await nMeetingUpd(m);toast('Meeting started ✓','ok');
+  (m.invitees||[]).forEach(name=>{
+    if(name!==CU.name){
+      sendNotif(name,`Meeting "${m.title}" is starting now`,'Meeting Started',m.title,false,{meetingId:m.id});
+      const inv=DB.team.find(x=>x.name===name);
+      if(inv) notifyTG(inv.id,'meeting_starting',{title:m.title,location:m.location||'',link:appLink('meetings')});
+    }
+  });
+  notifyAdmins(`${CU.name} started meeting "${m.title}"`,'Meeting Started',m.title,{meetingId:m.id});
+  notifyAdminsTG(`🔔 Meeting Started\n\n${CU.name} started "${m.title}"`,appLink('meetings'));
   nav('meetings',document.querySelector('[data-p="meetings"]'));
   setTimeout(()=>openMeetingDetail(id),80);
 };
@@ -433,6 +442,8 @@ window.saveMeeting=async()=>{
         if(inv) notifyTG(inv.id,'meeting_invited',{title,date:fd(date),time,location:data.location||'',link:appLink('meetings')});
       }
     });
+    notifyAdmins(`${CU.name} created meeting "${title}" — ${fd(date)} at ${time}${invitees.length?' · '+invitees.length+' invited':''}`,'Meeting Created',title,{meetingId:m.id});
+    notifyAdminsTG(`📅 Meeting Created\n\n${CU.name} scheduled "${title}"\n${fd(date)} at ${time}${invitees.length?'\nInvited: '+invitees.join(', '):''}`,appLink('meetings'));
     // If recurring, pre-schedule next occurrence
     if(recur){
       const nextDate=calcNextDue(date,recur);
