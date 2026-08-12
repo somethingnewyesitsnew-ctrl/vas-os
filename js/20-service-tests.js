@@ -445,7 +445,11 @@ window.completeSession=window.completeSessionFlow=async(sid)=>{
   await sbUpdateSession(s);
   // Notify admins
   const tester=DB.team.find(m=>m.id===s.tester_id)||CU;
-  notifyAdminsWA(`🧪 Service Test Completed\n\n👤 Tester: ${s.tester_name}\n🏢 Operator: ${s.operator_name}\n✅ Passed: ${s.passed_checks}  ❌ Failed: ${s.failed_checks}  📋 Total: ${s.total_checks}${s.failed_checks>0?'\n\n⚠️ Failed items have been converted to tasks.':''}`,appLink('svctest'));
+  // Admin broadcast — in-app row via notifyAdmins() with meta.testSessionId
+  // so it's clickable and realtime-deliverable (the old notifyAdminsWA-only
+  // call had no way to attach a link), plus the Telegram side separately.
+  notifyAdmins(`🧪 Service Test Completed — ${s.tester_name} · ${s.operator_name}: ${s.passed_checks}✓ ${s.failed_checks}✗ of ${s.total_checks}`,'Service Test Completed','',{testSessionId:s.id});
+  notifyAdminsTG(`🧪 Service Test Completed\n\n👤 Tester: ${s.tester_name}\n🏢 Operator: ${s.operator_name}\n✅ Passed: ${s.passed_checks}  ❌ Failed: ${s.failed_checks}  📋 Total: ${s.total_checks}${s.failed_checks>0?'\n\n⚠️ Failed items have been converted to tasks.':''}`,appLink('svctest'));
   logAction('Service Test Completed',`${s.tester_name} completed service test for ${s.operator_name} — ${s.passed_checks}/${s.total_checks} passed`,'Success',s.operator_name,`Failed: ${s.failed_checks}`,{operatorName:s.operator_name,memberName:s.tester_name,memberId:s.tester_id});
   toast('Test complete — '+s.passed_checks+'✓ '+s.failed_checks+'✗','ok',5000);
   window._chkSession=null;
