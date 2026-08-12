@@ -41,14 +41,24 @@ function logAction(action,event,severity='Info',target='',details='',meta={}){
   nLog(e);
 }
 
-// Notify all admins via in-app + Telegram
-function notifyAdminsWA(msg,link=''){
-  if(!isAdmin()) // don't notify if actor is admin themselves
+// Pings every admin via Telegram only. Pair this with notifyAdmins() at
+// the call site for the in-app notification row — notifyAdmins() writes
+// ONE admins_only row with proper meta.taskId/meetingId so clicking it
+// actually goes somewhere, which a per-admin row here never could.
+// Previously this function (then named notifyAdminsWA, from the old
+// WhatsApp-era naming) ALSO wrote its own unlinked in-app row per admin
+// on top of that — duplicating the notification and giving a dead click
+// target. Same guard as before: skip entirely if the actor performing
+// the action is themselves an admin.
+function notifyAdminsTG(msg,link=''){
+  if(!isAdmin())
     DB.team.filter(m=>isAdminMember(m)&&m.id!==CU?.id).forEach(m=>{
-      sendNotif(m.name,msg,'Admin Alert','');
       notifyTG(m.id,'default',{desc:`🔔 *VAS Admin Alert*\n\n${msg}`,link:link||appLink('')});
     });
 }
+// Back-compat alias — every current call site is being updated to the new
+// name alongside this change, but kept in case anything else still uses it.
+const notifyAdminsWA=notifyAdminsTG;
 
 // ══════════════════════════════════════════════════════
 // NAVIGATION
