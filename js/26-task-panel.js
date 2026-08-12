@@ -379,7 +379,7 @@ window.confirmHelpRequest=async()=>{
   if(helper)sendNotif(helper.name,`${CU.name} needs your help with "${t.title}". Please review and submit when done.`,'Help Request',helpTask.title,false,{taskId:helpTask.id});
   notifyAdmins(`${CU.name} requested help from ${helper?.name||'?'} on "${t.title}"`,'Help Request',t.title,{taskId:t.id});
   if(helper) notifyTG(helper.id,'help_requested',{title:t.title,desc,link:appLink('task-'+helpTask.id)});
-  notifyAdminsWA(`🤝 Help Request\n\n${CU.name} requested help from ${helper?.name||'?'}\nTask: "${t.title}"`,appLink('task-'+t.id));
+  notifyAdminsTG(`🤝 Help Request\n\n${CU.name} requested help from ${helper?.name||'?'}\nTask: "${t.title}"`,appLink('task-'+t.id));
   logAction('Help Requested',`${CU.name} requested help from ${helper?.name||'?'} for "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:helper?.id,memberName:helper?.name});
   CM('m-help');toast(`Help request sent to ${helper?.name||'?'} ✓`,'ok');openTask(_pendTask);updateBadges();
 };
@@ -432,6 +432,9 @@ window.confirmRemind=async()=>{
   }
   sendNotif(m.name,msg||defaultMsg,'Reminder',t.title,false,{taskId:t.id});
   notifyTG(m.id,'reminder',{desc:`⏰ *Reminder from ${CU.name}*\n\n${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
+  // Admins are watching this too, same as the rest of the task lifecycle
+  // notifications — a reminder is a signal something needs attention.
+  notifyAdmins(`${CU.name} reminded ${m.name} about "${t.title}"`,'Reminder',t.title,{taskId:t.id});
   logAction('Reminder Sent',`${CU.name} reminded ${m.name} about "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:m.id,memberName:m.name});
   CM('m-remind');toast(`Reminder sent to ${m.name} ✓`,'ok');
   updateBadges();
@@ -445,7 +448,7 @@ window.confirmStart=async()=>{
   const revMember=DB.team.find(m=>m.id===t.reviewer);
   if(revMember) sendNotif(revMember.name,`${CU.name} started "${t.title}" (Est: ${h}h) — awaiting review when done`,'Task Started',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} started task: "${t.title}" — ${h}h estimated`,'Task Started',t.title,{taskId:t.id});
-  notifyAdminsWA(`▶ Task Started\n\n${CU.name} started working on "${t.title}"\nEstimate: ${h}h`,appLink('task-'+t.id));
+  notifyAdminsTG(`▶ Task Started\n\n${CU.name} started working on "${t.title}"\nEstimate: ${h}h`,appLink('task-'+t.id));
   await nUpdateTask(t);
   CM('m-est'); toast(`Started — ${h}h estimated ✓`,'ok'); openTask(_pendTask); updateBadges();
 };
@@ -497,7 +500,7 @@ window.confirmSubmit=async()=>{
   if(revMember2) sendNotif(revMember2.name,`Review needed: "${t.title}" — ${actual?actual+'h actual':'auto-timed'} by ${CU.name}`,'Review Needed',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} submitted "${t.title}" for review (${actual?actual+'h':' time auto-tracked'})`,'Task Submitted',t.title,{taskId:t.id});
   if(revMember2) notifyTG(revMember2.id,'task_submitted',{title:t.title,priority:t.priority,link:appLink('task-'+t.id)});
-  notifyAdminsWA(`📤 Task Submitted for Review\n\n${CU.name} submitted "${t.title}"\n${actual?'Actual: '+actual+'h':''}\nReviewer: ${revMember2?.name||'Not set'}`,appLink('task-'+t.id));
+  notifyAdminsTG(`📤 Task Submitted for Review\n\n${CU.name} submitted "${t.title}"\n${actual?'Actual: '+actual+'h':''}\nReviewer: ${revMember2?.name||'Not set'}`,appLink('task-'+t.id));
   logAction('Task Submitted',`${CU.name} submitted "${t.title}" for review`,'Info',t.title,actual?`Actual: ${actual}h`:'',{taskId:t.id,taskTitle:t.title,memberId:revMember2?.id,memberName:revMember2?.name});
   await nUpdateTask(t);
   CM('m-sub'); toast('Submitted for review ✓','ok'); openTask(_pendTask); updateBadges();
