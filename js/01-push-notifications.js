@@ -379,7 +379,7 @@ async function sendTestPush() {
     const r = await fetch(PUSH_EDGE_FN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
-      body: JSON.stringify({ member_id: CU.id, title: '✅ VAS OS — Test', body: 'If you see this, push notifications are working 🎉', url: appLink('') }),
+      body: JSON.stringify({ member_id: CU.id, title: '✅ Digital Plus OS — Test', body: 'If you see this, push notifications are working 🎉', url: appLink('') }),
     });
     if (r.ok) toast('Test sent — check your device', 'ok', 6000);
     else toast('Edge Function error — deploy send-push first (see Settings)', 'bad');
