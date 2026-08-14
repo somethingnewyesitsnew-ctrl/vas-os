@@ -167,7 +167,7 @@ function rReminders(el){
 // TUTORIAL OVERLAY SYSTEM
 // ══════════════════════════════════════════════════════
 const TUTORIAL_STEPS_ALL=[
-  {title:'👋 Welcome to VAS OS',body:'This quick tour walks you through the features available to you. Use the arrows to navigate or press <strong>Skip</strong> to exit.',target:null,position:'center',action:null,perm:null},
+  {title:'👋 Welcome to Digital Plus OS',body:'This quick tour walks you through the features available to you. Use the arrows to navigate or press <strong>Skip</strong> to exit.',target:null,position:'center',action:null,perm:null},
   {title:'📌 The Sidebar',body:'The sidebar organises your workspace. Only the sections you have access to are shown — based on your membership type.',target:'nav.sb',position:'right',action:null,perm:null},
   {title:'⬛ Dashboard',body:'Your live overview — KPI stats, task velocity, upcoming meetings, and items needing your attention.',target:'[data-p="dash"]',position:'right',action:()=>navTo('dash'),perm:null},
   {title:'☑ My Tasks',body:'Shows tasks <strong>assigned to you</strong> (tab 1) and tasks you <strong>assigned to others</strong> (tab 2). Click any task to open its full detail panel with the timeline and action buttons.',target:'[data-p="mytasks"]',position:'right',action:()=>navTo('mytasks'),perm:null},
