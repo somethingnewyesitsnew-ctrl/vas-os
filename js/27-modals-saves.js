@@ -514,6 +514,7 @@ function _linkFromMeta(meta){
   if(meta.meetingId) return {type:'meeting',id:meta.meetingId};
   if(meta.hrComId)   return {type:'hrcom',id:meta.hrComId};
   if(meta.annId)     return {type:'announcement',id:meta.annId};
+  if(meta.testSessionId) return {type:'testsession',id:meta.testSessionId};
   return {type:null,id:null};
 }
 
