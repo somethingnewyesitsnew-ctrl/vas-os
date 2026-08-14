@@ -11,7 +11,7 @@
 // refresh. Realtime fixes that for every open session, admin or not,
 // since Postgres delivers the INSERT to all subscribed clients and each
 // one decides locally whether it's relevant.
-const REALTIME_NOTIF_TYPES=['Task Assigned','Task Started','Task Submitted','Review Needed','Task Approved','Task Rejected','Status Changed','Re-Estimate','Help Request','Help Accepted','Mention','Reminder','Comment','Meeting Created','Meeting Started','Meeting Ended','Meeting Cancelled','Meeting Rescheduled','Service Test Completed'];
+const REALTIME_NOTIF_TYPES=['Task Assigned','Task Started','Task Submitted','Review Needed','Task Approved','Task Rejected','Task Deleted','Status Changed','Re-Estimate','Help Request','Help Accepted','Mention','Reminder','Comment','Meeting Created','Meeting Started','Meeting Ended','Meeting Cancelled','Meeting Rescheduled','Service Test Completed','Normal Announcement','Important Announcement','Urgent Announcement'];
 let _rtChannel=null;
 
 function startRealtimeNotifs(){
@@ -32,7 +32,7 @@ function stopRealtimeNotifs(){
 // velocity chart (task-derived) and today's-meetings section (meeting-
 // derived), so both admin and member dashboard views pick up live changes
 // the same way the task-specific list pages do.
-const REALTIME_RERENDER_PAGES=['dash','mytasks','alltasks','toreview','helprequests','meetings','svctest','comments','reminders'];
+const REALTIME_RERENDER_PAGES=['dash','mytasks','alltasks','toreview','helprequests','meetings','svctest','comments','reminders','announcements','hrcoms'];
 
 async function handleRealtimeNotif(payload){
   const row=payload?.new;
@@ -65,10 +65,12 @@ async function handleRealtimeNotif(payload){
     await fetchAndUpsertMeeting(n.linkId);
   } else if(n.linkType==='testsession'&&n.linkId&&typeof fetchAndUpsertTestSession==='function'){
     await fetchAndUpsertTestSession(n.linkId);
-  } else if(n.type==='Reminder'&&typeof initCommsData==='function'){
-    // Reminders live in their own table, loaded in bulk (alongside HR
-    // comms/announcements) rather than one row at a time — cheap and
-    // infrequent enough that a full re-fetch of that small set is fine.
+  } else if((n.type==='Reminder'||n.linkType==='announcement'||n.linkType==='hrcom')&&typeof initCommsData==='function'){
+    // Reminders/announcements/HR comms all live in their own tables,
+    // loaded in bulk together (see initCommsData) rather than one row at
+    // a time — cheap and infrequent enough that re-fetching that small
+    // set is fine, and keeps all three fresh regardless of which one
+    // actually triggered this.
     await initCommsData();
   }
 
@@ -128,7 +130,7 @@ function showExternalNotifySheet(memberIds, taskTitle, taskDesc, taskId){
   members.forEach(m=>{
     const safeId='nm_'+m.id.replace(/[^a-z0-9]/gi,'_');
     const emailSubj='New Task Assigned: '+taskTitle;
-    const emailText='Hi '+m.name+',\n\nYou have been assigned a new task in VAS OS:\n\nTitle: '+taskTitle+'\n'+(taskDesc?'Details: '+taskDesc+'\n':'')+'\n'+(taskLink?'Open the task directly:\n'+taskLink+'\n':'')+'Regards,\n'+(CU?.name||'VAS OS');
+    const emailText='Hi '+m.name+',\n\nYou have been assigned a new task in '+SYS()+':\n\nTitle: '+taskTitle+'\n'+(taskDesc?'Details: '+taskDesc+'\n':'')+'\n'+(taskLink?'Open the task directly:\n'+taskLink+'\n':'')+'Regards,\n'+(CU?.name||SYS());
     window._notifyMembers[safeId]={
       email: m.email?'mailto:'+m.email+'?subject='+encodeURIComponent(emailSubj)+'&body='+encodeURIComponent(emailText):null
     };
