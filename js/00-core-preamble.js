@@ -90,7 +90,7 @@ async function sendTG(member, msg){
 
 // ── Deep link builder ─────────────────────────────────────────────────
 function appLink(hash){ return window.location.href.split('#')[0]+(hash?'#'+hash:''); }
-const SYS=()=>localStorage.getItem('vas_sys_name')||'VAS OS';
+const SYS=()=>localStorage.getItem('vas_sys_name')||'Digital Plus OS';
 
 // ── Universal notifier — one function for every event type ────────────
 // eventType: 'task_assigned' | 'task_approved' | 'task_rejected' | 'task_submitted'
