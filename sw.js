@@ -18,10 +18,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch (e) {
-    payload = { title: 'VAS OS', body: event.data ? event.data.text() : 'You have a new notification.' };
+    payload = { title: 'Digital Plus OS', body: event.data ? event.data.text() : 'You have a new notification.' };
   }
 
-  const title = payload.title || 'VAS OS';
+  const title = payload.title || 'Digital Plus OS';
   const options = {
     body: payload.body || '',
     icon: payload.icon || 'icons/icon-192.png',
