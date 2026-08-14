@@ -216,7 +216,11 @@ function buildMobMore(){
   }
   if(know.length) sections.push({title:'Knowledge',items:know});
 
-  list.innerHTML=sections.map(sec=>`
+  list.innerHTML=`
+    <div style="margin-bottom:14px">
+      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:4px 2px 6px">Notifications</div>
+      <div id="mob-push-status"><div style="font-size:11px;color:var(--tx3);padding:8px 0">Checking…</div></div>
+    </div>` + sections.map(sec=>`
     <div style="margin-bottom:10px">
       <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:4px 2px 6px">${sec.title}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -228,7 +232,43 @@ function buildMobMore(){
           ${bdg(pg.b)}
         </button>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`).join('') + `
+    <div style="margin-top:6px;padding-top:14px;border-top:1px solid var(--bd)">
+      <button onclick="hideMobMore();doLogout()" style="width:100%;padding:12px;background:var(--rb);border:1px solid var(--rbr);border-radius:10px;font-size:13px;font-weight:700;color:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:15px">←</span> Sign Out
+      </button>
+    </div>`;
+  if(typeof renderMobPushStatus==='function') renderMobPushStatus();
+}
+
+// Notification enable/disable + live status, reachable from the mobile
+// More menu by anyone — admin or member. The desktop equivalent
+// (push-status-box) only lives inside the admin-only Settings page, which
+// members can't reach at all, so this is a separate, always-accessible
+// control rather than trying to surface Settings itself on mobile.
+async function renderMobPushStatus(){
+  const host=document.getElementById('mob-push-status');
+  if(!host)return;
+  if(typeof pushSupported!=='function'||!pushSupported()){
+    host.innerHTML=`<div style="font-size:11px;color:var(--tx3);padding:8px 0">Push notifications aren't supported on this browser.</div>`;
+    return;
+  }
+  const perm=Notification.permission;
+  const on=perm==='granted'&&await isPushSubscribedHere();
+  if(on){
+    host.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:11px 12px;background:var(--gb);border:1px solid var(--gbr);border-radius:10px">
+      <span style="font-size:16px">🔔</span>
+      <span style="flex:1;font-size:12px;font-weight:700;color:var(--g)">Notifications on</span>
+      <button onclick="unsubscribeFromPush().then(renderMobPushStatus)" style="background:var(--s);border:1px solid var(--bd);border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;color:var(--tx2);cursor:pointer">Disable</button>
+    </div>`;
+    return;
+  }
+  const blocked=perm==='denied';
+  host.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:11px 12px;background:var(--yb);border:1px solid var(--ybr);border-radius:10px">
+    <span style="font-size:16px">🔕</span>
+    <span style="flex:1;font-size:12px;font-weight:700;color:var(--y)">${blocked?'Notifications blocked':'Notifications off'}</span>
+    <button onclick="${blocked?"toast('Enable notifications for this site in your phone\\'s browser settings, then reload','inf',7000)":'subscribeToPush().then(renderMobPushStatus)'}" style="background:var(--y);border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;cursor:pointer">${blocked?'Fix':'Enable'}</button>
+  </div>`;
 }
 // Update mobile nav badges
 function updateMobBadges(){
@@ -248,6 +288,17 @@ function updateMobBadges(){
   });
   const cmbdg=document.getElementById('nb-cm');
   if(cmbdg){cmbdg.textContent=cmN;cmbdg.style.display=cmN>0?'':'none';}
+  // Small nudge on the "More" tab itself when push isn't enabled on this
+  // device — the full status + enable/disable control lives inside the
+  // More menu (renderMobPushStatus), this is just the always-visible cue.
+  (async()=>{
+    const notifBdg=document.getElementById('mn-bdg-notif');
+    if(!notifBdg||typeof pushSupported!=='function')return;
+    if(!pushSupported()){notifBdg.style.display='none';return;}
+    const on=Notification.permission==='granted'&&typeof isPushSubscribedHere==='function'&&await isPushSubscribedHere();
+    notifBdg.textContent=on?'':'!';
+    notifBdg.style.display=on?'none':'flex';
+  })();
 }
 // Hook into updateBadges
 const _origUpdateBadges=window.updateBadges;
