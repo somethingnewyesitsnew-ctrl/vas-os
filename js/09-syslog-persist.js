@@ -125,10 +125,29 @@ function doDelete(){CM('m-del');if(_delCb)_delCb();_delCb=null;}
 const TABLE_MAP={tasks:'tasks',team:'team',services:'services',operators:'companies',companies:'companies',backlog:'backlog',docs:'docs',archive:'archive',todos:'todos',projects:'projects'};
 function delItem(col,id,name){
   confirmDel(`Delete "${name}"? This cannot be undone.`,async()=>{
+    // Capture task details before removal — the row is about to be gone
+    // from DB.tasks, so this is the only chance to know who to notify.
+    const deletedTask=col==='tasks'?DB.tasks.find(x=>x.id===id):null;
     DB[col]=DB[col].filter(x=>x.id!==id);
     sbDelete(TABLE_MAP[col]||col, id);
     logAction('Delete',`Deleted ${col}: ${name}`,'Warning',name,'');
     toast(`"${name}" deleted`,'ok');
+    if(deletedTask){
+      // No meta/link here — the task no longer exists, so there's
+      // nowhere for a click to go. clickNotif already handles a missing
+      // task gracefully ("it may have been deleted") for exactly this case.
+      const recipientIds=[deletedTask.assignedTo,deletedTask.reviewer,...(deletedTask.assignees||[])]
+        .filter((v,i,a)=>v&&a.indexOf(v)===i&&v!==CU?.id);
+      recipientIds.forEach(uid=>{
+        const m=DB.team.find(x=>x.id===uid);
+        if(m){
+          sendNotif(m.name,`${CU.name} deleted the task "${name}"`,'Task Deleted','');
+          notifyTG(m.id,'default',{desc:`🗑 *Task Deleted*\n\n${CU.name} deleted "${name}"`,link:''});
+        }
+      });
+      notifyAdmins(`${CU.name} deleted task "${name}"`,'Task Deleted','');
+      notifyAdminsTG(`🗑 Task Deleted\n\n${CU.name} deleted "${name}"`,'');
+    }
     nav(page, document.querySelector('.ni.on'));
   });
 }
