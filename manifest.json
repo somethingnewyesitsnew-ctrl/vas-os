@@ -1,6 +1,6 @@
 {
-  "name": "VAS OS",
-  "short_name": "VAS OS",
+  "name": "Digital Plus OS",
+  "short_name": "Digital Plus",
   "description": "Team operations management system",
   "start_url": "./index.html",
   "scope": "./",
