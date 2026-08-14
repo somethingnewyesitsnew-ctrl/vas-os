@@ -25,7 +25,7 @@ function rSettings(el){
   function saveLists(l){ localStorage.setItem(LISTS_KEY,JSON.stringify(l)); applyListsToForms(l); }
   
   const lists=getLists();
-  const sysName=localStorage.getItem('vas_sys_name')||'VAS OS';
+  const sysName=localStorage.getItem('vas_sys_name')||'Digital Plus OS';
   
   const listDefs=[
     {key:'serviceTypes',label:'Service Types'},
@@ -160,7 +160,7 @@ function rSettings(el){
           <span style="margin-left:auto;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #bae6fd">Per-device, no setup for members</span>
         </div>
         <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--tx3);line-height:1.8">
-          Native browser/OS notifications — arrive even when VAS OS isn't open. Every member enables it once per device (button below, or the prompt on first login); no chat ID or phone number to collect.
+          Native browser/OS notifications — arrive even when Digital Plus OS isn't open. Every member enables it once per device (button below, or the prompt on first login); no chat ID or phone number to collect.
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
             ℹ️ One-time setup for <strong style="color:var(--tx)">you as admin</strong>: run <code style="background:var(--s);padding:1px 4px;border-radius:3px">SUPABASE_MIGRATION_push_subscriptions.sql</code> and deploy <code style="background:var(--s);padding:1px 4px;border-radius:3px">supabase/functions/send-push</code> (see that folder's README in the repo). Nothing else to configure per member.
           </div>
@@ -352,7 +352,7 @@ function loadFormLists(){
 }
 
 window.saveSettings=()=>{
-  const name=document.getElementById('set-sysname')?.value?.trim()||'VAS OS';
+  const name=document.getElementById('set-sysname')?.value?.trim()||'Digital Plus OS';
   localStorage.setItem('vas_sys_name',name);
   ['sys-name-display','sys-name-topbar','login-sys-name'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.textContent=name;
@@ -446,7 +446,7 @@ function getBackups(){try{return JSON.parse(localStorage.getItem(BACKUP_KEY)||'[
 function buildBackupPayload(){
   const payload={
     version:'1.0',
-    sys_name:localStorage.getItem('vas_sys_name')||'VAS OS',
+    sys_name:localStorage.getItem('vas_sys_name')||'Digital Plus OS',
     created_at:new Date().toISOString(),
     created_by:CU?.name||'unknown',
     tables:{
@@ -472,7 +472,7 @@ window.downloadBackup=()=>{
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  const sysName=(localStorage.getItem('vas_sys_name')||'VAS_OS').replace(/\s/g,'_');
+  const sysName=(localStorage.getItem('vas_sys_name')||'Digital_Plus_OS').replace(/\s/g,'_');
   a.href=url;a.download=`${sysName}_backup_${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   showSaving(false);
@@ -510,7 +510,7 @@ window.triggerRestoreFile=()=>{
   input.onchange=async(e)=>{
     const file=e.target.files[0];if(!file)return;
     let payload;try{payload=JSON.parse(await file.text());}catch(err){toast('Invalid backup file','bad');return;}
-    if(!payload.tables||!payload.version){toast('Not a valid VAS OS backup','bad');return;}
+    if(!payload.tables||!payload.version){toast('Not a valid Digital Plus OS backup','bad');return;}
     previewRestore(payload);
   };
   input.click();
