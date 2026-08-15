@@ -69,7 +69,16 @@ let notifs=[];
 
 const FULL=['Aziz','Aymen','Maysa'];
 const AROLES=['CEO','Projects Manager','HR Manager'];
-const isAdmin=()=>FULL.includes(CU?.name)||AROLES.includes(CU?.role);
+// isAdmin checks the actual Access field on the member record first —
+// this is what the Add/Edit Member form's Access dropdown sets, and what
+// isAdminMember() (used elsewhere for admin lists/Telegram broadcasts)
+// already checks. FULL/AROLES are kept as a legacy fallback for the
+// original founder accounts, but the Access field is the real source of
+// truth for anyone made an admin through the normal UI — without this,
+// any such admin fails every isAdmin() check in the app (nav visibility,
+// admin-broadcast notification relevance, etc.) even though they show as
+// "Admin" everywhere else.
+const isAdmin=()=>CU?.access==='Admin'||FULL.includes(CU?.name)||AROLES.includes(CU?.role);
 
 // ── Member Type Permissions ───────────────────────────────────────────
 const MT_KEY='vas_member_types';
