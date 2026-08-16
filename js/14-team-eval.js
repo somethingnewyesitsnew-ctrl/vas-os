@@ -79,6 +79,20 @@ window.openMemberDetail=(id)=>{
     </div>
     <div style="font-size:9px;color:#dc2626;margin-top:6px;opacity:.75">⚠️ Plaintext credentials — flagged for migration to proper auth.</div>
   </div>`;
+  if(isAdmin()){
+    const gateLabels=[['projects','Projects'],['services','Services'],['library','Library'],['docs','Documentation']];
+    body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase;margin-bottom:7px">🔑 Content Access</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${gateLabels.map(([key,label])=>{
+          const on=memberHasPerm(m,key);
+          const overridden=m.permOverrides&&typeof m.permOverrides[key]==='boolean';
+          return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${on?'var(--gb)':'var(--rb)'};color:${on?'var(--g)':'var(--r)'};border:1px solid ${on?'var(--gbr)':'var(--rbr)'}">${on?'✓':'✗'} ${label}${overridden?' (set)':''}</span>`;
+        }).join('')}
+      </div>
+      <div style="font-size:9px;color:var(--tx3);margin-top:6px">"(set)" = individual override on this member, otherwise inherited from their Employment Type</div>
+    </div>`;
+  }
   // Eval score for this member
   const evalTasks=DB.tasks.filter(t=>t.assignedTo===m.id||(t.assignees||[]).includes(m.id));
   const evalDone=evalTasks.filter(t=>t.status==='Done').length;
