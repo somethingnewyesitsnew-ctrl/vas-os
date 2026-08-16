@@ -62,14 +62,14 @@ async function nUpdateTask(t){
 
 async function nMember(m, lid){
   showSaving(true);
-  const r = await sbInsert('team', {name:m.name,role:m.role,dept:m.dept,access:m.access||'Member',status:'Active',email:m.email||'',telegram:m.telegram||'',color:m.color,av:m.av,username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||''});
+  const r = await sbInsert('team', {name:m.name,role:m.role,dept:m.dept,access:m.access||'Member',status:'Active',email:m.email||'',telegram:m.telegram||'',color:m.color,av:m.av,username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||'',perm_overrides:m.permOverrides||{}});
   showSaving(false);
   if(r?.id) m.id=r.id;
   return r;
 }
 async function nMemberUpd(m){
   showSaving(true);
-  const r = await sbUpdate('team', m.id, {name:m.name,role:m.role,dept:m.dept,access:m.access,email:m.email||'',telegram:m.telegram||'',username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||''});
+  const r = await sbUpdate('team', m.id, {name:m.name,role:m.role,dept:m.dept,access:m.access,email:m.email||'',telegram:m.telegram||'',username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||'',perm_overrides:m.permOverrides||{}});
   showSaving(false); return r;
 }
 
