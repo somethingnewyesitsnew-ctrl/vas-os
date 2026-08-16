@@ -81,6 +81,13 @@ function openMemberModal(id){
   if(document.getElementById('mf-username'))document.getElementById('mf-username').value=m?.username||'';
   if(document.getElementById('mf-password'))document.getElementById('mf-password').value=m?.password||'abohamood@1.';
   document.getElementById('mf-telegram').value=m?.telegram||'';
+  // Individual content-access overrides — each defaults to "" (inherit
+  // from employment type) unless this member already has an explicit
+  // grant/deny set on their record.
+  ['projects','services','library','docs'].forEach(perm=>{
+    const el=document.getElementById('mf-perm-'+perm);
+    if(el) el.value=(m?.permOverrides&&typeof m.permOverrides[perm]==='boolean')?(m.permOverrides[perm]?'grant':'deny'):'';
+  });
   // Apply saved lists to role/dept selects
   try{
     const saved=JSON.parse(localStorage.getItem('vas_dropdown_lists')||'{}');
@@ -244,12 +251,22 @@ window.saveTask=async()=>{
 
 window.saveMember=async()=>{
   const name=document.getElementById('mf-name').value.trim();if(!name){toast('Name required','bad');return;}
+  // Build permOverrides from the 4 grant/deny/inherit selects — only
+  // explicit choices are stored; "inherit" (empty value) means no key at
+  // all, so the employment type default applies with nothing to clean up.
+  const permOverrides={};
+  ['projects','services','library','docs'].forEach(perm=>{
+    const v=document.getElementById('mf-perm-'+perm)?.value;
+    if(v==='grant')permOverrides[perm]=true;
+    else if(v==='deny')permOverrides[perm]=false;
+  });
   if(_editId){
     const m=DB.team.find(x=>x.id===_editId);if(!m)return;
     m.name=name; m.role=document.getElementById('mf-role').value; m.dept=document.getElementById('mf-dept').value;
     m.access=document.getElementById('mf-access').value; m.email=document.getElementById('mf-email').value;
     m.memberType=document.getElementById('mf-mtype')?.value||m.memberType||'';
     m.telegram=document.getElementById('mf-telegram').value.trim();
+    m.permOverrides=permOverrides;
     m.av=mkAv(name);
     if(document.getElementById('mf-username')?.value) m.username=document.getElementById('mf-username').value.trim().toLowerCase();
     if(document.getElementById('mf-password')?.value) m.password=document.getElementById('mf-password').value;
@@ -258,7 +275,7 @@ window.saveMember=async()=>{
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   } else {
     const colors=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626'];
-    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
+    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),permOverrides,av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
     DB.team.push(m);
     logAction('Member Added',`${CU.name} added "${name}"`,'Success',name,'');
     const r=await nMember(m,m.id); if(r?.url)NID[m.id]=r.url;
