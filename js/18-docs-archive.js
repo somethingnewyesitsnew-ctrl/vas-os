@@ -1,8 +1,8 @@
 // §18 ── DOCS & ARCHIVE ──────────────────────────────────────────────────
 function rDocs(el){
-  if(!canDo('docs')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Your membership type does not include access to documentation.</div></div>';return;}
+  if(!canDoStrict('docs')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Ask an admin to grant you Documentation access.</div></div>';return;}
   const tc={'Task Documentation':'var(--ac)','Process Guide':'var(--g)','Technical Reference':'var(--p)','Meeting Notes':'var(--tx3)','SOP':'var(--o)','Policy':'var(--r)','How-To':'var(--ac)'};
-  el.innerHTML=`
+  el.innerHTML=renderAccessSummary('docs','Documentation')+`
     <div class="fb" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">
       <input class="si" id="ds2" placeholder="Search docs…" oninput="fDocs()" style="min-width:160px">
       <select class="fs" id="dt2" onchange="fDocs()"><option value="">All types</option>${Object.keys(tc).map(t=>`<option>${t}</option>`).join('')}</select>
