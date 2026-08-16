@@ -115,7 +115,7 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
 
     if(!team){ setSync('err','Failed — run SQL setup first'); return false; }
 
-    DB.team = (team||[]).map(m=>({...m, color:m.color||mkColor(m.name), av:m.av||mkAv(m.name), username:m.username||(m.name.toLowerCase().split(' ')[0]), password:m.password||'abohamood@1.', lastLogin:m.last_login||null, memberType:m.member_type||''}));
+    DB.team = (team||[]).map(m=>({...m, color:m.color||mkColor(m.name), av:m.av||mkAv(m.name), username:m.username||(m.name.toLowerCase().split(' ')[0]), password:m.password||'abohamood@1.', lastLogin:m.last_login||null, memberType:m.member_type||'', permOverrides:m.perm_overrides||{}}));
     DB.services = (svcs||[]).map(s=>({...s, desc: s.description||'', service_type: s.service_type||'Digital'}));
     DB.operators = (cos||[]).filter(c=>c.type==='Telecom Operator'||['Zain','MTN','Sudani'].some(n=>(c.name||'').includes(n)));
     DB.companies = (cos||[]).filter(c=>!DB.operators.find(o=>o.id===c.id));
