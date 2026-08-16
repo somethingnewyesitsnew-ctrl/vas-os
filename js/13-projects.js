@@ -1,5 +1,6 @@
 // §13 ── PROJECTS ────────────────────────────────────────────────────────
 function rProjects(el){
+  if(!canDoStrict('projects')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Ask an admin to grant you Projects access.</div></div>';return;}
   const sc={Active:'#2563eb',Planning:'#ca8a04',Completed:'#15803d','On Hold':'#ea580c',Cancelled:'#dc2626'};
   const allCompanies=[...new Set(DB.projects.map(p=>p.ownedBy||p.company_owner).filter(Boolean))];
   const allFields=[...new Set(DB.projects.map(p=>p.field_of_work).filter(Boolean))];
@@ -15,7 +16,7 @@ function rProjects(el){
     if(fFi) prs=prs.filter(p=>p.field_of_work===fFi);
     if(sq)  prs=prs.filter(p=>(p.name||'').toLowerCase().includes(sq));
 
-    let h=`<div class="fb" style="margin-bottom:12px">
+    let h=renderAccessSummary('projects','Projects')+`<div class="fb" style="margin-bottom:12px">
       <input class="si" id="prf-sq" placeholder="Search projects…" oninput="window._rPr&&window._rPr()" value="${sq}">
       <select class="fs" id="prf-co" onchange="window._rPr&&window._rPr()"><option value="">All companies</option>${allCompanies.map(c=>`<option ${fCo===c?'selected':''}>${c}</option>`).join('')}</select>
       <select class="fs" id="prf-fi" onchange="window._rPr&&window._rPr()"><option value="">All fields</option>${allFields.map(f=>`<option ${fFi===f?'selected':''}>${f}</option>`).join('')}</select>
