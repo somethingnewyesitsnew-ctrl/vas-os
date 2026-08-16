@@ -9,16 +9,37 @@ function saveLibRequests(r){localStorage.setItem(LIB_REQ_KEY,JSON.stringify(r));
 // Check if current user has library access
 function hasLibAccess(){
   if(isAdmin()) return true;
-  // Members with a type set must explicitly have docs perm OR an approved request
+  // Individual override set on this member's record (from the Add/Edit
+  // Member modal) always wins, regardless of type or pending requests.
+  if(CU?.permOverrides&&typeof CU.permOverrides.library==='boolean') return CU.permOverrides.library;
+  // Members with a type set must explicitly have library (or the legacy
+  // shared docs perm, for configs set up before library got its own key)
+  // OR an approved request
   if(CU?.memberType){
     const p=getMTPerms(CU.memberType);
-    if(p&&p.docs) return true;
+    if(p&&(p.library||p.docs)) return true;
     const reqs=getLibRequests();
     return reqs.some(r=>r.memberId===CU?.id&&r.status==='Approved');
   }
   // Members with NO type set (old accounts) — check for approved request only
   const reqs=getLibRequests();
   return reqs.some(r=>r.memberId===CU?.id&&r.status==='Approved');
+}
+
+// Library-specific version of renderAccessSummary — also counts members
+// who got in via an approved access request, not just type/override,
+// since that's a third valid path to access unique to this page.
+function renderLibAccessSummary(){
+  if(!isAdmin())return '';
+  const approvedReqIds=new Set(getLibRequests().filter(r=>r.status==='Approved').map(r=>r.memberId));
+  const granted=DB.team.filter(m=>memberHasPerm(m,'library')||approvedReqIds.has(m.id));
+  return `<div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:9px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:700;color:var(--tx3);white-space:nowrap">👥 Library access:</span>
+    ${granted.length?granted.map(m=>`<span onclick="openMemberDetail('${m.id}')" style="display:inline-flex;align-items:center;gap:5px;background:var(--s);border:1px solid var(--bd);border-radius:20px;padding:2px 9px 2px 3px;cursor:pointer;font-size:11px;font-weight:600">
+      <span style="width:16px;height:16px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800;flex-shrink:0">${m.av}</span>${m.name}
+    </span>`).join(''):'<span style="font-size:11px;color:var(--tx3)">Admins only right now</span>'}
+    <button onclick="navTo('team')" style="margin-left:auto;font-size:10px;font-weight:700;color:var(--ac);background:none;border:none;cursor:pointer;white-space:nowrap">Manage in Team →</button>
+  </div>`;
 }
 
 function rLibrary(el){
@@ -59,7 +80,7 @@ function rLibrary(el){
 
   const pendingReqs=getLibRequests().filter(r=>r.status==='Pending');
 
-  let h=`
+  let h=renderLibAccessSummary()+`
   <div style="margin-bottom:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div>
