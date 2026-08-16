@@ -1,5 +1,6 @@
 // §16 ── SERVICES & OPERATORS ────────────────────────────────────────────
 function rServices(el){
+  if(!canDoStrict('services')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Ask an admin to grant you Services access.</div></div>';return;}
   const sc={Live:'#15803d','In Development':'#2563eb',Paused:'#ca8a04',Deprecated:'#dc2626'};
   const tc={Digital:'#2563eb',IVR:'#7c3aed',USSD:'#ea580c',SMS:'#15803d'};
 
@@ -22,7 +23,7 @@ function rServices(el){
     if(fSt) svcs=svcs.filter(s=>s.status===fSt);
     if(sq)  svcs=svcs.filter(s=>(s.name||'').toLowerCase().includes(sq));
 
-    let h=`<div class="fb" style="margin-bottom:12px">
+    let h=renderAccessSummary('services','Services')+`<div class="fb" style="margin-bottom:12px">
       <input class="si" id="sf-sq" placeholder="Search services…" oninput="window._rSvc&&window._rSvc()" value="${sq}">
       <select class="fs" id="sf-fop" onchange="window._rSvc&&window._rSvc()">
         <option value="">All operators</option>${allOps.map(o=>`<option ${fOp===o?'selected':''}>${o}</option>`).join('')}
