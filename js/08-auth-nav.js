@@ -50,20 +50,32 @@ async function startApp(){
   document.getElementById('sur').textContent=CU.role;
   // Apply nav visibility based on role + member type permissions
   if(!isAdmin()){
-    // Always hide admin-only management sections
+    // Management/Operations section headers stay hidden here for the
+    // first pass (before permOverrides/memberType are confirmed fresh
+    // from Supabase below) — Team/Eval/Backlog/Operators/Companies remain
+    // admin-only regardless, but Projects/Services can open up per-member,
+    // so their section headers get re-evaluated in the second pass.
     ['sec-mgmt','sec-ops','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-sl','nav-st']
       .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
     // Always show own tasks + meetings + comments
     ['nav-at','nav-mt','nav-mo','nav-cm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
     // Hide or show based on member type permission
     const showIf=(navId,perm)=>{const el=document.getElementById(navId);if(el)el.style.display=canDo(perm)?'':'none';};
-    showIf('nav-doc','docs');
     showIf('nav-arc','archive');
-    showIf('nav-lib','docs');
     showIf('nav-hrc','hrComs');
     showIf('nav-ann','announcements');
     showIf('nav-hr','hrComs');
     showIf('nav-svct','svcTest');
+    // Projects/Services/Library/Documentation are opt-in only — admin
+    // must explicitly grant them (per member type or an individual
+    // override), no permissive fallback for an unset type.
+    const showIfStrict=(navId,perm)=>{const el=document.getElementById(navId);if(el)el.style.display=canDoStrict(perm)?'':'none';};
+    showIfStrict('nav-doc','docs');
+    showIfStrict('nav-lib','library');
+    showIfStrict('nav-pr','projects');
+    showIfStrict('nav-sv','services');
+    if(canDoStrict('projects')){const el=document.getElementById('sec-mgmt');if(el)el.style.display='';}
+    if(canDoStrict('services')){const el=document.getElementById('sec-ops');if(el)el.style.display='';}
   } else {
     // Admin — show everything (all start hidden in HTML)
     ['sec-mgmt','sec-ops','nav-at','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-sl','nav-st','nav-mt','nav-mo','nav-hrc','nav-ann','nav-hr','nav-doc','nav-arc','nav-svct','nav-lib','nav-cm']
@@ -75,15 +87,22 @@ async function startApp(){
   if(!ok){ loadDemoData(); }
   // Re-sync CU with actual Supabase member record
   const found2=DB.team.find(m=>m.name.toLowerCase()===CU.name.toLowerCase());
-  if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||''};
-  // Re-apply nav now that memberType is loaded from DB
+  if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||'',permOverrides:found2.permOverrides||CU.permOverrides||{}};
+  // Re-apply nav now that memberType/permOverrides are loaded fresh from DB
   if(!isAdmin()){
     // Always show own tasks + meetings + comments (they start hidden in HTML)
     ['nav-at','nav-mt','nav-mo','nav-cm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
     const showIf2=(navId,perm)=>{const el2=document.getElementById(navId);if(el2)el2.style.display=canDo(perm)?'':'none';};
-    showIf2('nav-doc','docs'); showIf2('nav-arc','archive'); showIf2('nav-lib','docs');
+    showIf2('nav-arc','archive');
     showIf2('nav-hrc','hrComs'); showIf2('nav-ann','announcements');
     showIf2('nav-hr','hrComs'); showIf2('nav-svct','svcTest');
+    const showIf2Strict=(navId,perm)=>{const el2=document.getElementById(navId);if(el2)el2.style.display=canDoStrict(perm)?'':'none';};
+    showIf2Strict('nav-doc','docs');
+    showIf2Strict('nav-lib','library');
+    showIf2Strict('nav-pr','projects');
+    showIf2Strict('nav-sv','services');
+    const secMgmt=document.getElementById('sec-mgmt');if(secMgmt)secMgmt.style.display=canDoStrict('projects')?'':'none';
+    const secOps=document.getElementById('sec-ops');if(secOps)secOps.style.display=canDoStrict('services')?'':'none';
   }
   document.getElementById('sav').textContent=CU.av;
   document.getElementById('sav').style.background=CU.color;
