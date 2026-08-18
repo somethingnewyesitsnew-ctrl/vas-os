@@ -57,20 +57,22 @@ async function startApp(){
     // so their section headers get re-evaluated in the second pass.
     ['sec-mgmt','sec-ops','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-sl','nav-st']
       .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-    // Always show own tasks + meetings + comments
-    ['nav-at','nav-mt','nav-mo','nav-cm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+    // Always show own tasks + meetings + comments + archive + docs —
+    // these 4 (plus reminders, already unconditional) show a personal
+    // "your own things" view for everyone by default; canDoStrict below
+    // only controls whether they ALSO see everyone else's, decided inside
+    // each page's own render function rather than at the nav level.
+    ['nav-at','nav-mt','nav-mo','nav-cm','nav-arc','nav-doc'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
     // Hide or show based on member type permission
     const showIf=(navId,perm)=>{const el=document.getElementById(navId);if(el)el.style.display=canDo(perm)?'':'none';};
-    showIf('nav-arc','archive');
     showIf('nav-hrc','hrComs');
     showIf('nav-ann','announcements');
     showIf('nav-hr','hrComs');
     showIf('nav-svct','svcTest');
-    // Projects/Services/Library/Documentation are opt-in only — admin
-    // must explicitly grant them (per member type or an individual
-    // override), no permissive fallback for an unset type.
+    // Projects/Services/Library are opt-in only — admin must explicitly
+    // grant them (per member type or an individual override), no
+    // permissive fallback for an unset type.
     const showIfStrict=(navId,perm)=>{const el=document.getElementById(navId);if(el)el.style.display=canDoStrict(perm)?'':'none';};
-    showIfStrict('nav-doc','docs');
     showIfStrict('nav-lib','library');
     showIfStrict('nav-pr','projects');
     showIfStrict('nav-sv','services');
@@ -90,14 +92,13 @@ async function startApp(){
   if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||'',permOverrides:found2.permOverrides||CU.permOverrides||{}};
   // Re-apply nav now that memberType/permOverrides are loaded fresh from DB
   if(!isAdmin()){
-    // Always show own tasks + meetings + comments (they start hidden in HTML)
-    ['nav-at','nav-mt','nav-mo','nav-cm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+    // Always show own tasks + meetings + comments + archive + docs (they
+    // start hidden in HTML) — see first-pass comment above for why.
+    ['nav-at','nav-mt','nav-mo','nav-cm','nav-arc','nav-doc'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
     const showIf2=(navId,perm)=>{const el2=document.getElementById(navId);if(el2)el2.style.display=canDo(perm)?'':'none';};
-    showIf2('nav-arc','archive');
     showIf2('nav-hrc','hrComs'); showIf2('nav-ann','announcements');
     showIf2('nav-hr','hrComs'); showIf2('nav-svct','svcTest');
     const showIf2Strict=(navId,perm)=>{const el2=document.getElementById(navId);if(el2)el2.style.display=canDoStrict(perm)?'':'none';};
-    showIf2Strict('nav-doc','docs');
     showIf2Strict('nav-lib','library');
     showIf2Strict('nav-pr','projects');
     showIf2Strict('nav-sv','services');
