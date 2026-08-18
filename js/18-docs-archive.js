@@ -1,20 +1,26 @@
 // §18 ── DOCS & ARCHIVE ──────────────────────────────────────────────────
 function rDocs(el){
-  if(!canDoStrict('docs')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Ask an admin to grant you Documentation access.</div></div>';return;}
+  const full=canDoStrict('docs');
   const tc={'Task Documentation':'var(--ac)','Process Guide':'var(--g)','Technical Reference':'var(--p)','Meeting Notes':'var(--tx3)','SOP':'var(--o)','Policy':'var(--r)','How-To':'var(--ac)'};
-  el.innerHTML=renderAccessSummary('docs','Documentation')+`
+  const scopedDocs=full?DB.docs:DB.docs.filter(d=>{
+    if(d.author===CU?.id)return true;
+    const t=d.fromTask?DB.tasks.find(x=>x.id===d.fromTask):null;
+    if(!t)return false;
+    return t.assignedTo===CU?.id||(t.assignees||[]).includes(CU?.id)||t.reviewer===CU?.id;
+  });
+  el.innerHTML=(full?renderAccessSummary('docs','Documentation'):`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">Showing documentation you authored or that came from your own tasks. Ask an admin for full Documentation access to see everyone's.</div>`)+`
     <div class="fb" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">
       <input class="si" id="ds2" placeholder="Search docs…" oninput="fDocs()" style="min-width:160px">
       <select class="fs" id="dt2" onchange="fDocs()"><option value="">All types</option>${Object.keys(tc).map(t=>`<option>${t}</option>`).join('')}</select>
-      <select class="fs" id="df-mbr" onchange="fDocs()"><option value="">All authors</option>${DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select>
+      ${full?`<select class="fs" id="df-mbr" onchange="fDocs()"><option value="">All authors</option>${DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select>`:''}
       <select class="fs" id="df-svc" onchange="fDocs()"><option value="">All services</option>${DB.services.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
       <select class="fs" id="df-op" onchange="fDocs()"><option value="">All operators</option>${DB.operators.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}</select>
-      <select class="fs" id="df-co" onchange="fDocs()"><option value="">All companies</option>${DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+      ${full?`<select class="fs" id="df-co" onchange="fDocs()"><option value="">All companies</option>${DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>`:''}
       <select class="fs" id="df-proj" onchange="fDocs()"><option value="">All projects</option>${DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
       <select class="fs" id="df-date" onchange="fDocs()"><option value="">All dates</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select>
     </div>
     <div id="dg2" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px"></div>`;
-  window._docsAll=[...DB.docs]; fDocs();
+  window._docsAll=scopedDocs; fDocs();
 }
 window.fDocs=()=>{
   const sq=(document.getElementById('ds2')?.value||'').toLowerCase();
@@ -85,54 +91,60 @@ window.openDoc2=(id)=>{
 // ARCHIVE — fully filtered
 // ══════════════════════════════════════════════════════
 function rArchive(el){
-  if(!canDo('archive')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Your membership type does not include access to the task archive.</div></div>';return;}
+  const full=canDoStrict('archive');
   function render(){
-    const fSvc=document.getElementById('arc-svc')?.value||'';
-    const fMbr=document.getElementById('arc-mbr')?.value||'';
-    const fOp=document.getElementById('arc-op')?.value||'';
-    const fRev=document.getElementById('arc-rev')?.value||'';
-    const fReq=document.getElementById('arc-req')?.value||'';
-    const fFrom=document.getElementById('arc-from')?.value||'';
-    const fTo=document.getElementById('arc-to')?.value||'';
-    const sq=(document.getElementById('arc-s')?.value||'').toLowerCase();
-    let f=[...DB.archive];
-    if(sq)f=f.filter(a=>a.title.toLowerCase().includes(sq)||(a.what||'').toLowerCase().includes(sq));
-    if(fSvc)f=f.filter(a=>a.svc===fSvc);
-    if(fMbr)f=f.filter(a=>a.by===fMbr);
-    if(fOp)f=f.filter(a=>a.op===fOp);
-    if(fRev)f=f.filter(a=>a.reviewer===fRev);
-    if(fReq)f=f.filter(a=>a.reqBy===fReq||a.reqBy?.toLowerCase().includes(DB.team.find(m=>m.id===fReq)?.name?.toLowerCase()||''));
-    if(fFrom)f=f.filter(a=>a.done&&a.done>=fFrom);
-    if(fTo)f=f.filter(a=>a.done&&a.done<=fTo);
+    let f=full?[...DB.archive]:DB.archive.filter(a=>a.by===CU?.id);
+    let h='';
+    if(full){
+      h+=renderAccessSummary('archive','Archive');
+      const fSvc=document.getElementById('arc-svc')?.value||'';
+      const fMbr=document.getElementById('arc-mbr')?.value||'';
+      const fOp=document.getElementById('arc-op')?.value||'';
+      const fRev=document.getElementById('arc-rev')?.value||'';
+      const fReq=document.getElementById('arc-req')?.value||'';
+      const fFrom=document.getElementById('arc-from')?.value||'';
+      const fTo=document.getElementById('arc-to')?.value||'';
+      const sq=(document.getElementById('arc-s')?.value||'').toLowerCase();
+      if(sq)f=f.filter(a=>a.title.toLowerCase().includes(sq)||(a.what||'').toLowerCase().includes(sq));
+      if(fSvc)f=f.filter(a=>a.svc===fSvc);
+      if(fMbr)f=f.filter(a=>a.by===fMbr);
+      if(fOp)f=f.filter(a=>a.op===fOp);
+      if(fRev)f=f.filter(a=>a.reviewer===fRev);
+      if(fReq)f=f.filter(a=>a.reqBy===fReq||a.reqBy?.toLowerCase().includes(DB.team.find(m=>m.id===fReq)?.name?.toLowerCase()||''));
+      if(fFrom)f=f.filter(a=>a.done&&a.done>=fFrom);
+      if(fTo)f=f.filter(a=>a.done&&a.done<=fTo);
 
-    let h=`<div class="fb" style="flex-wrap:wrap;gap:6px">
-      <input class="si" id="arc-s" placeholder="Search archive…" oninput="arcRender()" value="${sq}" style="min-width:160px">
-      <select class="fs" id="arc-svc" onchange="arcRender()"><option value="">All services</option>${DB.services.map(s=>`<option ${fSvc===s.id?'selected':''} value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select class="fs" id="arc-mbr" onchange="arcRender()"><option value="">All members</option>${DB.team.map(m=>`<option ${fMbr===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
-      <select class="fs" id="arc-op" onchange="arcRender()"><option value="">All operators</option>${DB.operators.map(o=>`<option ${fOp===o.id?'selected':''} value="${o.id}">${o.name}</option>`).join('')}</select>
-      <select class="fs" id="arc-rev" onchange="arcRender()"><option value="">All reviewers</option>${DB.team.map(m=>`<option ${fRev===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
-      <select class="fs" id="arc-req" onchange="arcRender()"><option value="">All requesters</option>${DB.team.map(m=>`<option ${fReq===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
-      <input class="fs" type="date" id="arc-from" onchange="arcRender()" value="${fFrom}" title="Completed from">
-      <input class="fs" type="date" id="arc-to" onchange="arcRender()" value="${fTo}" title="Completed to">
-    </div>`;
+      h+=`<div class="fb" style="flex-wrap:wrap;gap:6px">
+        <input class="si" id="arc-s" placeholder="Search archive…" oninput="arcRender()" value="${sq}" style="min-width:160px">
+        <select class="fs" id="arc-svc" onchange="arcRender()"><option value="">All services</option>${DB.services.map(s=>`<option ${fSvc===s.id?'selected':''} value="${s.id}">${s.name}</option>`).join('')}</select>
+        <select class="fs" id="arc-mbr" onchange="arcRender()"><option value="">All members</option>${DB.team.map(m=>`<option ${fMbr===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
+        <select class="fs" id="arc-op" onchange="arcRender()"><option value="">All operators</option>${DB.operators.map(o=>`<option ${fOp===o.id?'selected':''} value="${o.id}">${o.name}</option>`).join('')}</select>
+        <select class="fs" id="arc-rev" onchange="arcRender()"><option value="">All reviewers</option>${DB.team.map(m=>`<option ${fRev===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
+        <select class="fs" id="arc-req" onchange="arcRender()"><option value="">All requesters</option>${DB.team.map(m=>`<option ${fReq===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
+        <input class="fs" type="date" id="arc-from" onchange="arcRender()" value="${fFrom}" title="Completed from">
+        <input class="fs" type="date" id="arc-to" onchange="arcRender()" value="${fTo}" title="Completed to">
+      </div>`;
+    } else {
+      h+=`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">Showing your own completed tasks only. Ask an admin for full Archive access to see everyone's.</div>`;
+    }
 
-    if(!f.length){h+=`<div class="empty"><div class="ei">🗄</div><div class="et">${DB.archive.length?'No matches':'No archived tasks yet'}</div><div class="es">${DB.archive.length?'Try adjusting filters':'Approved tasks appear here automatically'}</div></div>`;el.innerHTML=h;return;}
+    if(!f.length){h+=`<div class="empty"><div class="ei">🗄</div><div class="et">${DB.archive.length?'No matches':'No archived tasks yet'}</div><div class="es">${full?(DB.archive.length?'Try adjusting filters':'Approved tasks appear here automatically'):'Your completed tasks will appear here once approved'}</div></div>`;el.innerHTML=h;return;}
 
-    h+=`<div class="tw"><table><thead><tr><th>Title</th><th>Type</th><th>By</th><th>Reviewer</th><th>Service</th><th>Operator</th><th>Est h</th><th>Actual h</th><th>Outcome</th><th>Completed</th><th></th></tr></thead><tbody>`;
+    h+=`<div class="tw"><table><thead><tr><th>Title</th><th>Type</th>${full?'<th>By</th>':''}<th>Reviewer</th><th>Service</th><th>Operator</th><th>Est h</th><th>Actual h</th><th>Outcome</th><th>Completed</th><th></th></tr></thead><tbody>`;
     f.forEach(a=>{
       const cb=DB.team.find(m=>m.id===a.by);const cr=DB.team.find(m=>m.id===a.reviewer);
       const v=a.est&&a.actual?Math.round((a.actual-a.est)/a.est*100):null;
       const oc={Successful:'var(--g)',Partial:'var(--y)',Reverted:'var(--r)'}[a.outcome];
       h+=`<tr class="cl" onclick="openArcItem('${a.id}')">
         <td>${a.title}</td><td style="font-size:11px;color:var(--tx2)">${a.type||'—'}</td>
-        <td style="font-size:11px">${cb?cb.name:a.by||'—'}</td>
+        ${full?`<td style="font-size:11px">${cb?cb.name:a.by||'—'}</td>`:''}
         <td style="font-size:11px;color:var(--tx2)">${cr?cr.name:a.reviewer||'—'}</td>
         <td style="font-size:11px;color:var(--tx2)">${sn(a.svc)}</td>
         <td style="font-size:11px;color:var(--tx2)">${opn(a.op)}</td>
         <td>${a.est||'—'}</td><td>${a.actual||'—'}</td>
         <td><span style="background:${oc||'var(--s2)'}15;color:${oc||'var(--tx3)'};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">${a.outcome||'—'}</span></td>
         <td style="font-size:11px;color:var(--tx2)">${fd(a.done)}</td>
-        <td onclick="event.stopPropagation()"><div class="act-c"><div class="ib del" onclick="delItem('archive','${a.id}','${a.title.replace(/'/g,"\\'")}')">🗑</div></div></td>
+        <td onclick="event.stopPropagation()"><div class="act-c">${isAdmin()?`<div class="ib del" onclick="delItem('archive','${a.id}','${a.title.replace(/'/g,"\\'")}')">🗑</div>`:''}</div></td>
       </tr>`;
     });
     h+=`</tbody></table></div>`;
