@@ -203,7 +203,7 @@ function rSettings(el){
             ${Object.entries(t.perms).map(([perm,val])=>`
             <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:4px 6px;background:var(--s);border-radius:6px;border:1px solid var(--bd)">
               <input type="checkbox" ${val?'checked':''} onchange="toggleMTPerm('${t.id}','${perm}',this.checked)" style="accent-color:var(--ac)">
-              ${({'allTasks':'All Tasks','allMeetings':'All Meetings','docs':'Documents','archive':'Archive','projects':'Projects','services':'Services','library':'Library','team':'Team','backlog':'Backlog','dashboard':'Dashboard','hrComs':'HR Coms','announcements':'Announcements','todos':'Todos','svcTest':'Service Tests'})[perm]||perm}
+              ${({'allTasks':'All Tasks','allMeetings':'All Meetings','docs':'Documents','archive':'Archive','projects':'Projects','services':'Services','library':'Library','comments':'Comments','reminders':'Reminders','team':'Team','backlog':'Backlog','dashboard':'Dashboard','hrComs':'HR Coms','announcements':'Announcements','todos':'Todos','svcTest':'Service Tests'})[perm]||perm}
             </label>`).join('')}
           </div>
         </div>`).join('')}
@@ -281,7 +281,7 @@ window.addMemberType=()=>{
   const color=document.getElementById('mt-new-color')?.value||'#64748b';
   const types=getMemberTypes();
   if(types.find(t=>t.name.toLowerCase()===name.toLowerCase())){toast('Type already exists','bad');return;}
-  const newType={id:'mt'+Date.now(),name,color,perms:{allTasks:false,allMeetings:false,docs:false,archive:false,projects:false,services:false,library:false,team:false,backlog:false,dashboard:false,hrComs:false,announcements:false,todos:true}};
+  const newType={id:'mt'+Date.now(),name,color,perms:{allTasks:false,allMeetings:false,docs:false,archive:false,projects:false,services:false,library:false,comments:false,reminders:false,team:false,backlog:false,dashboard:false,hrComs:false,announcements:false,todos:true}};
   types.push(newType);
   saveMemberTypes(types);
   document.getElementById('mt-new-name').value='';
