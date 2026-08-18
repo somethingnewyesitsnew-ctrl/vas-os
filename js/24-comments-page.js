@@ -1,6 +1,8 @@
 // §24 ── COMMENTS PAGE ──────────────────────────────────────────────────
 function rComments(el){
+  const canAll=canDoStrict('comments');
   let tab=localStorage.getItem('vas_cm_tab')||'mine';
+  if(tab==='system'&&!canAll)tab='mine'; // access may have been revoked since last visit
 
   // Gather ALL comments across all tasks
   const allComments=[];
@@ -79,47 +81,52 @@ function rComments(el){
       <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;background:${tab==='mine'?'var(--ac)':mineComments.length?'var(--ac)18':'var(--s2)'};color:${tab==='mine'?'#fff':mineComments.length?'var(--ac)':'var(--tx3)'};border-radius:20px;font-size:11px;font-weight:800;margin-left:4px">${mineComments.length}</span>
       ${unreadMine>0?`<span style="background:var(--r);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px">${unreadMine} new</span>`:''}
     </div>
-    <div class="tab ${tab==='system'?'on':''}" onclick="localStorage.setItem('vas_cm_tab','system');rComments(document.getElementById('content'))" style="font-size:13px;font-weight:700;cursor:pointer;${tab==='system'?'color:var(--ac);border-bottom:3px solid var(--ac)':'color:var(--tx2)'}">
+    ${canAll?`<div class="tab ${tab==='system'?'on':''}" onclick="localStorage.setItem('vas_cm_tab','system');rComments(document.getElementById('content'))" style="font-size:13px;font-weight:700;cursor:pointer;${tab==='system'?'color:var(--ac);border-bottom:3px solid var(--ac)':'color:var(--tx2)'}">
       🌐 All Comments
       <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;background:${tab==='system'?'var(--ac)':systemComments.length?'var(--s2)':'var(--s2)'};color:${tab==='system'?'#fff':'var(--tx3)'};border-radius:20px;font-size:11px;font-weight:800;margin-left:4px">${systemComments.length}</span>
-    </div>
+    </div>`:''}
   </div>
+  ${!canAll?`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">Showing comments related to your own tasks only. Ask an admin for full Comments access to see everyone's.</div>`:''}
   <div id="cm-list">${renderList(list)}</div>`;
   el.innerHTML=h;
 }
 
 function rReminders(el){
-  const TABS=['Sent to Me','Sent by Me'];
+  const canAll=canDoStrict('reminders');
+  const TABS=canAll?['Sent to Me','Sent by Me','All Reminders']:['Sent to Me','Sent by Me'];
   let tab=0;
   function render(t){
     tab=t;
     const toMe=DB.reminders.filter(r=>r.toId===CU.id||r.toName===CU.name);
     const byMe=DB.reminders.filter(r=>r.fromId===CU.id||r.fromName===CU.name);
-    const list=t===0?toMe:byMe;
-    const cnt=[toMe.length,byMe.length];
+    const allR=canAll?[...DB.reminders]:[];
+    const list=t===0?toMe:t===1?byMe:allR;
+    const cnt=canAll?[toMe.length,byMe.length,allR.length]:[toMe.length,byMe.length];
 
     let h=`<div class="tabs" style="margin-bottom:14px">
       ${TABS.map((lb,i)=>`<div class="tab ${i===tab?'on':''}" style="font-size:13px;font-weight:700;${i===tab?'color:var(--ac);border-bottom:3px solid var(--ac)':'color:var(--tx2)'}">
         ${lb} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;background:${i===tab?'var(--ac)':cnt[i]>0?'var(--ac)18':'var(--s2)'};color:${i===tab?'#fff':cnt[i]>0?'var(--ac)':'var(--tx3)'};border-radius:20px;font-size:11px;font-weight:800;margin-left:4px">${cnt[i]}</span>
       </div>`).join('')}
     </div>`;
+    if(!canAll)h+=`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--ac)">Only your own reminders are shown. Ask an admin for full Reminders access to see everyone's.</div>`;
 
     if(!list.length){
-      h+=`<div class="empty"><div class="ei">🔔</div><div class="et">${tab===0?'No reminders received':'No reminders sent'}</div></div>`;
+      h+=`<div class="empty"><div class="ei">🔔</div><div class="et">${tab===0?'No reminders received':tab===1?'No reminders sent':'No reminders yet'}</div></div>`;
     } else {
       h+=`<div style="display:flex;flex-direction:column;gap:8px">`;
       [...list].sort((a,b)=>new Date(b.at||0)-new Date(a.at||0)).forEach(r=>{
         const task=r.taskId?DB.tasks.find(tk=>tk.id===r.taskId):null;
         const fromM=DB.team.find(m=>m.id===r.fromId||m.name===r.fromName);
         const toM=DB.team.find(m=>m.id===r.toId||m.name===r.toName);
-        const shown=tab===0?fromM:toM;
+        const shown=tab===0?fromM:tab===1?toM:null;
         const shownLabel=tab===0?'From':'To';
         h+=`<div style="background:var(--s);border:1px solid var(--bd);border-radius:11px;padding:13px 15px;display:flex;gap:12px;align-items:flex-start">
           <div style="font-size:22px;flex-shrink:0;line-height:1;margin-top:2px">${r.read&&tab===0?'🔕':'🔔'}</div>
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+              ${tab===2?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--tx)">${fromM?.name||r.fromName||'?'} <span style="color:var(--tx3);font-weight:500">→</span> ${toM?.name||r.toName||'?'}</span>`:`
               <span style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase">${shownLabel}:</span>
-              ${shown?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:20px;border-radius:50%;background:${shown.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800">${shown.av}</span><span style="font-size:12px;font-weight:700;color:var(--tx)">${shown.name}</span></span>`:'<span style="font-size:12px;color:var(--tx3)">Unknown</span>'}
+              ${shown?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:20px;border-radius:50%;background:${shown.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800">${shown.av}</span><span style="font-size:12px;font-weight:700;color:var(--tx)">${shown.name}</span></span>`:'<span style="font-size:12px;color:var(--tx3)">Unknown</span>'}`}
               <span style="font-size:10px;color:var(--tx3);margin-left:auto">${fdt(r.at)}</span>
             </div>
             ${(()=>{
