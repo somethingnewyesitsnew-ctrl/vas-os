@@ -84,7 +84,7 @@ function openMemberModal(id){
   // Individual content-access overrides — each defaults to "" (inherit
   // from employment type) unless this member already has an explicit
   // grant/deny set on their record.
-  ['projects','services','library','docs'].forEach(perm=>{
+  ['projects','services','library','docs','archive','comments','reminders'].forEach(perm=>{
     const el=document.getElementById('mf-perm-'+perm);
     if(el) el.value=(m?.permOverrides&&typeof m.permOverrides[perm]==='boolean')?(m.permOverrides[perm]?'grant':'deny'):'';
   });
@@ -255,7 +255,7 @@ window.saveMember=async()=>{
   // explicit choices are stored; "inherit" (empty value) means no key at
   // all, so the employment type default applies with nothing to clean up.
   const permOverrides={};
-  ['projects','services','library','docs'].forEach(perm=>{
+  ['projects','services','library','docs','archive','comments','reminders'].forEach(perm=>{
     const v=document.getElementById('mf-perm-'+perm)?.value;
     if(v==='grant')permOverrides[perm]=true;
     else if(v==='deny')permOverrides[perm]=false;
