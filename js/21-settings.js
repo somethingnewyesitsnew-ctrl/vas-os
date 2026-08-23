@@ -187,6 +187,27 @@ function rSettings(el){
 
     ${buildBackupCard()}
 
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">⏰ Automatic Task Reminders</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Periodic nudges about new/overdue/due-soon tasks</span></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.6">When enabled, everyone with "Automatic Task Reminders" checked on their profile (Team → Edit Member) gets a periodic check-in about tasks they haven't opened, tasks that are overdue, and tasks due soon — delivered in-app and via Telegram. Only runs while that person has the app open in a browser tab; it isn't a server-side scheduler.</div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700">
+          <input type="checkbox" id="autorem-enabled" ${AUTO_REM_CFG?.enabled?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)">
+          Enable system-wide
+        </label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;font-weight:700;color:var(--tx3)">Check every</label>
+          <select id="autorem-interval" style="padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px">
+            ${[1,2,4,6,8,12,24].map(h=>`<option value="${h}" ${Number(AUTO_REM_CFG?.interval_hours)===h?'selected':''}>${h} hour${h>1?'s':''}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn bp bsm" onclick="saveAutoRemSettings()">💾 Save</button>
+      </div>
+      <div id="autorem-weekly-table" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bd)">
+        <div style="font-size:11px;color:var(--tx3)">Loading this week's reminder activity…</div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="ct"><span class="ct-t">👥 Member Types & Permissions</span>
         <span style="font-size:10px;color:var(--tx3);font-weight:400">Define employment types and what each can access</span>
@@ -244,6 +265,8 @@ function rSettings(el){
     const el2=document.getElementById('sb-status-check');
     if(el2)el2.innerHTML=r!==null?'<span style="color:var(--g)">✓ Connected</span>':'<span style="color:var(--r)">✗ Error</span>';
   });
+
+  loadWeeklyReminderTable();
 
   // Push notification toggle box — reflects this device's actual subscription state
   if(typeof updatePushToggleUI==='function') updatePushToggleUI();
@@ -360,6 +383,61 @@ window.saveSettings=()=>{
   document.title=name;
   toast('Settings saved ✓','ok');
 };
+
+window.saveAutoRemSettings=async()=>{
+  const enabled=document.getElementById('autorem-enabled')?.checked||false;
+  const interval_hours=parseInt(document.getElementById('autorem-interval')?.value||'4');
+  showSaving(true);
+  const r=await sbUpdate('auto_reminder_settings',1,{enabled,interval_hours,updated_at:new Date().toISOString()});
+  showSaving(false);
+  if(r!==null){
+    AUTO_REM_CFG={enabled,interval_hours};
+    logAction('Settings Updated',`${CU.name} ${enabled?'enabled':'disabled'} automatic task reminders (every ${interval_hours}h)`,'Info','Automatic Reminders','');
+    toast('Reminder settings saved ✓','ok');
+  } else {
+    toast('Failed to save — check connection','bad');
+  }
+};
+
+// One query for every Reminder-type notification sent this week, grouped
+// per member — cheaper than querying per-member individually, and gives
+// admins a single at-a-glance view of who's getting reminded (and how
+// often) across the whole team. "This week" resets naturally every
+// Monday since it's a live date filter, not a stored counter.
+async function loadWeeklyReminderTable(){
+  const host=document.getElementById('autorem-weekly-table');
+  if(!host)return;
+  try{
+    const monday=getWeekStartISO();
+    const rows=await sbQ('notifications',`type=eq.Reminder&created_at=gte.${monday}&order=created_at.desc&limit=500`);
+    const list=Array.isArray(rows)?rows:[];
+    const byMember={};
+    list.forEach(r=>{
+      const name=r.to_name||'—';
+      if(!byMember[name])byMember[name]=[];
+      byMember[name].push(r);
+    });
+    const rowsSorted=Object.entries(byMember).sort((a,b)=>b[1].length-a[1].length);
+    if(!rowsSorted.length){
+      host.innerHTML=`<div style="font-size:11px;color:var(--tx3)">No reminders sent to anyone yet this week.</div>`;
+      return;
+    }
+    host.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">This Week, By Member (${list.length} total)</div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      ${rowsSorted.map(([name,items])=>{
+        const mObj=DB.team.find(m=>m.name===name);
+        return `<div onclick="${mObj?`openMemberDetail('${mObj.id}')`:''}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:8px;${mObj?'cursor:pointer':''}">
+          ${mObj?`<span style="width:20px;height:20px;border-radius:50%;background:${mObj.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800;flex-shrink:0">${mObj.av}</span>`:''}
+          <span style="flex:1;font-size:12px;font-weight:600;color:var(--tx)">${name}</span>
+          <span style="font-size:12px;font-weight:800;color:var(--ac)">${items.length}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }catch(e){
+    host.innerHTML=`<div style="font-size:11px;color:var(--tx3)">Couldn't load reminder activity.</div>`;
+    console.warn('loadWeeklyReminderTable failed',e);
+  }
+}
 
 window.saveSheetsCfg=()=>{
   const url=document.getElementById('cfg-sheets-url')?.value.trim();
