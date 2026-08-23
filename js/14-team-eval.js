@@ -80,7 +80,7 @@ window.openMemberDetail=(id)=>{
     <div style="font-size:9px;color:#dc2626;margin-top:6px;opacity:.75">⚠️ Plaintext credentials — flagged for migration to proper auth.</div>
   </div>`;
   if(isAdmin()){
-    const gateLabels=[['projects','Projects'],['services','Services'],['library','Library'],['docs','Documentation']];
+    const gateLabels=[['projects','Projects'],['services','Services'],['library','Library'],['docs','Documentation'],['archive','Archive'],['comments','Comments'],['reminders','Reminders']];
     body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:10px">
       <div style="font-size:9px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase;margin-bottom:7px">🔑 Content Access</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -121,6 +121,8 @@ window.openMemberDetail=(id)=>{
     </div>
   </div>`;
 
+  body+=`<div id="mem-rem-week"><div style="font-size:11px;color:var(--tx3);padding:8px 0">Loading reminder activity…</div></div>`;
+
   body+=`<div class="spa" style="flex-wrap:wrap">
     ${m.telegram?`<span class="btn bk bsm" style="cursor:default">✈️ Telegram connected</span>`:''}
     <button class="btn bp bsm" onclick="closeSP();window._navMember='${m.id}';navTo('alltasks')">📋 All Tasks</button>
@@ -130,7 +132,48 @@ window.openMemberDetail=(id)=>{
   </div>`;
   document.getElementById('sp-bd').innerHTML=body;
   document.getElementById('sp-pnl').classList.add('open');
+  loadMemberWeekReminders(m);
 };
+
+// Monday 00:00 of the current calendar week, as an ISO string — the
+// cutoff for "this week"'s reminder count/details. Using this as a live
+// query filter means the count naturally resets every Monday with no
+// stored counter to manage or reset job to run.
+function getWeekStartISO(){
+  const now=new Date();
+  const day=now.getDay(); // 0=Sun..6=Sat
+  const diffToMonday=(day===0?-6:1)-day;
+  const monday=new Date(now);
+  monday.setHours(0,0,0,0);
+  monday.setDate(now.getDate()+diffToMonday);
+  return monday.toISOString();
+}
+
+// Fetches this week's Reminder-type notifications sent to a member
+// (covers both manual "🔔 Remind" pings and the automatic task-reminder
+// system) and renders a count + detail list into their detail panel.
+async function loadMemberWeekReminders(m){
+  const host=document.getElementById('mem-rem-week');
+  if(!host)return;
+  try{
+    const monday=getWeekStartISO();
+    const rows=await sbQ('notifications',`to_name=eq.${encodeURIComponent(m.name)}&type=eq.Reminder&created_at=gte.${monday}&order=created_at.desc&limit=100`);
+    const list=Array.isArray(rows)?rows:[];
+    host.innerHTML=`<div class="sps" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🔔 Reminders This Week</span>
+      <span style="font-size:16px;font-weight:800;color:${list.length?'var(--ac)':'var(--tx3)'}">${list.length}</span>
+    </div>
+    ${list.length?`<div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;margin-bottom:10px">
+      ${list.map(r=>`<div style="padding:7px 10px;background:var(--s2);border-radius:7px">
+        <div style="font-size:11px;color:var(--tx);line-height:1.4">${r.message||''}</div>
+        <div style="font-size:9px;color:var(--tx3);margin-top:2px">${fdt(r.created_at)}${Array.isArray(r.read_by)&&r.read_by.includes(m.name)?' · read':' · unread'}</div>
+      </div>`).join('')}
+    </div>`:`<div style="font-size:11px;color:var(--tx3);padding:6px 0 10px">No reminders sent this week.</div>`}`;
+  }catch(e){
+    host.innerHTML=`<div style="font-size:11px;color:var(--tx3);padding:6px 0">Couldn't load reminder history.</div>`;
+    console.warn('loadMemberWeekReminders failed',e);
+  }
+}
 
 // ══════════════════════════════════════════════════════
 // EVALUATION
