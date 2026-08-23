@@ -89,7 +89,7 @@ async function startApp(){
   if(!ok){ loadDemoData(); }
   // Re-sync CU with actual Supabase member record
   const found2=DB.team.find(m=>m.name.toLowerCase()===CU.name.toLowerCase());
-  if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||'',permOverrides:found2.permOverrides||CU.permOverrides||{}};
+  if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||'',permOverrides:found2.permOverrides||CU.permOverrides||{},autoRemindersActive:found2.autoRemindersActive!==false};
   // Re-apply nav now that memberType/permOverrides are loaded fresh from DB
   if(!isAdmin()){
     // Always show own tasks + meetings + comments + archive + docs (they
@@ -130,6 +130,7 @@ async function startApp(){
     setTimeout(()=>openTaskDeepLink(tid), 800);
   }
   startReminderChecker();
+  startAutoTaskReminders();
   autoBackupIfNeeded();
   startAutoReload();
   // Push notifications — always register the service worker. The soft
@@ -230,6 +231,50 @@ function startAutoReload(){
 } // end startApp
 
 // ── Todo reminder checker ─────────────────────────────────────────────
+// ── Automatic Task Reminders (admin-configurable) ─────────────────────
+// A second, independent reminder layer on top of the 30-second checker
+// below — this one is admin-controlled (global on/off + how often, set
+// in Settings) and can be turned off for individual members. It focuses
+// specifically on due-date-driven signals the other checker doesn't
+// cover: new/unopened tasks, overdue tasks, and tasks due soon, rolled
+// into one consolidated ping per interval rather than one per task.
+// Like the checker below, this only runs in an open browser tab — there
+// is no server-side always-on scheduler behind it.
+function startAutoTaskReminders(){
+  if(!AUTO_REM_CFG?.enabled) return;
+  if(CU?.autoRemindersActive===false) return;
+  const intervalMs=Math.max(1,AUTO_REM_CFG.interval_hours||4)*3600000;
+
+  function checkAndSend(){
+    if(!CU||!DB.tasks) return;
+    const LAST_KEY='vas_auto_rem_last_'+CU.id;
+    const last=parseInt(localStorage.getItem(LAST_KEY)||'0');
+    if(Date.now()-last<intervalMs) return;
+
+    const myTasks=DB.tasks.filter(t=>(t.assignedTo===CU.id||(t.assignees||[]).includes(CU.id))&&!['Done','Cancelled'].includes(t.status));
+    const newUnopened=myTasks.filter(t=>t.status==='New'&&!t.tsOpened);
+    const overdue=myTasks.filter(t=>getDueStatus(t).key==='overdue');
+    const nearDue=myTasks.filter(t=>['today','soon'].includes(getDueStatus(t).key));
+
+    localStorage.setItem(LAST_KEY,String(Date.now()));
+    if(!newUnopened.length&&!overdue.length&&!nearDue.length) return; // nothing to say this round
+
+    const lines=[];
+    if(newUnopened.length)lines.push(`📥 ${newUnopened.length} new task${newUnopened.length>1?'s':''} not opened yet`);
+    if(overdue.length)lines.push(`🚨 ${overdue.length} overdue task${overdue.length>1?'s':''}`);
+    if(nearDue.length)lines.push(`⏰ ${nearDue.length} task${nearDue.length>1?'s':''} due soon`);
+
+    sendNotif(CU.name,`Task check-in: ${lines.join(' · ')}`,'Reminder','');
+    notifyTG(CU.id,'default',{desc:`⏰ *Task Reminder*\n\nHi ${CU.name}!\n\n${lines.join('\n')}\n\nOpen the app to review.`,link:appLink('')});
+  }
+
+  checkAndSend(); // run once immediately on login
+  // Re-check well inside the configured interval so a long-open tab (or
+  // one opened partway through the window) still catches up promptly —
+  // checkAndSend() itself is what actually gates on the real interval.
+  setInterval(checkAndSend, Math.min(intervalMs, 30*60*1000));
+}
+
 function startReminderChecker(){
   const FIRED_KEY='vas_reminded_'+CU?.name;
   const fired=new Set(JSON.parse(localStorage.getItem(FIRED_KEY)||'[]'));
