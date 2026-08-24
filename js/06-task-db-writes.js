@@ -47,7 +47,7 @@ async function nCreateTask(t, lid){
   showSaving(true);
   const r = await sbInsert('tasks', taskPayload(t));
   showSaving(false);
-  if(r?.id){ t.id=r.id; setSync('live','🔄 Refresh'); scheduleSync(); return r; }
+  if(r?.id){ t.id=r.id; setSync('live','Refresh'); scheduleSync(); return r; }
   setSync('err','Save failed'); return null;
 }
 
@@ -56,7 +56,7 @@ async function nUpdateTask(t){
   showSaving(true);
   const r = await sbUpdate('tasks', t.id, taskPayload(t));
   showSaving(false);
-  if(r!==null){ setSync('live','🔄 Refresh'); scheduleSync(); } else setSync('err','Update failed');
+  if(r!==null){ setSync('live','Refresh'); scheduleSync(); } else setSync('err','Update failed');
   return r;
 }
 
