@@ -64,7 +64,7 @@ window.openMemberDetail=(id)=>{
   if(mt.length)body+=`<div class="prg" style="margin-bottom:12px"><div class="prf" style="width:${Math.round(md/mt.length*100)}%;background:var(--g)"></div></div>`;
   body+=`<div class="sps">Active Tasks (${ma.length})</div>`;
   ma.slice(0,6).forEach(t=>{
-    body+=`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}</div>`;
+    body+=`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}${isAdmin()&&m.id!==CU?.id?`<button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:3px 9px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>`:''}</div>`;
   });
   if(ma.length>6)body+=`<div style="font-size:11px;color:var(--tx3);padding:7px 0">+${ma.length-6} more</div>`;
   if(isAdmin()) body+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:10px">
