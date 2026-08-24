@@ -409,13 +409,32 @@ window.delHelpTask=async(id)=>{
   toast('Deleted','ok'); updateBadges();
   const el=document.getElementById('content');if(el&&page==='helprequests')rHelpRequests(el);
 };
+// Builds a specific "why you're being reminded" sentence from the task's
+// actual state, instead of a generic "please take action" — this becomes
+// the pre-filled (but still editable) message text.
+function reminderContextMsg(t){
+  const ds=getDueStatus(t);
+  if(ds.key==='overdue') return `"${t.title}" is ${ds.label.replace('d overdue','day(s) overdue')} — it was due ${fd(t.due)}. Please take action.`;
+  if(t.status==='New'&&t.tsCreated&&!t.tsOpened){
+    const hrs=Math.floor((Date.now()-new Date(t.tsCreated))/3600000);
+    return `"${t.title}" was assigned ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} ago and hasn't been opened yet. Please take a look.`;
+  }
+  if(t.status==='In Progress'&&t.tsStarted){
+    const hrs=Math.floor((Date.now()-new Date(t.tsStarted))/3600000);
+    if(hrs>=12) return `"${t.title}" has been In Progress for ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} with no update. How's it going?`;
+  }
+  return `Reminder: "${t.title}" is still ${t.status}. Please take action.`;
+}
+
 window.reqRemind=(id)=>{
   _pendTask=id;
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const sel=document.getElementById('remind-member');
   const candidates=[t.assignedTo,t.reviewer,...(t.assignees||[])].filter((x,i,a)=>x&&a.indexOf(x)===i&&x!==CU.id);
   sel.innerHTML=candidates.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<option value="${m.id}">${m.name}</option>`:''}).join('')||DB.team.filter(m=>m.id!==CU.id).map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-  document.getElementById('remind-msg').value='';
+  // Pre-fill with a message specific to why this task needs a nudge —
+  // admin can edit or clear it before sending; not just decoration.
+  document.getElementById('remind-msg').value=reminderContextMsg(t);
   OM('m-remind');
 };
 window.confirmRemind=async()=>{
@@ -423,7 +442,7 @@ window.confirmRemind=async()=>{
   const msg=document.getElementById('remind-msg').value.trim();
   const t=DB.tasks.find(tk=>tk.id===_pendTask);if(!t)return;
   const m=DB.team.find(x=>x.id===mid);if(!m)return;
-  const defaultMsg=`Reminder: "${t.title}" is still ${t.status}. Please take action.`;
+  const defaultMsg=reminderContextMsg(t);
   const row={id:'r'+gid(),from_id:CU.id,from_name:CU.name,to_id:m.id,to_name:m.name,task_id:t.id,task_title:t.title,meeting_id:null,msg:msg||defaultMsg,read:false,at:now()};
   const saved=await sbCommsInsert('reminders',row);
   if(saved){
