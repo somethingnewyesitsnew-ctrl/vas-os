@@ -70,7 +70,7 @@ loadVersionBadge();
           DB.team=team.map(m=>({...m,color:m.color||mkColor(m.name),av:m.av||mkAv(m.name),
             username:m.username||(m.name.toLowerCase().split(' ')[0]),
             password:m.password||'abohamood@1.',lastLogin:m.last_login||null}));
-          setSync('live','🔄 Refresh');
+          setSync('live','Refresh');
         } else {
           // Tables exist but empty — load demo team so login works
           loadDemoData();
