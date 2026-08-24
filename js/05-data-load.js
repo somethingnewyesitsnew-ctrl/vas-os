@@ -168,7 +168,7 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
     DB.testSessions = (sessions||[]);
     DB.testChecks = (checks||[]);
 
-    setSync('live','🔄 Refresh');
+    setSync('live','Refresh');
     return true;
   }catch(e){ console.error('loadFromNotion:',e); setSync('err','Error'); return false; }
 }
