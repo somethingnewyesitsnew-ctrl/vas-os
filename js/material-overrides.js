@@ -730,20 +730,21 @@ function rDash(el){
   });
   const maxBar=Math.max(...day7.map(d=>Math.max(d.created,d.done)),1);
   // "Needs reminding" — the three signals the old client-side auto-reminder
-  // used to check itself (not opened, stalled in progress, overdue), now
+  // used to check itself (not opened, stuck in progress, overdue), now
   // just surfaced here so an admin can review and fire a manual 🔔 Remind
   // with one click instead of a background job doing it silently.
+  // No cap here on purpose — the card scrolls instead of hiding items.
   const needsRemindingRaw=[];
   activeTasks.forEach(t=>{
     if(t.status==='New'&&t.tsCreated&&!t.tsOpened&&(Date.now()-new Date(t.tsCreated))>=2*3600000){
       needsRemindingRaw.push({t,reason:'Not opened',hrs:Math.floor((Date.now()-new Date(t.tsCreated))/3600000)});
     } else if(t.status==='In Progress'&&t.tsStarted&&(Date.now()-new Date(t.tsStarted))>=12*3600000){
-      needsRemindingRaw.push({t,reason:'Stalled',hrs:Math.floor((Date.now()-new Date(t.tsStarted))/3600000)});
+      needsRemindingRaw.push({t,reason:'No update',hrs:Math.floor((Date.now()-new Date(t.tsStarted))/3600000)});
     } else if(getDueStatus(t).key==='overdue'){
       needsRemindingRaw.push({t,reason:'Overdue',hrs:null});
     }
   });
-  const needsReminding=needsRemindingRaw.sort((a,b)=>(b.hrs||999)-(a.hrs||999)).slice(0,8);
+  const needsReminding=needsRemindingRaw.sort((a,b)=>(b.hrs||999)-(a.hrs||999));
   const todayTests=DB.testSchedules.filter(s=>s.day_of_week===todayDow&&s.active!==false);
   const todayTestsDone2=DB.testSessions.filter(s=>s.test_date===todayStr&&s.status==='Completed');
   const weekStart7=new Date(now);weekStart7.setDate(now.getDate()-6);
@@ -888,11 +889,11 @@ function rDash(el){
   h+=`<div class="card" style="margin-bottom:14px">
     <div class="ct"><span class="ct-t">🔔 Needs Reminding</span><span style="font-size:10px;color:var(--tx3)">${needsReminding.length}</span></div>
     ${needsReminding.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ Nothing to remind</div>`:
-      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:420px;overflow-y:auto;padding-right:2px">
       ${needsReminding.map(({t,reason,hrs})=>{
-        const rc=reason==='Overdue'?'#dc2626':reason==='Stalled'?'#d97706':'#2563eb';
+        const rc=reason==='Overdue'?'#dc2626':reason==='No update'?'#d97706':'#2563eb';
         return`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
-        <span onclick="openTask('${t.id}')" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
+        <span onclick="openTask('${t.id}')" title="${reason==='No update'?'In Progress with no update':reason==='Not opened'?'Assigned but never opened':'Past its due date'}" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
         <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer"><div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${t.title}</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">${mn(t.assignedTo)||'—'}</div></div>
         <button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:4px 10px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>
       </div>`;}).join('')}
