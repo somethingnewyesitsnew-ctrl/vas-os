@@ -729,7 +729,6 @@ function rDash(el){
     return{ds,label,created,done,isToday:ds===todayStr};
   });
   const maxBar=Math.max(...day7.map(d=>Math.max(d.created,d.done)),1);
-  const urg=activeTasks.filter(t=>t.priority==='Critical'||getDueStatus(t).key==='overdue').slice(0,5);
   // "Needs reminding" — the three signals the old client-side auto-reminder
   // used to check itself (not opened, stalled in progress, overdue), now
   // just surfaced here so an admin can review and fire a manual 🔔 Remind
@@ -883,8 +882,8 @@ function rDash(el){
     </div>
   </div>`;
 
-  // ROW 4: Recent Activity + Needs Attention + Needs Reminding + Priority Risk — 4 columns
-  h+=`<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+  // ROW 4: Recent Activity + Needs Reminding + Priority Risk — 3 columns
+  h+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:14px">
 
     <!-- RECENT ACTIVITY — rich who-did-what feed -->
     <div class="card" style="min-width:0">
@@ -964,16 +963,6 @@ function rDash(el){
           </div>
         </div>`).join('');
       })()}
-    </div>
-
-    <!-- NEEDS ATTENTION -->
-    <div class="card" style="min-width:0">
-      <div class="ct"><span class="ct-t">🚨 Attention</span><span style="font-size:10px;color:var(--tx3)">${urg.length}</span></div>
-      ${urg.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ All clear</div>`:
-        urg.map(t=>{const ds2=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-          <span class="${ds2.cls}" style="font-size:9px;flex-shrink:0;white-space:nowrap">${ds2.label}</span>
-          <div style="flex:1;overflow:hidden;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
-        </div>`;}).join('')}
     </div>
 
     <!-- NEEDS REMINDING — one-tap manual reminder, sends push even if the
