@@ -730,6 +730,21 @@ function rDash(el){
   });
   const maxBar=Math.max(...day7.map(d=>Math.max(d.created,d.done)),1);
   const urg=activeTasks.filter(t=>t.priority==='Critical'||getDueStatus(t).key==='overdue').slice(0,5);
+  // "Needs reminding" — the three signals the old client-side auto-reminder
+  // used to check itself (not opened, stalled in progress, overdue), now
+  // just surfaced here so an admin can review and fire a manual 🔔 Remind
+  // with one click instead of a background job doing it silently.
+  const needsRemindingRaw=[];
+  activeTasks.forEach(t=>{
+    if(t.status==='New'&&t.tsCreated&&!t.tsOpened&&(Date.now()-new Date(t.tsCreated))>=2*3600000){
+      needsRemindingRaw.push({t,reason:'Not opened',hrs:Math.floor((Date.now()-new Date(t.tsCreated))/3600000)});
+    } else if(t.status==='In Progress'&&t.tsStarted&&(Date.now()-new Date(t.tsStarted))>=12*3600000){
+      needsRemindingRaw.push({t,reason:'Stalled',hrs:Math.floor((Date.now()-new Date(t.tsStarted))/3600000)});
+    } else if(getDueStatus(t).key==='overdue'){
+      needsRemindingRaw.push({t,reason:'Overdue',hrs:null});
+    }
+  });
+  const needsReminding=needsRemindingRaw.sort((a,b)=>(b.hrs||999)-(a.hrs||999)).slice(0,8);
   const todayTests=DB.testSchedules.filter(s=>s.day_of_week===todayDow&&s.active!==false);
   const todayTestsDone2=DB.testSessions.filter(s=>s.test_date===todayStr&&s.status==='Completed');
   const weekStart7=new Date(now);weekStart7.setDate(now.getDate()-6);
@@ -868,8 +883,8 @@ function rDash(el){
     </div>
   </div>`;
 
-  // ROW 4: Recent Activity + Needs Attention + Priority Risk — 3 columns
-  h+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:14px">
+  // ROW 4: Recent Activity + Needs Attention + Needs Reminding + Priority Risk — 4 columns
+  h+=`<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">
 
     <!-- RECENT ACTIVITY — rich who-did-what feed -->
     <div class="card" style="min-width:0">
@@ -958,6 +973,21 @@ function rDash(el){
         urg.map(t=>{const ds2=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <span class="${ds2.cls}" style="font-size:9px;flex-shrink:0;white-space:nowrap">${ds2.label}</span>
           <div style="flex:1;overflow:hidden;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
+        </div>`;}).join('')}
+    </div>
+
+    <!-- NEEDS REMINDING — one-tap manual reminder, sends push even if the
+         member's app/tab is closed (goes through the same push pipeline as
+         every other notification). -->
+    <div class="card" style="min-width:0">
+      <div class="ct"><span class="ct-t">🔔 Needs Reminding</span><span style="font-size:10px;color:var(--tx3)">${needsReminding.length}</span></div>
+      ${needsReminding.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ Nothing to remind</div>`:
+        needsReminding.map(({t,reason,hrs})=>{
+          const rc=reason==='Overdue'?'#dc2626':reason==='Stalled'?'#d97706':'#2563eb';
+          return`<div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd)">
+          <span onclick="openTask('${t.id}')" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
+          <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
+          <button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:3px 9px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer">🔔 Remind</button>
         </div>`;}).join('')}
     </div>
 
