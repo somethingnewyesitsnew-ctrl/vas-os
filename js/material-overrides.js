@@ -892,9 +892,17 @@ function rDash(el){
       `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:420px;overflow-y:auto;padding-right:2px">
       ${needsReminding.map(({t,reason,hrs})=>{
         const rc=reason==='Overdue'?'#dc2626':reason==='No update'?'#d97706':'#2563eb';
+        // How many times — and when last — this task has already been reminded on.
+        const remHist=(DB.reminders||[]).filter(r=>r.taskId===t.id).sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
+        const remCount=remHist.length;
+        const remLast=remHist[0];
         return`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
         <span onclick="openTask('${t.id}')" title="${reason==='No update'?'In Progress with no update':reason==='Not opened'?'Assigned but never opened':'Past its due date'}" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
-        <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer"><div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${t.title}</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">${mn(t.assignedTo)||'—'}</div></div>
+        <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer">
+          <div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${t.title}</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:2px">${mn(t.assignedTo)||'—'}</div>
+          ${remCount?`<div style="font-size:10px;color:var(--ac);margin-top:2px;font-weight:600">🔔 Reminded ${remCount}× · last ${fr(remLast.at)}</div>`:`<div style="font-size:10px;color:var(--tx3);margin-top:2px">Not reminded yet</div>`}
+        </div>
         <button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:4px 10px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>
       </div>`;}).join('')}
       </div>`}
