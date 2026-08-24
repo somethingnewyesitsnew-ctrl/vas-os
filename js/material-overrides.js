@@ -882,8 +882,25 @@ function rDash(el){
     </div>
   </div>`;
 
-  // ROW 4: Recent Activity + Needs Reminding + Priority Risk — 3 columns
-  h+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:14px">
+  // NEEDS REMINDING — full-width row on its own so nothing gets truncated.
+  // One-tap manual reminder, sends push even if the member's app/tab is
+  // closed (goes through the same push pipeline as every other notification).
+  h+=`<div class="card" style="margin-bottom:14px">
+    <div class="ct"><span class="ct-t">🔔 Needs Reminding</span><span style="font-size:10px;color:var(--tx3)">${needsReminding.length}</span></div>
+    ${needsReminding.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ Nothing to remind</div>`:
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+      ${needsReminding.map(({t,reason,hrs})=>{
+        const rc=reason==='Overdue'?'#dc2626':reason==='Stalled'?'#d97706':'#2563eb';
+        return`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
+        <span onclick="openTask('${t.id}')" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
+        <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer"><div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${t.title}</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">${mn(t.assignedTo)||'—'}</div></div>
+        <button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:4px 10px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>
+      </div>`;}).join('')}
+      </div>`}
+  </div>`;
+
+  // ROW 4: Recent Activity + Priority Risk — 2 columns
+  h+=`<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:14px">
 
     <!-- RECENT ACTIVITY — rich who-did-what feed -->
     <div class="card" style="min-width:0">
@@ -963,21 +980,6 @@ function rDash(el){
           </div>
         </div>`).join('');
       })()}
-    </div>
-
-    <!-- NEEDS REMINDING — one-tap manual reminder, sends push even if the
-         member's app/tab is closed (goes through the same push pipeline as
-         every other notification). -->
-    <div class="card" style="min-width:0">
-      <div class="ct"><span class="ct-t">🔔 Needs Reminding</span><span style="font-size:10px;color:var(--tx3)">${needsReminding.length}</span></div>
-      ${needsReminding.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ Nothing to remind</div>`:
-        needsReminding.map(({t,reason,hrs})=>{
-          const rc=reason==='Overdue'?'#dc2626':reason==='Stalled'?'#d97706':'#2563eb';
-          return`<div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd)">
-          <span onclick="openTask('${t.id}')" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
-          <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
-          <button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:3px 9px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer">🔔 Remind</button>
-        </div>`;}).join('')}
     </div>
 
     <!-- PRIORITY RISK -->
