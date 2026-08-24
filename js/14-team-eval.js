@@ -155,24 +155,27 @@ function getWeekStartISO(){
 async function loadMemberWeekReminders(m){
   const host=document.getElementById('mem-rem-week');
   if(!host)return;
-  try{
-    const monday=getWeekStartISO();
-    const rows=await sbQ('notifications',`to_name=eq.${encodeURIComponent(m.name)}&type=eq.Reminder&created_at=gte.${monday}&order=created_at.desc&limit=100`);
-    const list=Array.isArray(rows)?rows:[];
-    host.innerHTML=`<div class="sps" style="display:flex;align-items:center;justify-content:space-between">
-      <span>🔔 Reminders This Week</span>
-      <span style="font-size:16px;font-weight:800;color:${list.length?'var(--ac)':'var(--tx3)'}">${list.length}</span>
-    </div>
-    ${list.length?`<div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;margin-bottom:10px">
-      ${list.map(r=>`<div style="padding:7px 10px;background:var(--s2);border-radius:7px">
-        <div style="font-size:11px;color:var(--tx);line-height:1.4">${r.message||''}</div>
-        <div style="font-size:9px;color:var(--tx3);margin-top:2px">${fdt(r.created_at)}${Array.isArray(r.read_by)&&r.read_by.includes(m.name)?' · read':' · unread'}</div>
-      </div>`).join('')}
-    </div>`:`<div style="font-size:11px;color:var(--tx3);padding:6px 0 10px">No reminders sent this week.</div>`}`;
-  }catch(e){
-    host.innerHTML=`<div style="font-size:11px;color:var(--tx3);padding:6px 0">Couldn't load reminder history.</div>`;
-    console.warn('loadMemberWeekReminders failed',e);
-  }
+  // Reads straight from the already-loaded DB.reminders (same array the
+  // Reminders page and Recent Activity feed use) instead of a separate
+  // Supabase round-trip — faster, and one less thing that can silently
+  // fail to load. Shows both directions: reminders sent TO this member
+  // and reminders THEY sent about their own tasks.
+  const all=DB.reminders||[];
+  const toMe=all.filter(r=>r.toId===m.id||(r.toName||'').toLowerCase()===(m.name||'').toLowerCase());
+  const byMe=all.filter(r=>r.fromId===m.id||(r.fromName||'').toLowerCase()===(m.name||'').toLowerCase());
+  const list=[...toMe.map(r=>({...r,dir:'to'})),...byMe.map(r=>({...r,dir:'from'}))]
+    .sort((a,b)=>new Date(b.at||0)-new Date(a.at||0)).slice(0,25);
+  host.innerHTML=`<div class="sps" style="display:flex;align-items:center;justify-content:space-between">
+    <span>🔔 Reminders</span>
+    <span style="font-size:16px;font-weight:800;color:${list.length?'var(--ac)':'var(--tx3)'}">${list.length}</span>
+  </div>
+  ${list.length?`<div style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;margin-bottom:10px">
+    ${list.map(r=>`<div style="padding:7px 10px;background:var(--s2);border-radius:7px">
+      <div style="font-size:10px;font-weight:700;color:${r.dir==='to'?'var(--ac)':'var(--tx3)'};margin-bottom:2px">${r.dir==='to'?'⬇ Received from '+(r.fromName||'?'):'⬆ Sent to '+(r.toName||'?')}</div>
+      <div style="font-size:11px;color:var(--tx);line-height:1.4">${escapeHtml(r.msg||r.message||'')}</div>
+      <div style="font-size:9px;color:var(--tx3);margin-top:2px">${fdt(r.at)}${r.taskTitle?' · '+escapeHtml(r.taskTitle):''}</div>
+    </div>`).join('')}
+  </div>`:`<div style="font-size:11px;color:var(--tx3);padding:6px 0 10px">No reminders yet.</div>`}`;
 }
 
 // ══════════════════════════════════════════════════════
