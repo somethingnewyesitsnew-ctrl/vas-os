@@ -493,230 +493,12 @@ window.openMemberReport=(memberId)=>{
   const m=DB.team.find(x=>x.id===memberId);if(!m)return;
   const PERIODS={week:{label:'Last 7 Days',days:7},month:{label:'Last 30 Days',days:30},q:{label:'Last 3 Months',days:90},half:{label:'Last 6 Months',days:180},year:{label:'Last Year',days:365}};
   // Always open on the past week by default — that's the window people
-  // actually want to see first when checking in on someone. Deliberately
-  // ignores any previously-remembered period from a different member's
-  // report; period-switch buttons within the report still update
-  // window._mrPeriod as before.
-  let selPeriod='week';
-
-  function renderReport(period){
-    window._mrPeriod=period;
-    const {label,days}=PERIODS[period];
-    const from=new Date(Date.now()-days*864e5);
-    const to=new Date();
-    const inR=(ts)=>{if(!ts)return false;const d=new Date(ts);return d>=from&&d<=to;};
-
-    // ── Data ──────────────────────────────────────────
-    const myTasks=DB.tasks.filter(t=>t.assignedTo===m.id||(t.assignees||[]).includes(m.id));
-    const createdTasks=DB.tasks.filter(t=>(t.createdBy||'').toLowerCase()===m.name.toLowerCase()||t.reqBy===m.name);
-    const periodTasks=myTasks.filter(t=>inR(t.tsCreated));
-    const periodDone=myTasks.filter(t=>t.status==='Done'&&inR(t.tsReviewed));
-    const periodStarted=myTasks.filter(t=>inR(t.tsStarted));
-    const periodSubmitted=myTasks.filter(t=>inR(t.tsSubmitted));
-    const overdueNow=myTasks.filter(t=>getDueStatus(t).key==='overdue');
-    const rejectedP=myTasks.filter(t=>(t.rejections||[]).length>0&&inR(t.tsCreated));
-    const workHours=Math.round(periodDone.reduce((s,t)=>s+(t.actual||0),0)*10)/10;
-    const estHours=Math.round(periodDone.reduce((s,t)=>s+(t.est||0),0)*10)/10;
-    const variance=estHours>0?Math.round((workHours-estHours)/estHours*100):null;
-    const avgCycle=(()=>{const ct=periodDone.filter(t=>t.cycleH);return ct.length?Math.round(ct.reduce((s,t)=>s+t.cycleH,0)/ct.length*10)/10:null;})();
-
-    // Reviews
-    const reviewedByMe=DB.tasks.filter(t=>t.reviewer===m.id&&t.status==='Done'&&inR(t.tsReviewed));
-    const rejectedByMe=DB.tasks.filter(t=>t.reviewer===m.id&&(t.rejections||[]).some(r=>inR(r?.at)));
-
-    // Meetings
-    const myMeetings=DB.meetings.filter(mt=>inR(mt.meeting_date)&&((mt.invitees||[]).some(n=>(n||'').toLowerCase()===m.name.toLowerCase())||mt.created_by===m.name));
-    const attended=myMeetings.filter(mt=>{const k=Object.keys(mt.attendance||{}).find(k=>k.toLowerCase()===m.name.toLowerCase());return k&&mt.attendance[k]==='present';});
-    const missed=myMeetings.filter(mt=>{const k=Object.keys(mt.attendance||{}).find(k=>k.toLowerCase()===m.name.toLowerCase());return k&&mt.attendance[k]==='absent';});
-    const createdMeetings=DB.meetings.filter(mt=>mt.created_by===m.name&&inR(mt.meeting_date));
-
-    // Help requests
-    const helpGiven=DB.tasks.filter(t=>t.type==='Help Request'&&t.assignedTo===m.id&&inR(t.tsCreated));
-    const helpRequested=DB.tasks.filter(t=>t.type==='Help Request'&&t.reqBy===m.name&&inR(t.tsCreated));
-    const helpDone=helpGiven.filter(t=>t.status==='Done').length;
-
-    // Reminders
-    const remSent=(DB.reminders||[]).filter(r=>(r.fromId===m.id||r.fromName===m.name)&&inR(r.at));
-    const remReceived=(DB.reminders||[]).filter(r=>(r.toId===m.id||r.toName===m.name)&&inR(r.at));
-
-    // HR coms
-    const hrComs=(DB.hrComs||[]).filter(c=>(c.fromId===m.id||c.fromName===m.name)&&inR(c.at));
-    const hrReplies=hrComs.reduce((s,c)=>s+(c.replies||[]).length,0);
-
-    // Login activity from syslog
-    const loginEvents=syslog.filter(e=>e.action==='Login'&&e.actor===m.name&&inR(e.at));
-
-    // Announcements read
-    const annsRead=(DB.announcements||[]).filter(a=>(a.readBy||[]).includes(m.id)&&inR(a.at));
-
-    // Task timeline events by this member
-    const timelineEvents=[];
-    DB.tasks.forEach(t=>(t.timeline||[]).forEach(ev=>{if(ev.by===m.name&&inR(ev.at))timelineEvents.push({...ev,taskTitle:t.title,taskId:t.id});}));
-
-    // Re-estimates
-    const reests=myTasks.reduce((arr,t)=>{(t.reEstimates||[]).filter(r=>inR(r.at)).forEach(r=>arr.push({...r,taskTitle:t.title}));return arr;},[]);
-
-    // Score
-    const cr=periodTasks.length?Math.round(periodDone.length/periodTasks.length*100):null;
-    const crCol=cr===null?'#64748b':cr>=70?'#15803d':cr>=40?'#d97706':'#dc2626';
-
-    const SP=(title)=>`<div style="font-size:11px;font-weight:800;color:var(--tx);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--bd)">${title}</div>`;
-    const PILL=(v,c)=>`<span style="background:${c}18;color:${c};border:1px solid ${c}30;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">${v}</span>`;
-    const STAT=(icon,label,val,c='var(--tx)')=>`<div style="background:var(--s);border:1px solid var(--bd);border-radius:9px;padding:11px;border-top:3px solid ${c};text-align:center">
-      <div style="font-size:15px;margin-bottom:3px">${icon}</div>
-      <div style="font-size:19px;font-weight:800;color:${c};line-height:1;margin-bottom:3px">${val}</div>
-      <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase">${label}</div>
-    </div>`;
-
-    let h=`
-    <!-- PRINT HEADER (visible only on print) -->
-    <div class="print-header" style="display:none">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid #000">
-        <div style="width:50px;height:50px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff">${m.av}</div>
-        <div><div style="font-size:22px;font-weight:800">${m.name} — Member Report</div><div style="font-size:13px;color:#666">${label} · Generated ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
-      </div>
-    </div>
-
-    <!-- Toolbar (hidden on print) -->
-    <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button onclick="closeSP()" style="padding:6px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">← Back</button>
-        <div>
-          <div style="font-size:16px;font-weight:800">📋 ${m.name}</div>
-          <div style="font-size:11px;color:var(--tx3)">${m.role||''} · ${label}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        ${Object.entries(PERIODS).map(([p,{label:l}])=>`<button onclick="window._mrPeriod='${p}';document.getElementById('mr-body').innerHTML='';renderMemberReport('${m.id}','${p}')" style="padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${selPeriod===p?'var(--ac)':'var(--bd)'};background:${selPeriod===p?'var(--ac)':'var(--s2)'};color:${selPeriod===p?'#fff':'var(--tx2)'}">${l.split(' ')[0]+' '+l.split(' ').slice(1).join(' ')}</button>`).join('')}
-        <button onclick="window.print()" style="padding:4px 12px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🖨 Export PDF</button>
-      </div>
-    </div>
-
-    <!-- Member identity card -->
-    <div style="display:flex;align-items:center;gap:14px;background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:14px">
-      <span style="width:46px;height:46px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
-      <div style="flex:1">
-        <div style="font-size:16px;font-weight:800;color:var(--tx)">${m.name}</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px">
-          ${PILL(m.role||'Member','#2563eb')}
-          ${PILL(m.access||'Member','#7c3aed')}
-          ${PILL(m.status||'Active',m.status==='Active'||!m.status?'#15803d':'#d97706')}
-          ${PILL(m.email||'—','#64748b')}
-        </div>
-      </div>
-      ${cr!==null?`<div style="text-align:center;flex-shrink:0"><div style="font-size:26px;font-weight:800;color:${crCol}">${cr}%</div><div style="font-size:10px;color:${crCol};font-weight:700">COMPLETION</div></div>`:''}
-    </div>
-
-    ${SP('⚡ Activity Overview — '+label)}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:4px">
-      ${STAT('📋','Tasks Assigned',periodTasks.length,'#2563eb')}
-      ${STAT('✅','Completed',periodDone.length,'#15803d')}
-      ${STAT('▶','Started',periodStarted.length,'#7c3aed')}
-      ${STAT('📤','Submitted',periodSubmitted.length,'#7c3aed')}
-      ${STAT('⚠️','Overdue Now',overdueNow.length,overdueNow.length?'#dc2626':'#15803d')}
-      ${STAT('❌','Rejections',rejectedP.length,rejectedP.length?'#dc2626':'#15803d')}
-      ${STAT('⏱','Hours Logged',workHours+'h','#0891b2')}
-      ${STAT('📐','Est vs Actual',variance!==null?(variance>0?'+':'')+variance+'%':'—',variance===null?'#64748b':Math.abs(variance)<=20?'#15803d':Math.abs(variance)<=50?'#d97706':'#dc2626')}
-      ${STAT('🔄','Avg Cycle',avgCycle?avgCycle+'h':'—','#7c3aed')}
-      ${STAT('🔍','Reviews Done',reviewedByMe.length,'#2563eb')}
-      ${STAT('📅','Meetings',myMeetings.length,'#2563eb')}
-      ${STAT('🤝','Help Given',helpDone,'#15803d')}
-    </div>
-
-    ${SP('📋 Tasks in This Period')}
-    ${periodTasks.length?`<div class="tw"><table><thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Est h</th><th>Actual h</th><th>Variance</th><th>Submitted</th><th>Reviewed</th></tr></thead><tbody>
-    ${periodTasks.map(t=>{const v=t.est&&t.actual?Math.round((t.actual-t.est)/t.est*100):null;const vc=v===null?'var(--tx3)':Math.abs(v)<=20?'#15803d':Math.abs(v)<=50?'#d97706':'#dc2626';
-      return`<tr onclick="openTask('${t.id}')" class="cl">
-        <td style="font-size:12px;font-weight:700">${t.title}</td><td>${spill(t.status)}</td><td>${ppill(t.priority)}</td>
-        <td style="font-size:11px">${t.est!=null?t.est+'h':'—'}</td>
-        <td style="font-size:11px;color:#0891b2">${t.actual!=null?t.actual+'h':'—'}</td>
-        <td style="font-size:11px;font-weight:700;color:${vc}">${v!==null?(v>0?'+':'')+v+'%':'—'}</td>
-        <td style="font-size:10px;color:var(--tx3)">${t.tsSubmitted?fdt(t.tsSubmitted):'—'}</td>
-        <td style="font-size:10px;color:var(--tx3)">${t.tsReviewed?fdt(t.tsReviewed):'—'}</td>
-      </tr>`;}).join('')}
-    </tbody></table></div>`:`<div style="color:var(--tx3);font-size:12px;padding:8px 0">No tasks in this period</div>`}
-
-    ${reviewedByMe.length||rejectedByMe.length?SP('🔍 Reviews Performed'):''}
-    ${reviewedByMe.length?`<div class="tw"><table><thead><tr><th>Task Reviewed</th><th>Assignee</th><th>Result</th><th>Date</th></tr></thead><tbody>
-    ${reviewedByMe.map(t=>`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:12px;font-weight:700">${t.title}</td><td style="font-size:11px">${mn(t.assignedTo)||'—'}</td><td>${spill('Done')}</td><td style="font-size:10px;color:var(--tx3)">${fdt(t.tsReviewed)}</td></tr>`).join('')}
-    ${rejectedByMe.map(t=>`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:12px;font-weight:700">${t.title}</td><td style="font-size:11px">${mn(t.assignedTo)||'—'}</td><td>${spill('Rejected')}</td><td style="font-size:10px;color:var(--tx3)">${fdt(t.tsReviewed)}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-
-    ${myMeetings.length?SP('📅 Meetings ('+label+')'):''}
-    ${myMeetings.length?`<div class="tw"><table><thead><tr><th>Meeting</th><th>Date</th><th>Type</th><th>Duration</th><th>Attendance</th><th>Role</th></tr></thead><tbody>
-    ${myMeetings.map(mt=>{const k=Object.keys(mt.attendance||{}).find(k=>k.toLowerCase()===m.name.toLowerCase());const att=k?mt.attendance[k]:'invited';const attCol=att==='present'?'#15803d':att==='absent'?'#dc2626':'#64748b';return`<tr onclick="openMeetingDetail('${mt.id}')" class="cl"><td style="font-size:12px;font-weight:700">${mt.title}</td><td style="font-size:11px">${fd(mt.meeting_date)}</td><td style="font-size:11px;color:var(--tx3)">${mt.meeting_type||'—'}</td><td style="font-size:11px">${mt.duration_minutes?mt.duration_minutes+'min':'—'}</td><td>${PILL(att==='present'?'✓ Attended':att==='absent'?'✗ Missed':'Invited',attCol)}</td><td style="font-size:11px;color:var(--tx3)">${mt.created_by===m.name?'Organiser':'Invitee'}</td></tr>`;}).join('')}
-    </tbody></table></div>`:''}
-
-    ${helpGiven.length||helpRequested.length?SP('🤝 Help Requests'):''}
-    ${helpGiven.length?`<div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px">GIVEN (${helpGiven.length})</div>
-    <div class="tw"><table><thead><tr><th>Task</th><th>Requested By</th><th>Status</th><th>Date</th></tr></thead><tbody>
-    ${helpGiven.map(t=>`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:12px;font-weight:700">${t.title}</td><td style="font-size:11px">${t.reqBy||'—'}</td><td>${spill(t.status)}</td><td style="font-size:10px;color:var(--tx3)">${fdt(t.tsCreated)}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-    ${helpRequested.length?`<div style="font-size:11px;font-weight:700;color:var(--tx3);margin:10px 0 6px">REQUESTED (${helpRequested.length})</div>
-    <div class="tw"><table><thead><tr><th>Task</th><th>Helper</th><th>Status</th><th>Date</th></tr></thead><tbody>
-    ${helpRequested.map(t=>`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:12px;font-weight:700">${t.title}</td><td style="font-size:11px">${mn(t.assignedTo)||'—'}</td><td>${spill(t.status)}</td><td style="font-size:10px;color:var(--tx3)">${fdt(t.tsCreated)}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-
-    ${remSent.length||remReceived.length?SP('🔔 Reminders'):''}
-    ${remSent.length?`<div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px">SENT (${remSent.length})</div><div style="display:flex;flex-direction:column;gap:5px">
-    ${remSent.map(r=>`<div style="background:var(--s2);border-radius:8px;padding:8px 11px;font-size:12px"><strong>To: ${r.toName}</strong>${r.taskTitle?' · '+r.taskTitle:''} <span style="color:var(--tx3);font-size:10px">· ${fdt(r.at)}</span><div style="color:var(--tx2);margin-top:2px">${r.msg||''}</div></div>`).join('')}
-    </div>`:''}
-    ${remReceived.length?`<div style="font-size:11px;font-weight:700;color:var(--tx3);margin:8px 0 6px">RECEIVED (${remReceived.length})</div><div style="display:flex;flex-direction:column;gap:5px">
-    ${remReceived.map(r=>`<div style="background:var(--s2);border-radius:8px;padding:8px 11px;font-size:12px"><strong>From: ${r.fromName}</strong>${r.taskTitle?' · '+r.taskTitle:''} <span style="color:var(--tx3);font-size:10px">· ${fdt(r.at)}</span><div style="color:var(--tx2);margin-top:2px">${r.msg||''}</div></div>`).join('')}
-    </div>`:''}
-
-    ${hrComs.length?SP('💬 HR Communications'):''}
-    ${hrComs.length?`<div style="display:flex;flex-direction:column;gap:6px">
-    ${hrComs.map(c=>`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:12px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><strong>${c.title}</strong><span style="background:#64748b18;color:#64748b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">${c.status}</span></div>
-      <div style="color:var(--tx2)">${c.body}</div>
-      ${(c.replies||[]).length?`<div style="font-size:10px;color:var(--tx3);margin-top:4px">${c.replies.length} repl${c.replies.length>1?'ies':'y'}</div>`:''}
-      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${fdt(c.at)}</div>
-    </div>`).join('')}
-    </div>`:''}
-
-    ${reests.length?SP('⏱ Re-Estimates'):''}
-    ${reests.length?`<div class="tw"><table><thead><tr><th>Task</th><th>From</th><th>To</th><th>Reason</th><th>Date</th></tr></thead><tbody>
-    ${reests.map(r=>`<tr><td style="font-size:12px;font-weight:700">${r.taskTitle}</td><td style="color:#d97706;font-weight:700">${r.oldEst}h</td><td style="color:#2563eb;font-weight:700">${r.newEst}h</td><td style="font-size:11px;color:var(--tx2)">${r.reason}</td><td style="font-size:10px;color:var(--tx3)">${fdt(r.at)}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-
-    ${loginEvents.length?SP('🔐 Login Activity ('+loginEvents.length+' sessions)'):''}
-    ${loginEvents.length?`<div style="display:flex;flex-wrap:wrap;gap:5px">
-    ${loginEvents.map(e=>`<span style="background:var(--al);color:var(--ac);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid #bfdbfe">${fdt(e.at)}</span>`).join('')}
-    </div>`:''}
-
-    <div class="no-print" style="margin-top:18px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--tx3)">
-      <span style="font-size:16px">💡</span>Click <button onclick="window.print()" style="padding:3px 10px;background:var(--ac);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🖨 Export PDF</button> to save this report
-    </div>`;
-
-    const sp=document.getElementById('sp-bd');
-    if(sp)sp.innerHTML=h;
-  }
-
-  window.renderMemberReport=(mid,per)=>{
-    window._mrPeriod=per;
-    const mEl=DB.team.find(x=>x.id===mid);if(!mEl)return;
-    // Re-render by closing + reopening SP
-    openMemberReport(mid);
-  };
-
-  // Open in side panel
-  const title=`📋 ${m.name}'s Report`;
-  let bodyHtml=`<div id="mr-body"></div>`;
-  openSP(title,'',bodyHtml);
-  // Now actually render
-  setTimeout(()=>renderReport(selPeriod),50);
-
-  function renderReport(period){
-    selPeriod=period;
-    const sp=document.getElementById('sp-bd');
-    if(!sp)return;
-    // Call main render
-    const {label,days}=PERIODS[period];
-    // ... (re-uses all the calculation above)
-    // Simplified — just re-call the whole thing
-    openMemberReport_render(m,period,PERIODS);
-  }
+  // actually want to see first when checking in on someone.
+  const selPeriod='week';
+  window.renderMemberReport=(mid,per)=>{ window._mrPeriod=per; openMemberReport(mid); };
+  // Open in side panel with a loading placeholder, then render for real.
+  openSP(`📋 ${m.name}'s Report`,'',`<div id="mr-body"></div>`);
+  setTimeout(()=>openMemberReport_render(m,selPeriod,PERIODS),50);
 };
 
 // Internal: does actual render into sp-bd. Async because it needs to pull
@@ -735,6 +517,20 @@ async function openMemberReport_render(m,period,PERIODS){
   const spLoading=document.getElementById('sp-bd');
   if(spLoading) spLoading.innerHTML='<div class="loading-sc" style="height:160px"><div class="loader"></div><div class="loading-tx">Loading report…</div></div>';
 
+  try {
+    await openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label);
+  } catch(e) {
+    console.error('openMemberReport_render failed:', e);
+    const sp=document.getElementById('sp-bd');
+    if(sp) sp.innerHTML=`<div style="padding:20px;text-align:center">
+      <button onclick="closeSP()" style="padding:6px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:16px">← Back</button>
+      <div style="font-size:14px;font-weight:700;color:var(--r);margin-top:10px">Couldn't build this report</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:6px">Something in ${escapeHtml(m?.name||'this member')}'s activity data caused an error. Check the browser console for details, or try a shorter period.</div>
+    </div>`;
+  }
+}
+
+async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
   let memberNotifs=[];
   try{
     const rows=await sbQ('notifications', `to_name=eq.${encodeURIComponent(m.name)}&created_at=gte.${from.toISOString()}&order=created_at.desc&limit=150`);
@@ -832,7 +628,7 @@ async function openMemberReport_render(m,period,PERIODS){
   ${remReceived.slice(0,4).map(r=>`<div style="background:var(--al);border:1px solid #bfdbfe;border-radius:7px;padding:6px 10px;margin-bottom:4px;font-size:11px"><strong>← ${r.fromName}</strong>${r.taskTitle?' · '+r.taskTitle:''} <span style="color:var(--tx3);font-size:10px">${fdt(r.at)}</span></div>`).join('')}
 
   ${hrComs.length?SP('💬 HR Communications ('+hrComs.length+')'):''}
-  ${hrComs.slice(0,3).map(c=>`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:5px;font-size:11px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><strong>${c.title}</strong>${PILL(c.status,'#64748b')}</div><div style="color:var(--tx2)">${c.body.slice(0,80)}${c.body.length>80?'…':''}</div><div style="color:var(--tx3);font-size:10px;margin-top:2px">${fdt(c.at)}${(c.replies||[]).length?' · '+(c.replies||[]).length+' replies':''}</div></div>`).join('')}
+  ${hrComs.slice(0,3).map(c=>{const cBody=c.body||'';return`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:5px;font-size:11px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><strong>${escapeHtml(c.title||'')}</strong>${PILL(c.status,'#64748b')}</div><div style="color:var(--tx2)">${escapeHtml(cBody.slice(0,80))}${cBody.length>80?'…':''}</div><div style="color:var(--tx3);font-size:10px;margin-top:2px">${fdt(c.at)}${(c.replies||[]).length?' · '+(c.replies||[]).length+' replies':''}</div></div>`;}).join('')}
 
   ${reests.length?SP('⏱ Re-Estimates ('+reests.length+')'):''}
   ${reests.map(r=>`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:7px 10px;margin-bottom:4px;font-size:11px"><strong>${r.taskTitle}</strong> · ${r.oldEst}h → ${r.newEst}h<div style="color:var(--tx2);margin-top:2px">${r.reason}</div></div>`).join('')}
