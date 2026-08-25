@@ -90,7 +90,7 @@ document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.
 document.addEventListener('click',e=>{
   const sp=document.getElementById('sp-pnl'),nd=document.getElementById('nd'),nb=document.querySelector('.nb-b');
   if(sp?.classList.contains('open')&&!sp.contains(e.target)){
-    const isTrigger=e.target.closest('[onclick*="openTask"],[onclick*="openBacklog"],[onclick*="openDoc2"],[onclick*="openArcItem"],[onclick*="openSvcDetail"],[onclick*="openEntityDetail"],[onclick*="openMemberDetail"],[onclick*="openTodo"],tr.cl,.kb-card,.mc,.card[onclick],.stat');
+    const isTrigger=e.target.closest('[onclick*="openTask"],[onclick*="openBacklog"],[onclick*="openDoc2"],[onclick*="openArcItem"],[onclick*="openSvcDetail"],[onclick*="openEntityDetail"],[onclick*="openMemberDetail"],[onclick*="openMemberReport"],[onclick*="openTodo"],tr.cl,.kb-card,.mc,.card[onclick],.stat');
     if(!isTrigger)closeSP();
   }
   if(nd?.classList.contains('open')&&!nd.contains(e.target)&&!nb?.contains(e.target))closeND();
