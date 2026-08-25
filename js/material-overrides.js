@@ -908,12 +908,22 @@ function rDash(el){
       </div>`}
   </div>`;
 
-  // ROW 4: Recent Activity + Priority Risk — 2 columns
-  h+=`<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:14px">
+  // ROW 4: Recent Activity + Priority Risk + Team Load — 3 columns
+  const teamLoad=DB.team.map(m=>{
+    const mt2=activeTasks.filter(t=>t.assignedTo===m.id||t.assignees?.includes(m.id));
+    const criticalL=mt2.filter(t=>t.priority==='Critical').length;
+    const highL=mt2.filter(t=>t.priority==='High').length;
+    const overdueL=mt2.filter(t=>getDueStatus(t).key==='overdue').length;
+    return{m,count:mt2.length,criticalL,highL,overdueL};
+  }).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  const maxLoad=Math.max(...teamLoad.map(x=>x.count),1);
+
+  h+=`<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px;margin-bottom:14px">
 
     <!-- RECENT ACTIVITY — rich who-did-what feed -->
     <div class="card" style="min-width:0">
       <div class="ct"><span class="ct-t">🕐 Recent Activity</span></div>
+      <div style="max-height:360px;overflow-y:auto;padding-right:2px">
       ${(()=>{
         const events=[];
         const memberColor=(name)=>{const m=DB.team.find(x=>x.name===name||(x.name||'').toLowerCase()===(name||'').toLowerCase());return m?m.color:'#64748b';};
@@ -989,6 +999,7 @@ function rDash(el){
           </div>
         </div>`).join('');
       })()}
+      </div>
     </div>
 
     <!-- PRIORITY RISK -->
@@ -1026,47 +1037,39 @@ function rDash(el){
         </div>`;
       })()}
     </div>
-  </div>`;
 
-  // ROW 4b: Team Load widget (full width)
-  const teamLoad=DB.team.map(m=>{
-    const mt2=activeTasks.filter(t=>t.assignedTo===m.id||t.assignees?.includes(m.id));
-    const criticalL=mt2.filter(t=>t.priority==='Critical').length;
-    const highL=mt2.filter(t=>t.priority==='High').length;
-    const overdueL=mt2.filter(t=>getDueStatus(t).key==='overdue').length;
-    return{m,count:mt2.length,criticalL,highL,overdueL};
-  }).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
-  const maxLoad=Math.max(...teamLoad.map(x=>x.count),1);
-  h+=`<div class="card" style="margin-bottom:14px">
-    <div class="ct"><span class="ct-t">👥 Team Load</span><span style="font-size:11px;color:var(--tx3)">${activeTasks.length} active tasks across ${teamLoad.length} member${teamLoad.length!==1?'s':''}</span></div>
-    ${teamLoad.length===0?`<div style="padding:16px;text-align:center;font-size:13px;color:var(--tx3)">No active task assignments</div>`:`
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${teamLoad.map(({m,count,criticalL,highL,overdueL})=>{
-        const pct=Math.round(count/maxLoad*100);
-        const loadColor=count>=6?'#dc2626':count>=4?'#c2410c':count>=2?'#b45309':'#15803d';
-        const loadLabel=count>=6?'Overloaded':count>=4?'High':count>=2?'Moderate':'Light';
-        return`<div onclick="openMemberDetail('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--s2);cursor:pointer;border:1px solid var(--bd);transition:box-shadow .15s" onmouseenter="this.style.boxShadow='var(--shmd)'" onmouseleave="this.style.boxShadow=''">
-          <span style="width:32px;height:32px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:13px;font-weight:700;color:var(--tx)">${m.name}</span>
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-                ${criticalL?`<span style="background:#fdf2f4;color:#be123c;border:1px solid #fca5a5;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px">🔴 ${criticalL}</span>`:''}
-                ${highL?`<span style="background:#fff7f3;color:#c2410c;border:1px solid #fed7aa;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px">🟠 ${highL}</span>`:''}
-                ${overdueL?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px">⚠ ${overdueL}</span>`:''}
-                <span style="background:${loadColor}15;color:${loadColor};border:1px solid ${loadColor}30;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">${count} tasks</span>
+    <!-- TEAM LOAD -->
+    <div class="card" style="min-width:0">
+      <div class="ct"><span class="ct-t">👥 Team Load</span></div>
+      ${teamLoad.length===0?`<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No active task assignments</div>`:`
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;padding-right:2px">
+        ${teamLoad.map(({m,count,criticalL,highL,overdueL})=>{
+          const pct=Math.round(count/maxLoad*100);
+          const loadColor=count>=6?'#dc2626':count>=4?'#c2410c':count>=2?'#b45309':'#15803d';
+          const loadLabel=count>=6?'Overloaded':count>=4?'High':count>=2?'Moderate':'Light';
+          return`<div onclick="openMemberDetail('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;background:var(--s2);cursor:pointer;border:1px solid var(--bd)">
+            <span style="width:26px;height:26px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:3px">
+                <span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span>
+                <span style="background:${loadColor}15;color:${loadColor};border:1px solid ${loadColor}30;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0">${count}</span>
               </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:${pct}%;background:${loadColor};border-radius:3px;transition:width .4s"></div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
+                  <div style="height:100%;width:${pct}%;background:${loadColor};border-radius:3px"></div>
+                </div>
+                <span style="font-size:9px;font-weight:700;color:${loadColor};flex-shrink:0">${loadLabel}</span>
               </div>
-              <span style="font-size:10px;font-weight:700;color:${loadColor};flex-shrink:0;min-width:60px;text-align:right">${loadLabel}</span>
+              ${(criticalL||highL||overdueL)?`<div style="display:flex;gap:4px;margin-top:3px">
+                ${criticalL?`<span style="font-size:9px;font-weight:700;color:#be123c">🔴${criticalL}</span>`:''}
+                ${highL?`<span style="font-size:9px;font-weight:700;color:#c2410c">🟠${highL}</span>`:''}
+                ${overdueL?`<span style="font-size:9px;font-weight:700;color:#dc2626">⚠${overdueL}</span>`:''}
+              </div>`:''}
             </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`}
+          </div>`;
+        }).join('')}
+      </div>`}
+    </div>
   </div>`;
 
   // ROW 5: Operations (full width)
@@ -1089,33 +1092,8 @@ function rDash(el){
     </div>
   </div>`;
 
-  // ── EXTRA: HR panel + Recent Logins (Material dashboard addition) ──
-  const _now2=new Date();
-  const _inRange2=(ts,from,to)=>{if(!ts)return false;const d=new Date(ts);return d>=from&&d<to;};
-  const meetWeeks=Array.from({length:8},(_,i)=>{
-    const end=new Date(_now2); end.setDate(_now2.getDate()-(7*(7-i)));
-    const start=new Date(end); start.setDate(end.getDate()-7);
-    const ms=DB.meetings.filter(m=>m.status==='Completed'&&_inRange2(m.meeting_date,start,end));
-    let inv=0,pres=0;
-    ms.forEach(m=>Object.values(m.attendance||{}).forEach(v=>{inv++;if(v==='present')pres++;}));
-    return{label:end.toLocaleDateString('en',{day:'numeric',month:'short'}),value:inv?Math.round(pres/inv*100):null};
-  });
-  const deptCounts={};
-  DB.team.forEach(m=>{const d=m.dept||'Other';deptCounts[d]=(deptCounts[d]||0)+1;});
-  const deptColors=['#3762E4','#6750A4','#146C2E','#8A5300','#B3261E','#0891B2','#767B8D'];
-  const deptData=Object.entries(deptCounts).map(([l,v],i)=>({v,label:l,color:deptColors[i%deptColors.length]}));
-
-  h+=`<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-bottom:14px">
-    <div class="card">
-      <div class="ct"><span class="ct-t">📅 HR — Meeting Attendance Rate</span><span style="font-size:11px;color:var(--tx3);font-weight:500">last 8 weeks</span></div>
-      ${miniBarColumns(meetWeeks,{height:74})}
-    </div>
-    <div class="card">
-      <div class="ct"><span class="ct-t">Team by Department</span></div>
-      ${donut(deptData,88)}
-    </div>
-    <div id="dash-login-widget"></div>
-  </div>`;
+  // ── EXTRA: Recent Logins (Material dashboard addition) ──
+  h+=`<div id="dash-login-widget" style="margin-bottom:14px"></div>`;
 
   // ROW 6: Team Performance (full width)
   const teamPerf=DB.team.map(m=>{
