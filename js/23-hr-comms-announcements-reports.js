@@ -564,7 +564,8 @@ async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
   const hrComs=(DB.hrComs||[]).filter(c=>(c.fromId===m.id||c.fromName===m.name)&&inR(c.at));
   const reests=myTasks.reduce((arr,t)=>{(t.reEstimates||[]).filter(r=>inR(r.at)).forEach(r=>arr.push({...r,taskTitle:t.title}));return arr;},[]);
   const loginEvents=syslog.filter(e=>e.action==='Login'&&e.actor===m.name&&inR(e.at));
-  const cr=periodTasks.length?Math.round(periodDone.length/periodTasks.length*100):null;
+  const periodTasksDoneNow=periodTasks.filter(t=>t.status==='Done').length;
+  const cr=periodTasks.length?Math.round(periodTasksDoneNow/periodTasks.length*100):null;
   const crCol=cr===null?'#64748b':cr>=70?'#15803d':cr>=40?'#d97706':'#dc2626';
 
   const SP=(t)=>`<div style="font-size:11px;font-weight:800;color:var(--tx);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--bd)">${t}</div>`;
@@ -582,15 +583,12 @@ async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
     <span style="width:40px;height:40px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
     <div style="flex:1"><div style="font-size:14px;font-weight:800">${m.name}</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">${PILL(m.role||'Member','#2563eb')}${PILL(m.access||'Member','#7c3aed')}${PILL(m.status||'Active',m.status==='Active'||!m.status?'#15803d':'#d97706')}</div></div>
-    ${cr!==null?`<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:${crCol}">${cr}%</div><div style="font-size:9px;color:${crCol};font-weight:700">RATE</div></div>`:''}
   </div>
 
   ${SP('⚡ Overview — '+label)}
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:4px">
-    ${ST('📋','Assigned',periodTasks.length,'#2563eb')}${ST('✅','Done',periodDone.length,'#15803d')}${ST('⚠️','Overdue',overdueNow.length,overdueNow.length?'#dc2626':'#15803d')}
-    ${ST('⏱','Hours',workHours+'h','#0891b2')}${ST('📐','Est Var',variance!==null?(variance>0?'+':'')+variance+'%':'—',variance===null?'#64748b':Math.abs(variance)<=20?'#15803d':Math.abs(variance)<=50?'#d97706':'#dc2626')}${ST('🔄','Cycle',avgCycle?avgCycle+'h':'—','#7c3aed')}
-    ${ST('🔍','Reviewed',reviewedByMe.length,'#2563eb')}${ST('📅','Meetings',myMeetings.length,'#2563eb')}${ST('🔐','Logins',loginEvents.length,'#64748b')}
-    ${ST('🔔','Notified',memberNotifs.length,memberNotifs.length?'#2563eb':'#64748b')}${ST('👁','Read',notifsRead,memberNotifs.length&&notifsRead===memberNotifs.length?'#15803d':memberNotifs.length?'#d97706':'#64748b')}${ST('◌','Unread',memberNotifs.length-notifsRead,(memberNotifs.length-notifsRead)>0?'#dc2626':'#15803d')}
+    ${ST('📋','Assigned',periodTasks.length,'#2563eb')}${ST('✅','Done',periodDone.length,'#15803d')}${ST('📈','Completion',cr!==null?cr+'%':'—',crCol)}
+    ${ST('⚠️','Overdue Now',overdueNow.length,overdueNow.length?'#dc2626':'#15803d')}${ST('⏱','Hours',workHours+'h','#0891b2')}${ST('🔄','Avg Cycle',avgCycle?avgCycle+'h':'—','#7c3aed')}
   </div>
 
   ${SP('🔔 Notifications Sent to '+m.name.split(' ')[0]+' ('+memberNotifs.length+' · '+notifsRead+' read)')}
