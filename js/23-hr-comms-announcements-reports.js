@@ -657,7 +657,7 @@ window.openMemberDetail=async(id)=>{
       const btn=document.createElement('button');
       btn.className='btn bg2 bsm mr-btn';
       btn.textContent='📋 Full Report';
-      btn.onclick=()=>openMemberReport(id);
+      btn.onclick=(e)=>{e.stopPropagation();openMemberReport(id);};
       spa.insertBefore(btn,spa.firstChild);
     }
   },100);
