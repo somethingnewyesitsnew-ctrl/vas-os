@@ -418,6 +418,19 @@ function rDash(el){
   const todayDow=new Date().getDay();
   const now=new Date();
 
+  // Single source of truth for "is this task assigned to this member" —
+  // checks id match, assignees array (by id), and case-insensitive name
+  // fallback on both assignedTo and assignees. Used everywhere below so
+  // done/active/rejected counts stay consistent with each other.
+  const taskAssignedToMember=(t,m)=>{
+    if(!m)return false;
+    const nm=(m.name||'').toLowerCase();
+    return t.assignedTo===m.id||
+      (t.assignees||[]).includes(m.id)||
+      (t.assignedTo||'').toLowerCase()===nm||
+      (t.assignees||[]).some(a=>(a||'').toLowerCase()===nm);
+  };
+
   // ── Core data aggregations ──────────────────────────────────────────
   const allTasks=DB.tasks;
   const activeTasks=allTasks.filter(t=>!['Done','Cancelled'].includes(t.status));
@@ -462,14 +475,24 @@ function rDash(el){
 
   if(!isAdmin()){
     // ── MEMBER VIEW ─────────────────────────────────────────────────
-    const mine=activeTasks.filter(t=>t.assignedTo===CU.id||t.assignees?.includes(CU.id)||(t.assignedTo||'').toLowerCase()===CU.name.toLowerCase()||(t.assignees||[]).some(a=>(a||'').toLowerCase()===CU.name.toLowerCase()));
-    const myDone=doneTasks.filter(t=>t.assignedTo===CU.id||t.assignees?.includes(CU.id)||(t.assignedTo||'').toLowerCase()===CU.name.toLowerCase());
+    const isMine=t=>taskAssignedToMember(t,CU);
+    // activeTasks only excludes Done/Cancelled — Rejected tasks are still
+    // in there. Since Rejected now gets its own stat box, "mine" (used for
+    // the Active count, My Tasks list, Overdue, Near-due, New) must exclude
+    // Rejected too, or a rejected task gets counted twice on the dashboard.
+    // mineAll keeps Rejected in the completion-rate denominator, same as before.
+    const mineAll=activeTasks.filter(isMine);
+    const mine=mineAll.filter(t=>t.status!=='Rejected');
+    const myDone=doneTasks.filter(isMine);
     const myOverdue=mine.filter(t=>getDueStatus(t).key==='overdue');
+    const myNearDue=mine.filter(t=>{const k=getDueStatus(t).key;return k==='soon'||k==='today';});
+    const myNewTasks=mine.filter(t=>t.status==='New');
     const myRev=allTasks.filter(t=>(t.reviewer===CU.id||(t.reviewer||'').toLowerCase()===CU.name.toLowerCase())&&t.status==='Pending Review');
-    const myRate=mine.length+myDone.length?Math.round(myDone.length/(mine.length+myDone.length)*100):0;
-    const myRejected=allTasks.filter(t=>(t.assignedTo===CU.id||(t.assignedTo||'').toLowerCase()===CU.name.toLowerCase())&&t.status==='Rejected').length;
+    const myRate=mineAll.length+myDone.length?Math.round(myDone.length/(mineAll.length+myDone.length)*100):0;
+    const myRejected=allTasks.filter(t=>isMine(t)&&t.status==='Rejected').length;
 
-    // Done this week / month
+    // Done this week / month — all derived from the same myDone set above,
+    // so "Today"/"Week"/"Month"/"all-time" numbers can never drift apart.
     const last7d=new Date(now);last7d.setDate(now.getDate()-7);
     const last30d=new Date(now);last30d.setDate(now.getDate()-30);
     const doneThisWeek=myDone.filter(t=>t.tsReviewed&&new Date(t.tsReviewed)>=last7d);
@@ -477,29 +500,32 @@ function rDash(el){
     const doneToday=myDone.filter(t=>t.tsReviewed&&t.tsReviewed.slice(0,10)===todayStr);
 
     // ── Performance note ──────────────────────────────────────────
-    function perfNote(rate,overdue,rejected,active,doneW){
+    function perfNote(rate,overdue,rejected,active,doneW,newCount,nearDueCount){
       // Grade
-      let grade,color,icon,note;
+      let grade,color,icon;
       if(rate>=90&&overdue===0)      {grade='Excellent';color='#15803d';icon='🌟';}
       else if(rate>=75&&overdue<=1)  {grade='Good';color='#2563eb';icon='✅';}
       else if(rate>=50)              {grade='Average';color='#d97706';icon='📈';}
       else if(active>0&&rate<30)     {grade='Needs focus';color='#dc2626';icon='⚠️';}
       else                           {grade='Getting started';color='#6366f1';icon='🚀';}
 
-      // Build note text
+      // Build note lines — always report the four things the member cares
+      // about: good progress, unopened new tasks, overdue, and near-due.
       const lines=[];
-      if(doneW>0) lines.push(`You completed ${doneW} task${doneW>1?'s':''} this week — great progress.`);
-      if(overdue===0&&active>0) lines.push(`All ${active} active task${active>1?'s are':' is'} on track, no overdue items.`);
-      if(overdue>0) lines.push(`${overdue} task${overdue>1?'s are':' is'} overdue — prioritise ${overdue>1?'these':'this'} first.`);
-      if(rejected>0) lines.push(`${rejected} task${rejected>1?'s were':' was'} rejected — review the feedback carefully.`);
-      if(rate>=80) lines.push(`Your ${rate}% completion rate is strong — keep it up.`);
-      else if(rate>0&&rate<50) lines.push(`Completion rate is ${rate}% — breaking tasks into smaller steps may help.`);
-      if(myRev.length>0) lines.push(`${myRev.length} task${myRev.length>1?'s are':' is'} waiting for your review.`);
-      if(!lines.length) lines.push('No active tasks yet. Check All Tasks for new assignments.');
+      if(doneW>0) lines.push(`✅ ${doneW} task${doneW>1?'s':''} completed this week — great progress.`);
+      else if(rate>=80) lines.push(`✅ ${rate}% completion rate — strong work, keep it up.`);
+      else if(active===0&&doneW===0) lines.push(`🚀 No tasks yet — check All Tasks for new assignments.`);
 
-      return {grade,color,icon,note:lines.join(' ')};
+      lines.push(newCount>0?`🆕 ${newCount} new task${newCount>1?'s':''} not opened yet.`:`🆕 No new unopened tasks.`);
+      lines.push(overdue>0?`🔴 ${overdue} task${overdue>1?'s':''} overdue — prioritise ${overdue>1?'these':'this'} first.`:`🟢 Nothing overdue.`);
+      lines.push(nearDueCount>0?`🟡 ${nearDueCount} task${nearDueCount>1?'s':''} due within 2 days — plan ahead.`:`🟡 Nothing due soon.`);
+
+      if(rejected>0) lines.push(`❌ ${rejected} task${rejected>1?'s':''} rejected — review the feedback carefully.`);
+      if(myRev.length>0) lines.push(`📝 ${myRev.length} task${myRev.length>1?'s':''} waiting for your review.`);
+
+      return {grade,color,icon,lines};
     }
-    const {grade,color,icon,note}=perfNote(myRate,myOverdue.length,myRejected,mine.length,doneThisWeek.length);
+    const {grade,color,icon,lines:noteLines}=perfNote(myRate,myOverdue.length,myRejected,mine.length,doneThisWeek.length,myNewTasks.length,myNearDue.length);
 
     // ── STAT CARDS ────────────────────────────────────────────────
     h+=`<div class="sg" style="margin-bottom:14px;overflow:hidden">
@@ -507,44 +533,71 @@ function rDash(el){
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div><div class="st-sub">${myOverdue.length?'needs attention':'all on track ✓'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('toreview')"><div class="st-bar" style="background:#7c3aed"></div><div class="st-lbl">To Review</div><div class="st-val" style="color:#7c3aed">${myRev.length}</div><div class="st-sub">${myRev.length?'awaiting your review':'nothing pending'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#15803d"></div><div class="st-lbl">Completion Rate</div><div class="st-val" style="color:#15803d">${myRate}%</div><div class="st-sub">${grade}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Rejected')"><div class="st-bar" style="background:#dc2626"></div><div class="st-lbl">Rejected</div><div class="st-val" style="color:#dc2626">${myRejected}</div><div class="st-sub">${myRejected?'needs revision':'none rejected ✓'}</div></div>
     </div>`;
 
-    // ── PERFORMANCE NOTE ─────────────────────────────────────────
-    h+=`<div style="background:${color}12;border:1px solid ${color}33;border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start">
-      <div style="font-size:28px;flex-shrink:0;line-height:1">${icon}</div>
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-size:13px;font-weight:800;color:${color}">${grade}</span>
-          <span style="font-size:10px;font-weight:700;background:${color}22;color:${color};padding:2px 8px;border-radius:20px">${myRate}% rate</span>
-          ${doneThisWeek.length?`<span style="font-size:10px;font-weight:700;background:#15803d22;color:#15803d;padding:2px 8px;border-radius:20px">${doneThisWeek.length} done this week</span>`:''}
-        </div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${note}</div>
-      </div>
-    </div>`;
-
-    // ── BEST OF THE WEEK (visible to all members) ────────────────
+    // ── BEST OF THE WEEK data (used in the row below) ─────────────
     const bowStart=new Date();bowStart.setDate(bowStart.getDate()-6);
     const bowScores=DB.team.filter(m=>m.access!=='Admin'&&!FULL.includes(m.name)&&!AROLES.includes(m.role)).map(m=>{
-      const doneW=DB.tasks.filter(t=>t.status==='Done'&&t.assignedTo===m.id&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).length;
-      const overdueW=DB.tasks.filter(t=>!['Done','Cancelled'].includes(t.status)&&t.assignedTo===m.id&&getDueStatus(t).key==='overdue').length;
+      const doneW=DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).length;
+      const overdueW=DB.tasks.filter(t=>!['Done','Cancelled'].includes(t.status)&&taskAssignedToMember(t,m)&&getDueStatus(t).key==='overdue').length;
       return{m,doneW,overdueW,score:doneW*3-overdueW*2};
     }).filter(x=>x.doneW>0||x.overdueW>0).sort((a,b)=>b.score-a.score);
     const bow=bowScores[0];
-    if(bow){
-      const bowNote=DB.tasks.filter(t=>t.status==='Done'&&t.assignedTo===bow.m.id&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · ');
-      h+=`<div onclick="openMemberDetail('${bow.m.id}')" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#14532d18,#15803d12);border:1px solid #86efac50;border-radius:10px;padding:10px 14px;margin-bottom:12px;cursor:pointer">
-        <span style="font-size:20px;flex-shrink:0">⭐</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Employee of the Week</div>
-          <div style="display:flex;align-items:center;gap:7px">
-            <span style="width:22px;height:22px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
-            <span style="font-size:13px;font-weight:800;color:var(--tx)">${bow.m.name}</span>
-            <span style="font-size:11px;color:#15803d;font-weight:600">${bow.doneW} task${bow.doneW!==1?'s':''} done</span>
-          </div>
-          ${bowNote?`<div style="font-size:10px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bowNote}</div>`:''}
+    const bowNote=bow?DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,bow.m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · '):'';
+
+    // ── ROW: My Tasks | Tasks Done | Member Notice | Employee of the Week ──
+    h+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px;overflow:hidden">
+      <div class="card" style="min-width:0;overflow:hidden">
+        <div class="ct"><span class="ct-t" style="font-weight:800;font-size:14px">📋 My Tasks</span></div>
+        ${mine.length?mine.slice(0,5).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+          ${spill(t.status)}
+          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          <span class="${ds.cls}" style="font-size:10px;flex-shrink:0">${ds.label}</span>
+        </div>`;}).join('')+
+        (mine.length>5?`<div style="font-size:11px;color:var(--ac);margin-top:8px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
+        :`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
+      </div>
+
+      <div class="card" style="min-width:0;overflow:hidden">
+        <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'Week',v:doneThisWeek.length,c:'#15803d'},{l:'Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
+          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:8px 4px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:${c};line-height:1">${v}</div>
+            <div style="font-size:9px;font-weight:600;color:${c};margin-top:2px">${l}</div>
+          </div>`).join('')}
         </div>
-      </div>`;
-    }
+        ${doneThisWeek.length?`<div>
+          ${doneThisWeek.slice(0,3).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+            <span style="width:6px;height:6px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
+            <span style="flex:1;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          </div>`).join('')}
+          ${doneThisWeek.length>3?`<div style="font-size:10px;color:var(--ac);margin-top:5px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-3} more →</div>`:''}
+        </div>`:
+        `<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--tx3)">No completed tasks this week yet</div>`}
+      </div>
+
+      <div class="card" style="min-width:0;overflow:hidden">
+        <div class="ct"><span class="ct-t">${icon} Member Notice</span><span style="font-size:9px;font-weight:800;background:${color}18;color:${color};padding:2px 8px;border-radius:20px;flex-shrink:0">${grade}</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${noteLines.map(l=>`<div style="font-size:11.5px;color:var(--tx2);line-height:1.5">${l}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="min-width:0;overflow:hidden">
+        <div class="ct"><span class="ct-t">⭐ Employee of the Week</span></div>
+        ${bow?`<div onclick="openMemberDetail('${bow.m.id}')" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <span style="width:32px;height:32px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bow.m.name}</div>
+            <div style="font-size:11px;color:#15803d;font-weight:600">${bow.doneW} task${bow.doneW!==1?'s':''} done</div>
+          </div>
+        </div>
+        ${bowNote?`<div style="font-size:10px;color:var(--tx3);margin-top:6px">${bowNote}</div>`:''}`
+        :`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--tx3)">Not enough activity this week yet.</div>`}
+      </div>
+    </div>`;
 
     // ── MEETING ATTENDANCE BANNER ────────────────────────────────
     const ms=getMeetingStats(CU.name,30);
@@ -582,40 +635,6 @@ function rDash(el){
         </div>
       </div>`;
     }
-
-    // ── DONE WIDGET ───────────────────────────────────────────────
-    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;min-width:0;overflow:hidden">
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
-          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:26px;font-weight:800;color:${c};line-height:1">${v}</div>
-            <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
-          </div>`).join('')}
-        </div>
-        ${doneThisWeek.length?`<div style="margin-top:4px">
-          ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-            <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-            <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-            <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
-          </div>`).join('')}
-          ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
-        </div>`:
-        `<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
-      </div>
-
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t">📋 My Active Tasks</span></div>
-        ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-          ${spill(t.status)}
-          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-          <span class="${ds.cls}" style="font-size:10px;flex-shrink:0">${ds.label}</span>
-        </div>`;}).join('')+
-        (mine.length>6?`<div style="font-size:11px;color:var(--ac);margin-top:8px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
-        :`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
-      </div>
-    </div>`;
 
     // ── TODAY'S MEETINGS ─────────────────────────────────────────
     if(todayMeetings.length){
