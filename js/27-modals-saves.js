@@ -231,14 +231,14 @@ window.saveTask=async()=>{
     const allAssigneeIds=t.assignees?.length?t.assignees:[t.assignedTo].filter(Boolean);
     allAssigneeIds.forEach(aid=>{
       const am=DB.team.find(m=>m.id===aid);
-      if(am&&am.name!==CU?.name){
+      if(am&&!sameName(am.name,CU?.name)){
         sendNotif(am.name,`New task assigned: "${title}" — ${t.priority} priority`,"Task Assigned",title);
         notifyTG(aid,'task_assigned',{title,priority:t.priority,due:t.due||'Not set',desc:t.desc||'',link:appLink('task-'+t.id)});
       }
     });
     // Notify reviewer — in-app + Telegram
     const rev=DB.team.find(m=>m.id===t.reviewer);
-    if(rev&&rev.name!==CU?.name&&rev.name!==ass?.name){
+    if(rev&&!sameName(rev.name,CU?.name)&&!sameName(rev.name,ass?.name)){
       sendNotif(rev.name,`You are reviewer for new task: "${title}" (assigned to ${ass?.name||'?'})`,'Task Assigned',title);
       notifyTG(rev.id,'review_requested',{title,priority:t.priority,link:appLink('task-'+t.id)});
     }
@@ -551,7 +551,7 @@ async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=
   };
   notifs.unshift(n);notifs=notifs.slice(0,60);
   // Show immediately for current user if relevant
-  if(n.to===CU?.name||(n.adminsOnly&&isAdmin()))renderNotifs();
+  if(sameName(n.to,CU?.name)||(n.adminsOnly&&isAdmin()))renderNotifs();
   updateBadges();
   // Persist to Supabase async (non-blocking). link_type/link_id use the
   // silent writer since those columns are an additive migration — older
@@ -573,8 +573,8 @@ function notifyTaskEvent(task, text, type){
   const meta={taskId:task?.id};
   const ass=DB.team.find(m=>m.id===task.assignedTo);
   const rev=DB.team.find(m=>m.id===task.reviewer);
-  if(ass&&ass.name!==CU?.name) sendNotif(ass.name, text, type, task.title, false, meta);
-  if(rev&&rev.name!==CU?.name&&rev.name!==ass?.name) sendNotif(rev.name, text, type, task.title, false, meta);
+  if(ass&&!sameName(ass.name,CU?.name)) sendNotif(ass.name, text, type, task.title, false, meta);
+  if(rev&&!sameName(rev.name,CU?.name)&&!sameName(rev.name,ass?.name)) sendNotif(rev.name, text, type, task.title, false, meta);
   // Always notify admins (as an admin-only broadcast)
   sendNotif('', text, type, task.title, true, meta);
 }
@@ -582,13 +582,13 @@ function notifyTaskEvent(task, text, type){
 function renderNotifs(){
   const list=document.getElementById('nd-list');if(!list)return;
   const mine=notifs.filter(n=>{
-    if(n.to===CU?.name)return true;
+    if(sameName(n.to,CU?.name))return true;
     if(n.adminsOnly&&isAdmin())return true;
     return false;
   });
   if(!mine.length){list.innerHTML='<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">All caught up! ✓</div>';updateBadges();return;}
   list.innerHTML=mine.slice(0,12).map(n=>{
-    const isRead=n.readBy.includes(CU?.name);
+    const isRead=n.readBy.some(x=>sameName(x,CU?.name));
     const typeIcons={'Task Assigned':'📬','Task Started':'▶️','Task Submitted':'📤','Task Approved':'✅','Task Rejected':'🔴','Review Needed':'🔍','Task Updated':'✏️','Status Changed':'🔄','Mention':'💬'};
     const icon=typeIcons[n.type]||'🔔';
     return`<div class="ndi ${isRead?'':'unr'}" onclick="clickNotif('${n.id}')">
@@ -603,7 +603,7 @@ function renderNotifs(){
 
 window.clickNotif=async(id)=>{
   const n=notifs.find(no=>no.id===id);if(!n)return;
-  if(!n.readBy.includes(CU?.name)){
+  if(!n.readBy.some(x=>sameName(x,CU?.name))){
     n.readBy.push(CU.name);
     localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
     // Update read_by in Supabase async (silent — same reasoning as the
