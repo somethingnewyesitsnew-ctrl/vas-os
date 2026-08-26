@@ -357,7 +357,7 @@ window.confirmHelpRequest=async()=>{
     parentTaskId:t.id,
     due:due||null,est:null,recur:null,
     desc:`${CU.name} needs your help with task "${t.title}".\n\nWhat's needed:\n${desc}\n\nWork this task normally — set your estimate, start, then submit when done. ${CU.name} will review and accept or reject your submission.`,
-    link:'',tsCreated:now(),tsOpened:null,tsStarted:null,
+    link:'',tsCreated:now(),tsAssigned:now(),tsOpened:null,tsStarted:null,
     tsSubmitted:null,tsReviewed:null,tsArchived:null,
     actual:null,what:'',tech:'',rejReason:'',rejections:[]
   };
@@ -567,7 +567,7 @@ window.approveTask=async(id)=>{
       reqBy:t.reqBy, createdBy:t.createdBy||CU?.name||'',
       due:nextDue, est:t.est, recur:t.recur,
       desc:t.desc, link:t.link||'',
-      tsCreated:now(), tsOpened:null, tsStarted:null,
+      tsCreated:now(), tsAssigned:t.assignedTo?now():null, tsOpened:null, tsStarted:null,
       tsSubmitted:null, tsReviewed:null, tsArchived:null,
       actual:null, what:'', tech:'', rejReason:'', rejections:[],
       respH:null, workH:null, revH:null, cycleH:null
