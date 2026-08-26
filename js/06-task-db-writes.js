@@ -21,6 +21,7 @@ function taskPayload(t){
     company_id2: t.company2||null,
     link: t.link||'',
     ts_started: t.tsStarted||null,
+    ts_assigned: t.tsAssigned||null,
     ts_submitted: t.tsSubmitted||null,
     ts_reviewed: t.tsReviewed||null,
     ts_archived: t.tsArchived||null,
