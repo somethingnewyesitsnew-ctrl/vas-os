@@ -237,7 +237,7 @@ function filterAssignSearch(q) {
   if (!filtered.length) { drop.style.display = 'none'; return; }
   drop.style.display = 'block';
   drop.innerHTML = filtered.map(m =>
-    `<div onclick="addAssignTag('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
+    `<div onmousedown="event.preventDefault();addAssignTag('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
       <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
       <div><div style="font-weight:600">${m.name}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
     </div>`
