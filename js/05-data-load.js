@@ -27,6 +27,7 @@ function mapTaskRow(t){
     company2Name: DB.companies.find(c=>c.id===t.company_id2)?.name||'',
     projectName:  proj?.name||'',
     tsCreated:    t.created_at,
+    tsAssigned:   t.ts_assigned,
     tsStarted:    t.ts_started,
     tsSubmitted:  t.ts_submitted,
     meetingId:    t.meeting_id||null,
