@@ -188,7 +188,7 @@ window.saveTask=async()=>{
     const t=DB.tasks.find(x=>x.id===_editId);if(!t)return;
     t.title=title; t.priority=document.getElementById('tf-priority').value; t.type=document.getElementById('tf-type').value;
     const newAssignees=getSelectedAssignees();
-    if(newAssignees.length){t.assignees=newAssignees;t.assignedTo=newAssignees[0];}
+    if(newAssignees.length){t.assignees=newAssignees;t.assignedTo=newAssignees[0];t.tsAssigned=now();}
     t.reviewer=document.getElementById('tf-reviewer').value; t.service=document.getElementById('tf-service').value;
     t.operator=document.getElementById('tf-operator').value;
     t.company2=document.getElementById('tf-company').value||null;
@@ -214,7 +214,7 @@ window.saveTask=async()=>{
       reqBy:document.getElementById('tf-reqby').value,due:document.getElementById('tf-due').value,
       est:parseFloat(document.getElementById('tf-est')?.value)||null,
       recur:document.getElementById('tf-recur')?.value||null,
-      actual:null,what:'',tech:'',rejReason:'',createdBy:CU?.name||'',tsCreated:now(),tsOpened:null,tsStarted:null,tsSubmitted:null,tsReviewed:null,tsArchived:null,rejections:[],
+      actual:null,what:'',tech:'',rejReason:'',createdBy:CU?.name||'',tsCreated:now(),tsAssigned:assignedTo2?now():null,tsOpened:null,tsStarted:null,tsSubmitted:null,tsReviewed:null,tsArchived:null,rejections:[],
       desc:document.getElementById('tf-desc').value,respH:null,workH:null,revH:null,cycleH:null};
     DB.tasks.unshift(t);
     const ass=DB.team.find(m=>m.id===assignedTo2);
