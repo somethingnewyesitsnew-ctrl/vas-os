@@ -117,10 +117,22 @@ async function startApp(){
     syslog=syslog.slice(0,2000);
   }
 
-  loadNotifs(); updateBadges(); loadFormLists(); buildAlertStrip();
-  initCommsData(); // load HR coms + announcements from localStorage after DB is ready
-  checkFirstTimeTutorial();
-  nav('dash', document.querySelector('[data-p="dash"]'));
+  // Each of these is independent — wrapped individually so a single bad
+  // step (e.g. a malformed record tripping an exception in tutorial/alert
+  // strip/reminders) can't silently prevent everything after it from ever
+  // running. Before this, one uncaught throw here meant push registration
+  // and the Realtime notification subscription below never fired for that
+  // login session — the member would see nothing live and get no push,
+  // while every other member with clean data was unaffected. Errors are
+  // still logged to the console so real bugs stay visible.
+  const safe=(label,fn)=>{ try{ fn(); }catch(e){ console.error('startApp step failed:',label,e); } };
+  safe('loadNotifs',()=>loadNotifs());
+  safe('updateBadges',()=>updateBadges());
+  safe('loadFormLists',()=>loadFormLists());
+  safe('buildAlertStrip',()=>buildAlertStrip());
+  safe('initCommsData',()=>initCommsData()); // load HR coms + announcements from localStorage after DB is ready
+  safe('checkFirstTimeTutorial',()=>checkFirstTimeTutorial());
+  safe('nav dash',()=>nav('dash', document.querySelector('[data-p="dash"]')));
 
   // Handle deep link: #task-{id}
   const hash=window.location.hash;
@@ -129,31 +141,33 @@ async function startApp(){
     // Wait long enough for DB to be fully populated
     setTimeout(()=>openTaskDeepLink(tid), 800);
   }
-  startReminderChecker();
-  startAutoTaskReminders();
-  autoBackupIfNeeded();
-  startAutoReload();
+  safe('startReminderChecker',()=>startReminderChecker());
+  safe('startAutoTaskReminders',()=>startAutoTaskReminders());
+  safe('autoBackupIfNeeded',()=>autoBackupIfNeeded());
+  safe('startAutoReload',()=>startAutoReload());
   // Push notifications — always register the service worker. The soft
   // one-time enable prompt itself is only auto-fired here for returning
   // users (tutorial already completed); first-time users get it chained
   // right after the tutorial finishes instead (see 25-tutorial.js), so
   // the tutorial and the notification prompt never fight for the screen.
-  if(typeof registerPushSW==='function'){
-    registerPushSW().then(()=>{
-      const tutorialAlreadyDone=!!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest'));
-      if(tutorialAlreadyDone&&typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1200);
-    });
-  }
-  if(typeof renderPushStatusPill==='function') renderPushStatusPill();
+  safe('registerPushSW',()=>{
+    if(typeof registerPushSW==='function'){
+      registerPushSW().then(()=>{
+        const tutorialAlreadyDone=!!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest'));
+        if(tutorialAlreadyDone&&typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1200);
+      }).catch(e=>console.error('registerPushSW failed:',e));
+    }
+  });
+  safe('renderPushStatusPill',()=>{ if(typeof renderPushStatusPill==='function') renderPushStatusPill(); });
   // Self-heal the team.push_enabled flag against this device's actual
   // subscription state — fixes Team cards showing "Off" for members who
   // are genuinely subscribed but did so before push_enabled existed, or
   // whose browser silently re-subscribed them.
-  if(typeof syncPushEnabledState==='function') syncPushEnabledState();
+  safe('syncPushEnabledState',()=>{ if(typeof syncPushEnabledState==='function') syncPushEnabledState(); });
   // Live delivery for notifications (submits, approvals, mentions, help
   // requests, etc.) — see startRealtimeNotifs in 07-notify-log.js for why
   // this exists and what it's scoped to.
-  if(typeof startRealtimeNotifs==='function') startRealtimeNotifs();
+  safe('startRealtimeNotifs',()=>{ if(typeof startRealtimeNotifs==='function') startRealtimeNotifs(); });
 }
 
 // Opens a #task-{id} deep link (from an OS push notification, an in-app
@@ -224,8 +238,6 @@ function startAutoReload(){
       buildAlertStrip();
       // Re-render current page silently if content area exists
       smartRerender(page, document.getElementById('content'));
-      // Update sync dot
-      updateSyncDot('live');
     }
   }, INTERVAL);
 } // end startApp
