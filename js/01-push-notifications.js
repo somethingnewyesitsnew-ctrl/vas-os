@@ -387,11 +387,21 @@ async function sendPushToMember(memberId, eventType, data = {}) {
   const url = data.link || appLink('');
 
   try {
-    await fetch(PUSH_EDGE_FN_URL, {
+    const r = await fetch(PUSH_EDGE_FN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
       body: JSON.stringify({ member_id: member.id, title, body, url }),
     });
+    // The function answers 200 even with nothing to send to (no
+    // push_subscriptions row for this member) — surface that in the
+    // console instead of it being silently indistinguishable from a
+    // real successful delivery.
+    if (r.ok) {
+      const result = await r.json().catch(() => null);
+      if (result && result.sent === 0) {
+        console.warn(`sendPushToMember: 0 devices reached for ${member.name} — no active push subscription`);
+      }
+    }
   } catch (e) {
     console.warn('sendPushToMember error:', e); // never block the rest of notifyTG on push failure
   }
@@ -406,8 +416,20 @@ async function sendTestPush() {
       headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
       body: JSON.stringify({ member_id: CU.id, title: '✅ Digital Plus OS — Test', body: 'If you see this, push notifications are working 🎉', url: appLink('') }),
     });
-    if (r.ok) toast('Test sent — check your device', 'ok', 6000);
-    else toast('Edge Function error — deploy send-push first (see Settings)', 'bad');
+    if (!r.ok) { toast('Edge Function error — deploy send-push first (see Settings)', 'bad'); return; }
+    // The function itself always answers 200, even when there was nothing
+    // to send to — a member with no push_subscriptions row (never
+    // completed subscribing, or their subscription got pruned as dead)
+    // gets { sent: 0 } back with no HTTP-level error at all. Checking
+    // only r.ok used to show "Test sent — check your device" in that case
+    // too, which hid exactly the problem it should have revealed.
+    let result = null;
+    try { result = await r.json(); } catch (e) {}
+    if (result && result.sent > 0) {
+      toast(`Test sent to ${result.sent} device${result.sent>1?'s':''} — check your device`, 'ok', 6000);
+    } else {
+      toast('No active push subscription found for your account — tap "Enable" on the notification pill and grant permission again', 'bad', 8000);
+    }
   } catch (e) {
     toast('Could not reach the push function — deploy send-push first', 'bad');
   }
