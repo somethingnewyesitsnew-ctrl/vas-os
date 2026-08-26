@@ -88,7 +88,7 @@ async function startApp(){
   const ok=await loadFromNotion();
   if(!ok){ loadDemoData(); }
   // Re-sync CU with actual Supabase member record
-  const found2=DB.team.find(m=>m.name.toLowerCase()===CU.name.toLowerCase());
+  const found2=DB.team.find(m=>sameName(m.name,CU.name));
   if(found2) CU={...CU,...found2,color:found2.color||CU.color,av:found2.av||CU.av,memberType:found2.memberType||CU.memberType||'',permOverrides:found2.permOverrides||CU.permOverrides||{},autoRemindersActive:found2.autoRemindersActive!==false};
   // Re-apply nav now that memberType/permOverrides are loaded fresh from DB
   if(!isAdmin()){
