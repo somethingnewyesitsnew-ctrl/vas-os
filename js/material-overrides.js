@@ -603,41 +603,39 @@ function rDash(el){
     const bow=bowScores[0];
     const bowNote=bow?DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,bow.m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · '):'';
 
-    // ── ROW: (Tasks Done + My Tasks, stacked, wider) | Member Notice | Employee of the Week ──
-    h+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:14px;overflow:hidden">
-      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-        <div class="card" style="min-width:0;overflow:hidden">
-          <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-            ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
-            <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:10px;text-align:center">
-              <div style="font-size:22px;font-weight:800;color:${c};line-height:1">${v}</div>
-              <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
-            </div>`).join('')}
-          </div>
-          ${doneThisWeek.length?`<div>
-            ${doneThisWeek.slice(0,3).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-              <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-              <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-              <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
-            </div>`).join('')}
-            ${doneThisWeek.length>3?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-3} more in Archive →</div>`:''}
-          </div>`:
-          `<div style="text-align:center;padding:10px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
-        </div>
+    // ── STACK: My Tasks (full width) → Tasks Done (full width) → Member Notice | Employee of the Week ──
+    h+=`<div class="card" style="min-width:0;overflow:hidden;padding:18px;margin-bottom:14px">
+      <div class="ct" style="margin-bottom:16px"><span class="ct-t" style="font-weight:800;font-size:16px">📋 My Tasks</span></div>
+      ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+        ${spill(t.status)}
+        <span style="flex:1;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+        <span class="${ds.cls}" style="font-size:11px;flex-shrink:0">${ds.label}</span>
+      </div>`;}).join('')+
+      (mine.length>6?`<div style="font-size:12px;color:var(--ac);margin-top:10px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
+      :`<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
+    </div>
 
-        <div class="card" style="min-width:0;overflow:hidden;padding:18px">
-          <div class="ct" style="margin-bottom:16px"><span class="ct-t" style="font-weight:800;font-size:16px">📋 My Tasks</span></div>
-          ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-            ${spill(t.status)}
-            <span style="flex:1;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-            <span class="${ds.cls}" style="font-size:11px;flex-shrink:0">${ds.label}</span>
-          </div>`;}).join('')+
-          (mine.length>6?`<div style="font-size:12px;color:var(--ac);margin-top:10px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
-          :`<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
-        </div>
+    <div class="card" style="min-width:0;overflow:hidden;margin-bottom:14px">
+      <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
+        <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:${c};line-height:1">${v}</div>
+          <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
+        </div>`).join('')}
       </div>
+      ${doneThisWeek.length?`<div>
+        ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+          <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
+          <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
+        </div>`).join('')}
+        ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
+      </div>`:
+      `<div style="text-align:center;padding:10px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
+    </div>
 
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;overflow:hidden">
       <div style="background:${color}12;border:1px solid ${color}33;border-radius:14px;padding:16px;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="font-size:20px;line-height:1">${icon}</span>
