@@ -15,11 +15,30 @@ const REALTIME_NOTIF_TYPES=['Task Assigned','Task Started','Task Submitted','Rev
 let _rtChannel=null;
 
 function startRealtimeNotifs(){
-  if(!sbClient||!CU||_rtChannel)return; // no client loaded, not logged in, or already subscribed this session
+  if(!CU||_rtChannel)return; // not logged in, or already subscribed this session
+  if(!sbClient){
+    // Supabase SDK didn't load (CDN blocked/slow/failed) — this used to
+    // fail completely silently, leaving that session with no live
+    // notifications and no live dashboard updates and no visible sign why.
+    // Log it clearly and retry shortly rather than giving up for the rest
+    // of the session.
+    console.error('startRealtimeNotifs: sbClient not ready (Supabase SDK failed to load?) — retrying in 5s');
+    setTimeout(()=>{ if(CU&&!_rtChannel) startRealtimeNotifs(); },5000);
+    return;
+  }
   _rtChannel=sbClient
     .channel('notifications-inserts')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications'},handleRealtimeNotif)
-    .subscribe();
+    .subscribe((status,err)=>{
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+        console.error('Realtime notifications connection issue:',status,err||'');
+        if(sbClient&&_rtChannel){ sbClient.removeChannel(_rtChannel); }
+        _rtChannel=null;
+        // Retry with a short backoff instead of leaving this session with
+        // no live delivery until the next full page reload.
+        setTimeout(()=>{ if(CU) startRealtimeNotifs(); },8000);
+      }
+    });
 }
 
 function stopRealtimeNotifs(){
@@ -38,12 +57,12 @@ async function handleRealtimeNotif(payload){
   const row=payload?.new;
   if(!row||!CU)return;
   if(!REALTIME_NOTIF_TYPES.includes(row.type))return;
-  const isRelevant=row.to_name===CU.name||(row.admins_only&&isAdmin());
+  const isRelevant=sameName(row.to_name,CU.name)||(row.admins_only&&isAdmin());
   if(!isRelevant)return;
   // Skip the echo of our own action — sendNotif() already rendered it
   // locally on the sender's own screen the instant they performed the
   // action, so processing the server echo too would just duplicate it.
-  if(row.from_name===CU.name)return;
+  if(sameName(row.from_name,CU.name))return;
   if(notifs.some(n=>n.id===row.id))return; // already have it somehow
 
   const n={
@@ -83,7 +102,8 @@ async function handleRealtimeNotif(payload){
 // §07 ── NOTIFICATIONS & LOGGING ────────────────────────────────────────
 async function loadNotifs(){
   if(!CU)return;
-  const params = `order=created_at.desc&limit=40&or=(to_name.eq.${CU.name},admins_only.eq.true)`;
+  const myName=(CU.name||'').trim();
+  const params = `order=created_at.desc&limit=40&or=(to_name.ilike.${encodeURIComponent(myName)},admins_only.eq.true)`;
   const data = await sbQ('notifications', params);
   if(Array.isArray(data)){
     notifs = data.map(n=>({...n, readBy: n.read_by||[], time: n.created_at, linkType: n.link_type||null, linkId: n.link_id||null}));
