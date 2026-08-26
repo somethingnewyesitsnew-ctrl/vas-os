@@ -491,6 +491,19 @@ function rDash(el){
     const myRate=mineAll.length+myDone.length?Math.round(myDone.length/(mineAll.length+myDone.length)*100):0;
     const myRejected=allTasks.filter(t=>isMine(t)&&t.status==='Rejected').length;
 
+    // Response time (created → opened) and completion/cycle time, for the
+    // two boxes that replace the plain Completion Rate stat.
+    const fmtHrs=h=>{
+      if(h==null)return'—';
+      if(h<1)return Math.round(h*60)+'m';
+      if(h<48)return (Math.round(h*10)/10)+'h';
+      return (Math.round(h/24*10)/10)+'d';
+    };
+    const myRespTasks=allTasks.filter(t=>isMine(t)&&t.tsOpened&&t.tsCreated);
+    const avgRespH=myRespTasks.length?myRespTasks.reduce((s,t)=>s+((new Date(t.tsOpened)-new Date(t.tsCreated))/3600000),0)/myRespTasks.length:null;
+    const myCycleTasks=myDone.filter(t=>t.cycleH&&t.cycleH>0);
+    const avgCycleH=myCycleTasks.length?myCycleTasks.reduce((s,t)=>s+t.cycleH,0)/myCycleTasks.length:null;
+
     // Done this week / month — all derived from the same myDone set above,
     // so "Today"/"Week"/"Month"/"all-time" numbers can never drift apart.
     const last7d=new Date(now);last7d.setDate(now.getDate()-7);
@@ -532,7 +545,8 @@ function rDash(el){
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div><div class="st-sub">${myOverdue.length?'needs attention':'all on track ✓'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('toreview')"><div class="st-bar" style="background:#7c3aed"></div><div class="st-lbl">To Review</div><div class="st-val" style="color:#7c3aed">${myRev.length}</div><div class="st-sub">${myRev.length?'awaiting your review':'nothing pending'}</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#15803d"></div><div class="st-lbl">Completion Rate</div><div class="st-val" style="color:#15803d">${myRate}%</div><div class="st-sub">${grade}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#0891b2"></div><div class="st-lbl">Avg Response</div><div class="st-val" style="color:#0891b2">${fmtHrs(avgRespH)}</div><div class="st-sub">${avgRespH!=null?'time to open new tasks':'no data yet'}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#ea580c"></div><div class="st-lbl">Avg Completion</div><div class="st-val" style="color:#ea580c">${fmtHrs(avgCycleH)}</div><div class="st-sub">${avgCycleH!=null?'time to finish tasks':'no data yet'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Rejected')"><div class="st-bar" style="background:#dc2626"></div><div class="st-lbl">Rejected</div><div class="st-val" style="color:#dc2626">${myRejected}</div><div class="st-sub">${myRejected?'needs revision':'none rejected ✓'}</div></div>
     </div>`;
 
@@ -580,7 +594,7 @@ function rDash(el){
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:14px;padding:16px;${bow?'cursor:pointer':''}" ${bow?`onclick="openMemberDetail('${bow.m.id}')"`:''}>
+        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:14px;padding:16px">
           <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🎉 Employee of the Week</div>
           ${bow?`<div style="display:flex;align-items:center;gap:10px">
             <span style="width:40px;height:40px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
