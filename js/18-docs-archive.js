@@ -404,7 +404,7 @@ window.savePostMeetingAction=async(meetingId)=>{
     service:null,
     desc:`Action item from meeting: "${m.title}" on ${fd(m.meeting_date)}`,
     link:'',
-    tsCreated:now(),tsOpened:null,tsStarted:null,
+    tsCreated:now(),tsAssigned:assigneeMember?now():null,tsOpened:null,tsStarted:null,
     tsSubmitted:null,tsReviewed:null,tsArchived:null,
     actual:null,what:'',tech:'',rejReason:'',rejections:[],comments:[]
   };
@@ -550,7 +550,7 @@ window.confirmEndMeeting=async(id)=>{
       meetingId:m.id,   // ← link back to the meeting
       desc:`Action item from meeting: "${m.title}" on ${fd(m.meeting_date)}${outcomes?'\n\nMeeting notes:\n'+outcomes:''}`,
       link:'',
-      tsCreated:now(),tsOpened:null,tsStarted:null,
+      tsCreated:now(),tsAssigned:assigneeMember?now():null,tsOpened:null,tsStarted:null,
       tsSubmitted:null,tsReviewed:null,tsArchived:null,
       actual:null,what:'',tech:'',rejReason:'',rejections:[]
     };
