@@ -546,56 +546,63 @@ function rDash(el){
     const bow=bowScores[0];
     const bowNote=bow?DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,bow.m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · '):'';
 
-    // ── ROW: My Tasks | Tasks Done | Member Notice | Employee of the Week ──
-    h+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px;overflow:hidden">
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t" style="font-weight:800;font-size:14px">📋 My Tasks</span></div>
-        ${mine.length?mine.slice(0,5).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+    // ── ROW: My Tasks | Tasks Done | (Employee of the Week + Member Notice) ──
+    h+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px;overflow:hidden">
+      <div class="card" style="min-width:0;overflow:hidden;padding:18px">
+        <div class="ct" style="margin-bottom:16px"><span class="ct-t" style="font-weight:800;font-size:16px">📋 My Tasks</span></div>
+        ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           ${spill(t.status)}
-          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-          <span class="${ds.cls}" style="font-size:10px;flex-shrink:0">${ds.label}</span>
+          <span style="flex:1;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          <span class="${ds.cls}" style="font-size:11px;flex-shrink:0">${ds.label}</span>
         </div>`;}).join('')+
-        (mine.length>5?`<div style="font-size:11px;color:var(--ac);margin-top:8px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
-        :`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
+        (mine.length>6?`<div style="font-size:12px;color:var(--ac);margin-top:10px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
+        :`<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
       </div>
 
       <div class="card" style="min-width:0;overflow:hidden">
         <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
-          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'Week',v:doneThisWeek.length,c:'#15803d'},{l:'Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
-          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:8px 4px;text-align:center">
-            <div style="font-size:20px;font-weight:800;color:${c};line-height:1">${v}</div>
-            <div style="font-size:9px;font-weight:600;color:${c};margin-top:2px">${l}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
+          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:${c};line-height:1">${v}</div>
+            <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
           </div>`).join('')}
         </div>
         ${doneThisWeek.length?`<div>
-          ${doneThisWeek.slice(0,3).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-            <span style="width:6px;height:6px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-            <span style="flex:1;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+            <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
+            <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+            <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
           </div>`).join('')}
-          ${doneThisWeek.length>3?`<div style="font-size:10px;color:var(--ac);margin-top:5px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-3} more →</div>`:''}
+          ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
         </div>`:
-        `<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--tx3)">No completed tasks this week yet</div>`}
+        `<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
       </div>
 
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t">${icon} Member Notice</span><span style="font-size:9px;font-weight:800;background:${color}18;color:${color};padding:2px 8px;border-radius:20px;flex-shrink:0">${grade}</span></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${noteLines.map(l=>`<div style="font-size:11.5px;color:var(--tx2);line-height:1.5">${l}</div>`).join('')}
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:14px;padding:16px;${bow?'cursor:pointer':''}" ${bow?`onclick="openMemberDetail('${bow.m.id}')"`:''}>
+          <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🎉 Employee of the Week</div>
+          ${bow?`<div style="display:flex;align-items:center;gap:10px">
+            <span style="width:40px;height:40px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
+            <div style="min-width:0">
+              <div style="font-size:15px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bow.m.name}</div>
+              <div style="font-size:12px;color:#15803d;font-weight:700">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</div>
+            </div>
+          </div>
+          ${bowNote?`<div style="font-size:11px;color:var(--tx3);margin-top:10px">${bowNote}</div>`:''}`
+          :`<div style="text-align:center;padding:8px 0;font-size:12px;color:var(--tx3)">Not enough activity this week yet.</div>`}
         </div>
-      </div>
 
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t">⭐ Employee of the Week</span></div>
-        ${bow?`<div onclick="openMemberDetail('${bow.m.id}')" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <span style="width:32px;height:32px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
-          <div style="min-width:0">
-            <div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bow.m.name}</div>
-            <div style="font-size:11px;color:#15803d;font-weight:600">${bow.doneW} task${bow.doneW!==1?'s':''} done</div>
+        <div style="background:${color}12;border:1px solid ${color}33;border-radius:14px;padding:16px;flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:20px;line-height:1">${icon}</span>
+            <span style="font-size:13px;font-weight:800;color:${color}">${grade}</span>
+            <span style="font-size:9px;font-weight:800;background:${color}22;color:${color};padding:2px 8px;border-radius:20px;margin-left:auto">Member Notice</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            ${noteLines.map(l=>`<div style="font-size:11.5px;color:var(--tx2);line-height:1.5">${l}</div>`).join('')}
           </div>
         </div>
-        ${bowNote?`<div style="font-size:10px;color:var(--tx3);margin-top:6px">${bowNote}</div>`:''}`
-        :`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--tx3)">Not enough activity this week yet.</div>`}
       </div>
     </div>`;
 
