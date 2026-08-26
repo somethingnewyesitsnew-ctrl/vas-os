@@ -522,19 +522,23 @@ function rDash(el){
       else if(active>0&&rate<30)     {grade='Needs focus';color='#dc2626';icon='⚠️';}
       else                           {grade='Getting started';color='#6366f1';icon='🚀';}
 
-      // Build note lines — always report the four things the member cares
-      // about: good progress, unopened new tasks, overdue, and near-due.
+      // Build note lines — overdue and unopened/delayed tasks lead and are
+      // flagged for emphasis (the two things most worth a member's
+      // attention); good progress and near-due follow at normal weight.
       const lines=[];
-      if(doneW>0) lines.push(`✅ ${doneW} task${doneW>1?'s':''} completed this week — great progress.`);
-      else if(rate>=80) lines.push(`✅ ${rate}% completion rate — strong work, keep it up.`);
-      else if(active===0&&doneW===0) lines.push(`🚀 No tasks yet — check All Tasks for new assignments.`);
+      lines.push({emphasis:true,c:overdue>0?'#dc2626':'#15803d',
+        text:overdue>0?`🔴 ${overdue} task${overdue>1?'s':''} overdue — prioritise ${overdue>1?'these':'this'} first.`:`🟢 Nothing overdue — all on track.`});
+      lines.push({emphasis:true,c:newCount>0?'#ea580c':'#15803d',
+        text:newCount>0?`🆕 ${newCount} new task${newCount>1?'s':''} not opened yet — don't let these sit.`:`🆕 No new unopened tasks.`});
 
-      lines.push(newCount>0?`🆕 ${newCount} new task${newCount>1?'s':''} not opened yet.`:`🆕 No new unopened tasks.`);
-      lines.push(overdue>0?`🔴 ${overdue} task${overdue>1?'s':''} overdue — prioritise ${overdue>1?'these':'this'} first.`:`🟢 Nothing overdue.`);
-      lines.push(nearDueCount>0?`🟡 ${nearDueCount} task${nearDueCount>1?'s':''} due within 2 days — plan ahead.`:`🟡 Nothing due soon.`);
+      if(doneW>0) lines.push({emphasis:false,text:`✅ ${doneW} task${doneW>1?'s':''} completed this week — great progress.`});
+      else if(rate>=80) lines.push({emphasis:false,text:`✅ ${rate}% completion rate — strong work, keep it up.`});
+      else if(active===0&&doneW===0) lines.push({emphasis:false,text:`🚀 No tasks yet — check All Tasks for new assignments.`});
 
-      if(rejected>0) lines.push(`❌ ${rejected} task${rejected>1?'s':''} rejected — review the feedback carefully.`);
-      if(myRev.length>0) lines.push(`📝 ${myRev.length} task${myRev.length>1?'s':''} waiting for your review.`);
+      lines.push({emphasis:false,text:nearDueCount>0?`🟡 ${nearDueCount} task${nearDueCount>1?'s':''} due within 2 days — plan ahead.`:`🟡 Nothing due soon.`});
+
+      if(rejected>0) lines.push({emphasis:false,text:`❌ ${rejected} task${rejected>1?'s':''} rejected — review the feedback carefully.`});
+      if(myRev.length>0) lines.push({emphasis:false,text:`📝 ${myRev.length} task${myRev.length>1?'s':''} waiting for your review.`});
 
       return {grade,color,icon,lines};
     }
@@ -599,8 +603,8 @@ function rDash(el){
     const bow=bowScores[0];
     const bowNote=bow?DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,bow.m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · '):'';
 
-    // ── ROW: My Tasks | Tasks Done | (Employee of the Week + Member Notice) ──
-    h+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px;overflow:hidden">
+    // ── ROW: My Tasks (wider) | Member Notice | (Employee of the Week + Tasks Done) ──
+    h+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:14px;overflow:hidden">
       <div class="card" style="min-width:0;overflow:hidden;padding:18px">
         <div class="ct" style="margin-bottom:16px"><span class="ct-t" style="font-weight:800;font-size:16px">📋 My Tasks</span></div>
         ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer">
@@ -612,24 +616,18 @@ function rDash(el){
         :`<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--tx3)">No active tasks — you're all clear!</div>`}
       </div>
 
-      <div class="card" style="min-width:0;overflow:hidden">
-        <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'This Week',v:doneThisWeek.length,c:'#15803d'},{l:'This Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
-          <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:24px;font-weight:800;color:${c};line-height:1">${v}</div>
-            <div style="font-size:10px;font-weight:600;color:${c};margin-top:3px">${l}</div>
-          </div>`).join('')}
+      <div style="background:${color}12;border:1px solid ${color}33;border-radius:14px;padding:16px;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:20px;line-height:1">${icon}</span>
+          <span style="font-size:13px;font-weight:800;color:${color}">${grade}</span>
+          <span style="font-size:9px;font-weight:800;background:${color}22;color:${color};padding:2px 8px;border-radius:20px;margin-left:auto">Member Notice</span>
         </div>
-        ${doneThisWeek.length?`<div>
-          ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
-            <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-            <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-            <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
-          </div>`).join('')}
-          ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
-        </div>`:
-        `<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
+        <div style="display:flex;flex-direction:column;gap:9px">
+          ${noteLines.map(l=>l.emphasis?
+            `<div style="font-size:13px;font-weight:800;color:${l.c};background:${l.c}15;border:1px solid ${l.c}30;border-radius:9px;padding:8px 10px;line-height:1.4">${l.text}</div>`
+            :`<div style="font-size:11px;color:var(--tx2);line-height:1.5">${l.text}</div>`
+          ).join('')}
+        </div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
@@ -646,15 +644,23 @@ function rDash(el){
           :`<div style="text-align:center;padding:8px 0;font-size:12px;color:var(--tx3)">Not enough activity this week yet.</div>`}
         </div>
 
-        <div style="background:${color}12;border:1px solid ${color}33;border-radius:14px;padding:16px;flex:1">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <span style="font-size:20px;line-height:1">${icon}</span>
-            <span style="font-size:13px;font-weight:800;color:${color}">${grade}</span>
-            <span style="font-size:9px;font-weight:800;background:${color}22;color:${color};padding:2px 8px;border-radius:20px;margin-left:auto">Member Notice</span>
+        <div class="card" style="min-width:0;overflow:hidden;flex:1">
+          <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+            ${[{l:'Today',v:doneToday.length,c:'#2563eb'},{l:'Week',v:doneThisWeek.length,c:'#15803d'},{l:'Month',v:doneThisMonth.length,c:'#7c3aed'}].map(({l,v,c})=>`
+            <div style="background:${c}11;border:1px solid ${c}22;border-radius:8px;padding:8px 4px;text-align:center">
+              <div style="font-size:18px;font-weight:800;color:${c};line-height:1">${v}</div>
+              <div style="font-size:9px;font-weight:600;color:${c};margin-top:2px">${l}</div>
+            </div>`).join('')}
           </div>
-          <div style="display:flex;flex-direction:column;gap:7px">
-            ${noteLines.map(l=>`<div style="font-size:11.5px;color:var(--tx2);line-height:1.5">${l}</div>`).join('')}
-          </div>
+          ${doneThisWeek.length?`<div>
+            ${doneThisWeek.slice(0,3).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);cursor:pointer">
+              <span style="width:6px;height:6px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
+              <span style="flex:1;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+            </div>`).join('')}
+            ${doneThisWeek.length>3?`<div style="font-size:10px;color:var(--ac);margin-top:5px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-3} more →</div>`:''}
+          </div>`:
+          `<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--tx3)">No completed tasks this week yet</div>`}
         </div>
       </div>
     </div>`;
