@@ -544,7 +544,7 @@ async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
   const NOTIF_ICONS={'Task Assigned':'📬','Task Started':'▶️','Task Submitted':'📤','Task Approved':'✅','Task Rejected':'🔴','Review Needed':'🔍','Status Changed':'🔄','Re-Estimate':'⏱','Mention':'💬','Comment':'💬','Reminder':'🔔','Help Request':'🤝','Help Accepted':'✅','Meeting Created':'📅','Meeting Started':'🔔','Meeting Ended':'✅','Meeting Cancelled':'❌','Meeting Rescheduled':'📆','Service Test Completed':'🧪'};
 
   const myTasks=DB.tasks.filter(t=>t.assignedTo===m.id||(t.assignees||[]).includes(m.id));
-  const periodTasks=myTasks.filter(t=>inR(t.tsCreated));
+  const periodTasks=myTasks.filter(t=>inR(t.tsAssigned||t.tsCreated));
   const periodDone=myTasks.filter(t=>t.status==='Done'&&inR(t.tsReviewed));
   const periodStarted=myTasks.filter(t=>inR(t.tsStarted));
   const periodSubmitted=myTasks.filter(t=>inR(t.tsSubmitted));
