@@ -540,15 +540,54 @@ function rDash(el){
     }
     const {grade,color,icon,lines:noteLines}=perfNote(myRate,myOverdue.length,myRejected,mine.length,doneThisWeek.length,myNewTasks.length,myNearDue.length);
 
+    // Per-metric status: gives each stat box its own arrow + colored label
+    // so the member can tell at a glance where they stand on that metric,
+    // independent of the overall Member Notice grade above.
+    function statusLevel(kind,val){
+      const T=(label,c,arrow)=>({label,c,arrow});
+      switch(kind){
+        case 'load':
+          if(val===0)  return T('Very Good','#15803d','↑');
+          if(val<=5)   return T('Good','#2563eb','↗');
+          if(val<=10)  return T('Needs Attention','#ea580c','↘');
+          return T('Poor','#dc2626','↓');
+        case 'overdue':
+        case 'rejected':
+          if(val===0)  return T('Very Good','#15803d','↑');
+          if(val===1)  return T('Needs Attention','#ea580c','↘');
+          return T('Poor','#dc2626','↓');
+        case 'resp':
+          if(val==null) return T('No Data','#94a3b8','–');
+          if(val<=1)   return T('Very Good','#15803d','↑');
+          if(val<=4)   return T('Good','#2563eb','↗');
+          if(val<=24)  return T('Needs Attention','#ea580c','↘');
+          return T('Poor','#dc2626','↓');
+        case 'cycle':
+          if(val==null) return T('No Data','#94a3b8','–');
+          if(val<=24)  return T('Very Good','#15803d','↑');
+          if(val<=72)  return T('Good','#2563eb','↗');
+          if(val<=168) return T('Needs Attention','#ea580c','↘');
+          return T('Poor','#dc2626','↓');
+        default: return T('','#94a3b8','–');
+      }
+    }
+    function statusBadge(kind,val){
+      const s=statusLevel(kind,val);
+      return `<div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:10px;font-weight:800;color:${s.c};background:${s.c}18;border:1px solid ${s.c}33;padding:2px 8px;border-radius:20px">
+        <span style="font-size:11px;line-height:1">${s.arrow}</span><span>${s.label}</span>
+      </div>`;
+    }
+
     // ── STAT CARDS ────────────────────────────────────────────────
     h+=`<div class="sg" style="margin-bottom:14px;overflow:hidden">
-      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div><div class="st-sub">${myOverdue.length?'needs attention':'all on track ✓'}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div>${statusBadge('load',mine.length)}</div>
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div>${statusBadge('overdue',myOverdue.length)}</div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('toreview')"><div class="st-bar" style="background:#7c3aed"></div><div class="st-lbl">To Review</div><div class="st-val" style="color:#7c3aed">${myRev.length}</div><div class="st-sub">${myRev.length?'awaiting your review':'nothing pending'}</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#0891b2"></div><div class="st-lbl">Avg Response</div><div class="st-val" style="color:#0891b2">${fmtHrs(avgRespH)}</div><div class="st-sub">${avgRespH!=null?'time to open new tasks':'no data yet'}</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#ea580c"></div><div class="st-lbl">Avg Completion</div><div class="st-val" style="color:#ea580c">${fmtHrs(avgCycleH)}</div><div class="st-sub">${avgCycleH!=null?'time to finish tasks':'no data yet'}</div></div>
-      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Rejected')"><div class="st-bar" style="background:#dc2626"></div><div class="st-lbl">Rejected</div><div class="st-val" style="color:#dc2626">${myRejected}</div><div class="st-sub">${myRejected?'needs revision':'none rejected ✓'}</div></div>
+      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#0891b2"></div><div class="st-lbl">Avg Response</div><div class="st-val" style="color:#0891b2">${fmtHrs(avgRespH)}</div>${statusBadge('resp',avgRespH)}</div>
+      <div class="stat" style="min-width:0;overflow:hidden"><div class="st-bar" style="background:#ea580c"></div><div class="st-lbl">Avg Completion</div><div class="st-val" style="color:#ea580c">${fmtHrs(avgCycleH)}</div>${statusBadge('cycle',avgCycleH)}</div>
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Rejected')"><div class="st-bar" style="background:#dc2626"></div><div class="st-lbl">Rejected</div><div class="st-val" style="color:#dc2626">${myRejected}</div>${statusBadge('rejected',myRejected)}</div>
     </div>`;
+
 
     // ── BEST OF THE WEEK data (used in the row below) ─────────────
     const bowStart=new Date();bowStart.setDate(bowStart.getDate()-6);
