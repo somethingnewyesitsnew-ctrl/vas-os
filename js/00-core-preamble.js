@@ -101,7 +101,7 @@ const SYS=()=>localStorage.getItem('vas_sys_name')||'Digital Plus OS';
 async function notifyTG(memberId, eventType, data={}){
   const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
   if(!member) return;
-  if(member.name===CU?.name) return; // never notify yourself
+  if(sameName(member.name,CU?.name)) return; // never notify yourself
   // Push notification — independent of Telegram being configured. Fires
   // for every event/member regardless of whether member.telegram is set,
   // since push only needs a push_subscriptions row (see 01-push-notifications.js).
@@ -250,3 +250,10 @@ const hb=(a,b)=>{if(!a||!b)return null;const ms=new Date(b)-new Date(a);if(isNaN
 const dur=(h)=>{if(h===null)return'—';return h<1?Math.round(h*60)+'m':h+'h'};
 const mkColor=(n)=>{const c=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626','#374151'];let h=0;for(let i=0;i<(n||'').length;i++)h=(n||'').charCodeAt(i)+((h<<5)-h);return c[Math.abs(h)%c.length]};
 const mkAv=(n)=>(n||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+// Case/whitespace-tolerant name match — used wherever a member's name is
+// compared against CU.name to decide if a notification/event is theirs.
+// A plain === here is fragile: a single stray trailing space or a casing
+// difference introduced whenever a team record was created/edited is
+// enough to make a specific member silently stop matching, while every
+// other member (whose name happens to be clean) keeps working fine.
+const sameName=(a,b)=>!!a&&!!b&&String(a).trim().toLowerCase()===String(b).trim().toLowerCase();
