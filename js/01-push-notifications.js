@@ -355,7 +355,7 @@ function pushBodyFor(eventType, data, sys) {
 async function sendPushToMember(memberId, eventType, data = {}) {
   const member = DB.team.find((m) => m.id === memberId || (m.name || '').toLowerCase() === (memberId || '').toLowerCase());
   if (!member) return;
-  if (member.name === CU?.name) return; // never push to yourself
+  if(sameName(member.name,CU?.name)) return; // never push to yourself
 
   const title = PUSH_TITLES[eventType] || `🔔 ${SYS()}`;
   const body = pushBodyFor(eventType, data, SYS());
