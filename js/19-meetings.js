@@ -363,7 +363,7 @@ function filterInvSearch(q){
   const filtered=DB.team.filter(m=>m.name!==CU?.name&&!_selectedInvitees.includes(m.name)&&(m.name.toLowerCase().includes(q.toLowerCase())||m.role.toLowerCase().includes(q.toLowerCase())));
   if(!filtered.length){drop.style.display='none';return;}
   drop.style.display='block';
-  drop.innerHTML=filtered.map(m=>`<div onclick="addInvitee('${m.name.replace(/'/g,"\'")}') " style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
+  drop.innerHTML=filtered.map(m=>`<div onmousedown="event.preventDefault();addInvitee('${m.name.replace(/'/g,"\'")}')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
     <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
     <div><div style="font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--tx3)">${m.role}</div></div>
   </div>`).join('');
