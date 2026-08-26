@@ -522,7 +522,7 @@ window.convertFailToTask=async(checkId)=>{
     reqBy:c.tester_name||CU?.name||'', createdBy:CU?.name||'',
     due:null, est:null, recur:null,
     desc:`Found during service testing on ${fd(c.test_date)} by ${c.tester_name||'?'}.\n\n🏢 Operator: ${c.operator_name}\n📡 Service: ${c.service_name}\n✗ Check: ${c.check_name}${c.tester_note?`\n\n📝 Tester notes:\n${c.tester_note}`:''}`,
-    link:'', tsCreated:now(), tsOpened:null, tsStarted:null,
+    link:'', tsCreated:now(), tsAssigned:tester?now():null, tsOpened:null, tsStarted:null,
     tsSubmitted:null, tsReviewed:null, tsArchived:null,
     actual:null, what:'', tech:'', rejReason:'', rejections:[], comments:[],
   };
