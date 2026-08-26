@@ -266,7 +266,10 @@ async function renderPushStatusPill() {
   host.style.display = 'inline-flex';
 
   if (on) {
-    host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #86efac;white-space:nowrap">🔔 Notifications on</span>`;
+    host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 6px 3px 10px;border-radius:20px;border:1px solid #86efac;white-space:nowrap">
+      🔔 Notifications on
+      <button onclick="sendTestPush()" style="background:#16a34a;color:#fff;border:none;border-radius:14px;padding:2px 9px;font-size:10px;font-weight:800;cursor:pointer">🧪 Test</button>
+    </span>`;
     return;
   }
   const blocked = perm === 'denied';
