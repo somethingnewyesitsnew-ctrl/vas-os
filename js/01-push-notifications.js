@@ -177,9 +177,31 @@ function markMemberPushEnabled(on) {
 async function syncPushEnabledState(){
   if(!CU || !pushSupported()) return;
   try{
-    const actuallyOn = Notification.permission==='granted' && await isPushSubscribedHere();
-    if(!!CU.push_enabled !== actuallyOn){
-      markMemberPushEnabled(actuallyOn);
+    const granted = Notification.permission==='granted';
+    let subscribed = granted && await isPushSubscribedHere();
+    // Self-heal a dropped subscription: permission was granted at some
+    // point but the actual browser subscription is gone (cleared site
+    // data, browser update, service worker reset, endpoint expired,
+    // etc.). Without this, that member is silently stuck receiving no
+    // push until someone notices and they manually click Enable again —
+    // while another member whose subscription never dropped keeps
+    // working fine, making the two accounts behave differently for a
+    // reason that isn't visible anywhere in the UI.
+    if(granted && !subscribed){
+      try{
+        const reg=_swReg||(await registerPushSW());
+        if(reg){
+          let sub=await reg.pushManager.getSubscription();
+          if(!sub){
+            sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+          }
+          const saved=await savePushSubscription(sub.toJSON());
+          if(saved){ subscribed=true; console.log('syncPushEnabledState: silently re-subscribed this device to push'); }
+        }
+      }catch(e){ console.warn('syncPushEnabledState: silent re-subscribe failed:',e); }
+    }
+    if(!!CU.push_enabled !== subscribed){
+      markMemberPushEnabled(subscribed);
       renderPushStatusPill();
     }
   }catch(e){ console.warn('syncPushEnabledState error:', e); }
