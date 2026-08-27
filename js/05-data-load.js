@@ -190,6 +190,7 @@ function showSaving(v){ document.getElementById('tb-sav').classList.toggle('on',
 
 // Auto-sync: after every successful write, refresh data in background
 let _syncTimer=null;
+let _syncTable=null;
 function toggleSidebar(){
   const sb=document.getElementById('sb-nav');
   const btn=document.getElementById('sb-toggle');
