@@ -41,7 +41,7 @@ function rSettings(el){
     {key:'companyTypes',label:'Company Types'},
   ];
   
-  const cfg=getNotifCfg();
+
   el.innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
     <div>
@@ -109,49 +109,10 @@ function rSettings(el){
         </div>
         <div id="sheets-status" style="font-size:11px;margin-top:8px;color:var(--tx3)"></div>
       </div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Configure automatic email and Telegram alerts when tasks are assigned. Both are free with no backend required.</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Push is the only active notification channel — no setup required per member.</div>
 
-        <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
-          Email via EmailJS
-          <label style="margin-left:auto;display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:600">
-            <input type="checkbox" id="cfg-email-enabled" ${cfg.email_enabled?'checked':''} style="width:14px;height:14px">Enable</label>
-        </div>
-        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--tx3);line-height:1.7">
-          1. Create free account at <strong style="color:var(--ac)">emailjs.com</strong><br>
-          2. Add an Email Service (Gmail, Outlook, etc.)<br>
-          3. Create a Template — use variables: <code style="background:var(--s);padding:1px 4px;border-radius:3px">{{to_email}} {{to_name}} {{task_title}} {{task_priority}} {{task_due}} {{task_desc}} {{task_link}} {{assigned_by}}</code><br>
-          4. Copy your keys below and save
-        </div>
-        <div style="display:grid;gap:8px;margin-bottom:12px">
-          <div><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Public Key</label>
-            <input id="cfg-ejs-pub" value="${cfg.emailjs_public_key||''}" placeholder="user_xxxxxxxxxxxxxxx" style="width:100%;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none;box-sizing:border-box"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Service ID</label>
-            <input id="cfg-ejs-svc" value="${cfg.emailjs_service_id||''}" placeholder="service_xxxxxxx" style="width:100%;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none;box-sizing:border-box"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Template ID</label>
-            <input id="cfg-ejs-tpl" value="${cfg.emailjs_template_id||''}" placeholder="template_xxxxxxx" style="width:100%;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none;box-sizing:border-box"></div>
-        </div>
-
-        <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#229ED9"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.568 8.16-1.61 7.59c-.121.545-.44.679-.892.423l-2.46-1.814-1.187 1.143c-.131.131-.242.242-.497.242l.178-2.523 4.59-4.148c.199-.178-.043-.276-.31-.099l-5.67 3.572-2.44-.762c-.53-.166-.541-.53.111-.784l9.538-3.677c.442-.166.828.099.649.827z"/></svg>
-          Telegram via Bot API
-          <span style="margin-left:auto;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid #bae6fd">Manual setup required</span>
-        </div>
-        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--tx3);line-height:1.8">
-          1. Message <strong style="color:var(--tx)">@BotFather</strong> on Telegram → <code style="background:var(--s);padding:1px 4px;border-radius:3px">/newbot</code> → follow the prompts to get a bot token.<br>
-          2. Paste that token into <code style="background:var(--s);padding:1px 4px;border-radius:3px">TG_BOT_TOKEN</code> at the top of <code style="background:var(--s);padding:1px 4px;border-radius:3px">js/00-core-preamble.js</code> and redeploy.<br>
-          3. Each member opens a chat with your bot and taps <strong style="color:var(--tx)">Start</strong> — this is required, a bot can't message someone who hasn't started a chat with it first.<br>
-          4. Get their numeric Chat ID (have them message <strong style="color:var(--tx)">@userinfobot</strong>, or check your bot's <code style="background:var(--s);padding:1px 4px;border-radius:3px">getUpdates</code> API response) and paste it into their profile under Team → Edit Member → Telegram Chat ID.
-          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
-            ℹ️ Unlike phone numbers, a Telegram Chat ID only works for messages sent <em>by your bot</em> — there's no "click to open chat" link an admin can share, since the ID isn't a public handle.
-          </div>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Your Telegram Chat ID (for test)</label>
-          <div style="display:flex;gap:7px">
-            <input id="cfg-tg-test-id" placeholder="e.g. 123456789" value="${CU?.telegram||''}" style="flex:1;padding:7px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;font-family:var(--fnm);outline:none">
-            <button class="btn bp bsm" onclick="testTGDirect()">🧪 Test</button>
-          </div>
+        <div style="background:var(--s2);border:1px dashed var(--bd);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:var(--tx3);line-height:1.7">
+          ℹ️ Email (EmailJS) and Telegram bot delivery are archived to cut network calls and page weight — the Telegram token was never configured (every send was a wasted, always-failing request) and the EmailJS script was loading on every page load for a path nothing called. The working code is preserved in <code style="background:var(--s);padding:1px 4px;border-radius:3px">js/archived/legacy-notification-channels.js</code> with restore instructions in its header comment.
         </div>
 
         <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
@@ -166,8 +127,6 @@ function rSettings(el){
           </div>
         </div>
         <div id="push-status-box" style="margin-bottom:10px">${(typeof pushToggleHTML==='function')?'Loading…':''}</div>
-
-        <button class="btn bp" style="width:100%;padding:10px" onclick="saveNotifConfig()">💾 Save Email Settings</button>
       </div>
 
       <div class="card">
@@ -477,43 +436,8 @@ window.sendToGoogleSheets=async(silent=false)=>{
   }
 };
 
-window.saveNotifConfig=()=>{
-  const cfg={
-    email_enabled: document.getElementById('cfg-email-enabled')?.checked||false,
-    emailjs_public_key: document.getElementById('cfg-ejs-pub')?.value.trim()||'',
-    emailjs_service_id: document.getElementById('cfg-ejs-svc')?.value.trim()||'',
-    emailjs_template_id: document.getElementById('cfg-ejs-tpl')?.value.trim()||'',
-  };
-  localStorage.setItem(NOTIF_CFG_KEY,JSON.stringify(cfg));
-  toast('Settings saved ✓','ok');
-};
-
-window.testTGDirect=async()=>{
-  const chatId=(document.getElementById('cfg-tg-test-id')?.value||'').trim();
-  if(!chatId){toast('Enter a Telegram Chat ID first','bad');return;}
-  toast('Sending test message…','inf');
-  try{
-    const sys=SYS();
-    const msg=`✅ *${sys}* — Test\n\nHi! This is a test notification from ${sys}.\n\nIf you received this, Telegram notifications are working correctly. 🎉`;
-    const res=await fetch(`${TG_API_BASE}/sendMessage`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'Markdown'})
-    });
-    const data=await res.json().catch(()=>({}));
-    if(data.ok){
-      // Also save the chat id to CU.telegram if not set
-      if(!CU.telegram){CU.telegram=chatId;const m=DB.team.find(x=>x.id===CU.id);if(m){m.telegram=chatId;await nMemberUpd(m);}}
-      toast('✅ Test sent! Check your Telegram','ok',6000);
-    } else {
-      toast('Send failed — check the bot token and Chat ID: '+(data.description||'unknown error'),'bad',7000);
-    }
-  } catch(e){
-    toast('Error: '+e.message,'bad');
-  }
-};
-
-window.testNotifConfig=window.testTGDirect;
+// (Email/Telegram save+test handlers archived — see
+// js/archived/legacy-notification-channels.js)
 
 // ══ BACKUP SYSTEM ══════════════════════════════════════════════════════
 const BACKUP_KEY='vas_backups';
