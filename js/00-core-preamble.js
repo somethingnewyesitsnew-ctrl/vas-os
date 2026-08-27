@@ -63,31 +63,6 @@ function getNotifCfg(){
   try{return JSON.parse(localStorage.getItem(NOTIF_CFG_KEY)||'{}');}catch(e){return{};}
 }
 
-// ── Telegram Bot ──────────────────────────────────────────────────────
-// Create a bot via @BotFather on Telegram, paste its token below (or move
-// it into Settings → a config field if you want it editable without a
-// redeploy). Each team member must open a chat with the bot and press
-// Start once — you then paste their numeric chat_id into their profile
-// (Team → Edit Member → Telegram Chat ID). Bots cannot message a user
-// who hasn't started a conversation with them first — this mirrors the
-// old "member activates once" WhatsApp/CallMeBot setup.
-const TG_BOT_TOKEN='PASTE_YOUR_BOT_TOKEN_HERE';
-const TG_API_BASE=`https://api.telegram.org/bot${TG_BOT_TOKEN}`;
-
-async function sendTG(member, msg){
-  if(!member?.telegram) return;
-  const chatId=String(member.telegram).trim();
-  if(!chatId) return;
-  try{
-    await fetch(`${TG_API_BASE}/sendMessage`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'Markdown'})
-    });
-    logAction('Telegram Sent',`Telegram sent to ${member.name}`,'Info','','');
-  } catch(e){ console.warn('Telegram error:',e); }
-}
-
 // ── Deep link builder ─────────────────────────────────────────────────
 function appLink(hash){ return window.location.href.split('#')[0]+(hash?'#'+hash:''); }
 const SYS=()=>localStorage.getItem('vas_sys_name')||'Digital Plus OS';
@@ -98,106 +73,31 @@ const SYS=()=>localStorage.getItem('vas_sys_name')||'Digital Plus OS';
 //            | 'help_requested' | 'help_accepted' | 'help_completed'
 //            | 'reminder' | 'meeting_invited' | 'meeting_starting'
 //            | 'announcement' | 'hr_reply' | 'review_requested'
+//
+// PUSH IS THE ONLY ACTIVE CHANNEL (as of 2026-08-27). Telegram Bot API and
+// EmailJS delivery were archived to cut wasted network calls (dead-token
+// Telegram sends were firing on every event) and page weight (the EmailJS
+// CDN script tag loaded on every session for a code path nothing ever
+// called). Full working implementations — sendTG(), the per-event message
+// builder, sendEmailNotif(), and the notifyMemberExternal()/sendTGNotif
+// legacy shim — are preserved in js/archived/legacy-notification-channels.js
+// (not loaded by material.html/index.html). To restore either channel:
+//   1. Re-add the EmailJS <script> tag to material.html + index.html (for email)
+//   2. Add js/archived/legacy-notification-channels.js as a <script> tag
+//      (same order position, after this file) to both HTML files
+//   3. Uncomment the `await sendTG(member, msg)` call this function used to
+//      end with, rebuilding `msg` via the archived switch statement, or call
+//      notifyMemberExternal() directly wherever notifyTG() is called for
+//      task-assignment events if you want email back too
 async function notifyTG(memberId, eventType, data={}){
   const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
   if(!member) return;
   if(sameName(member.name,CU?.name)) return; // never notify yourself
-  // Push notification — independent of Telegram being configured. Fires
-  // for every event/member regardless of whether member.telegram is set,
-  // since push only needs a push_subscriptions row (see 01-push-notifications.js).
+  // Push notification — the sole active delivery channel. Fires for every
+  // event/member since push only needs a push_subscriptions row (see
+  // 01-push-notifications.js).
   if (typeof sendPushToMember === 'function') sendPushToMember(memberId, eventType, data).catch?.(()=>{});
-  if(!member.telegram) return; // no Telegram chat id — skip Telegram send only
-  const sys=SYS();
-  const by=CU?.name||'System';
-  const link=data.link||'';
-  let msg='';
-
-  switch(eventType){
-    case 'task_assigned':
-      msg=`🔔 *${sys}*\n\nHi ${member.name}! A new task has been assigned to you.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n📅 Due: ${data.due||'Not set'}\n👤 Assigned by: ${by}${data.desc?'\n\n'+data.desc.slice(0,200):''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'task_approved':
-      msg=`✅ *${sys}*\n\nHi ${member.name}! Your task has been approved.\n\n📋 *${data.title||'Task'}*\n👤 Approved by: ${by}${data.note?'\n💬 Note: '+data.note:''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'task_rejected':
-      msg=`❌ *${sys}*\n\nHi ${member.name}! Your task was rejected and needs revision.\n\n📋 *${data.title||'Task'}*\n👤 Rejected by: ${by}${data.reason?'\n💬 Reason: '+data.reason:''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'task_submitted':
-      msg=`📤 *${sys}*\n\nHi ${member.name}! A task has been submitted for your review.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n👤 Submitted by: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'review_requested':
-      msg=`🔍 *${sys}*\n\nHi ${member.name}! You have a task waiting for your review.\n\n📋 *${data.title||'Task'}*\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'help_requested':
-      msg=`🤝 *${sys}*\n\nHi ${member.name}! Your help has been requested.\n\n📋 *${data.title||'Task'}*\n👤 Requested by: ${by}${data.desc?'\n\n📝 '+data.desc.slice(0,200):''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'help_accepted':
-      msg=`✅ *${sys}*\n\nHi ${member.name}! Your help request was accepted.\n\n📋 *${data.title||'Task'}*\n👤 Accepted by: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'help_completed':
-      msg=`🏁 *${sys}*\n\nHi ${member.name}! Help has been completed on your task.\n\n📋 *${data.title||'Task'}*\n👤 Completed by: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'reminder':
-      msg=`⏰ *${sys}* — Reminder\n\nHi ${member.name}!\n\n${data.desc||'You have a reminder.'}\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'meeting_invited':
-      msg=`📅 *${sys}*\n\nHi ${member.name}! You've been invited to a meeting.\n\n🗓 *${data.title||'Meeting'}*\n📆 Date: ${data.date||'TBD'} at ${data.time||'TBD'}\n📍 ${data.location||'See details'}\n👤 Organised by: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'meeting_starting':
-      msg=`🔔 *${sys}*\n\nHi ${member.name}! Your meeting is starting now.\n\n🗓 *${data.title||'Meeting'}*\n📍 ${data.location||''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'announcement':
-      msg=`📢 *${sys}* — Announcement\n\n*${data.title||'New Announcement'}*\n\n${data.desc||''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'hr_reply':
-      msg=`💬 *${sys}* — HR Update\n\nHi ${member.name}! Your HR communication has received a reply.\n\n📝 Re: ${data.title||'Your message'}\n👤 From: ${by}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'task_due_soon':
-      msg=`⚠️ *${sys}* — Due Tomorrow\n\nHi ${member.name}! A task is due tomorrow.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'task_overdue':
-      msg=`🚨 *${sys}* — Overdue\n\nHi ${member.name}! A task is overdue.\n\n📋 *${data.title||'Task'}*\n⚡ Priority: ${data.priority||'Normal'}\n📅 Was due: ${data.due||'?'}${link?'\n\n🔗 '+link:''}`;
-      break;
-    case 'mention':
-      msg=`💬 *${sys}*\n\nHi ${member.name}! ${by} mentioned you in a comment on "${data.title||'a task'}".\n\n${data.text?'"'+data.text.slice(0,200)+'"':''}${link?'\n\n🔗 '+link:''}`;
-      break;
-    default:
-      msg=`🔔 *${sys}*\n\nHi ${member.name}! ${data.desc||'You have a new notification.'}${link?'\n\n🔗 '+link:''}`;
-  }
-  await sendTG(member, msg);
 }
-
-// ── Email (unchanged) ─────────────────────────────────────────────────
-async function sendEmailNotif(member, taskTitle, taskPriority, taskDue, taskDesc, taskId){
-  const cfg=getNotifCfg();
-  if(!cfg.emailjs_public_key||!cfg.emailjs_service_id||!cfg.emailjs_template_id)return;
-  if(!member?.email){return;}
-  try{
-    emailjs.init(cfg.emailjs_public_key);
-    const taskLink=appLink('task-'+taskId);
-    await emailjs.send(cfg.emailjs_service_id, cfg.emailjs_template_id,{
-      to_email: member.email, to_name: member.name,
-      task_title: taskTitle, task_priority: taskPriority||'Normal',
-      task_due: taskDue||'Not set',
-      task_desc: taskDesc?taskDesc.slice(0,300):'No description',
-      task_link: taskLink, assigned_by: CU?.name||'System',
-      sys_name: SYS()
-    });
-    logAction('Email Sent',`Email sent to ${member.name} for task "${taskTitle}"`,'Info',taskTitle,'');
-  } catch(e){ console.warn('EmailJS error:',e); }
-}
-
-// ── Legacy shim so existing calls still work ─────────────────────────
-async function notifyMemberExternal(memberId, taskTitle, taskPriority, taskDue, taskDesc, taskId){
-  const member=DB.team.find(m=>m.id===memberId||(m.name||'').toLowerCase()===(memberId||'').toLowerCase());
-  if(!member||member.name===CU?.name) return;
-  const cfg=getNotifCfg();
-  const link=appLink('task-'+taskId);
-  await notifyTG(memberId,'task_assigned',{title:taskTitle,priority:taskPriority,due:taskDue,desc:taskDesc,link});
-  if(cfg.email_enabled&&member.email) await sendEmailNotif(member,taskTitle,taskPriority,taskDue,taskDesc,taskId);
-}
-// legacy alias
-const sendTGNotif=notifyMemberExternal;
 
 
 // NOTION DB IDs — verified exact schemas
