@@ -584,6 +584,7 @@ function rDash(el){
 
     // ── STAT CARDS ────────────────────────────────────────────────
     h+=`<div class="sg" style="margin-bottom:14px;overflow:hidden">
+      <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','New')"><div class="st-bar" style="background:#94a3b8"></div><div class="st-lbl">New</div><div class="st-val" style="color:#94a3b8">${myNewTasks.length}</div><div class="st-sub">${myNewTasks.length?'not started yet':'nothing new'}</div></div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks')"><div class="st-bar" style="background:#2563eb"></div><div class="st-lbl">My Active Tasks</div><div class="st-val" style="color:#2563eb">${mine.length}</div><div class="st-sub">${myDone.length} completed all-time</div>${statusBadge('load',mine.length)}</div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('mytasks','Overdue')"><div class="st-bar" style="background:${myOverdue.length?'#dc2626':'#15803d'}"></div><div class="st-lbl">Overdue</div><div class="st-val" style="color:${myOverdue.length?'#dc2626':'#15803d'}">${myOverdue.length}</div>${statusBadge('overdue',myOverdue.length)}</div>
       <div class="stat" style="min-width:0;overflow:hidden" onclick="navTo('toreview')"><div class="st-bar" style="background:#7c3aed"></div><div class="st-lbl">To Review</div><div class="st-val" style="color:#7c3aed">${myRev.length}</div><div class="st-sub">${myRev.length?'awaiting your review':'nothing pending'}</div></div>
