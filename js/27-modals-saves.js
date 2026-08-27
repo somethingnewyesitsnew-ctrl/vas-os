@@ -579,6 +579,43 @@ function notifyTaskEvent(task, text, type){
   sendNotif('', text, type, task.title, true, meta);
 }
 
+// Per-type color/icon/short-label so the notification drawer card shows
+// the event category at a glance, not just the raw text. Falls back to a
+// neutral gray bell for any type not in this map (new/legacy types still
+// render fine, just unstyled).
+const NOTIF_TYPE_META={
+  'Task Assigned':{c:'#2563eb',i:'📬',l:'Assigned'},
+  'Task Started':{c:'#2563eb',i:'▶️',l:'Started'},
+  'Task Submitted':{c:'#7c3aed',i:'📤',l:'Submitted'},
+  'Task Updated':{c:'#2563eb',i:'✏️',l:'Updated'},
+  'Status Changed':{c:'#2563eb',i:'🔄',l:'Status Changed'},
+  'Re-Estimate':{c:'#2563eb',i:'⏱',l:'Re-Estimate'},
+  'Review Needed':{c:'#7c3aed',i:'🔍',l:'Review Needed'},
+  'Task Approved':{c:'#15803d',i:'✅',l:'Approved'},
+  'Task Rejected':{c:'#dc2626',i:'🔴',l:'Rejected'},
+  'Task Deleted':{c:'#dc2626',i:'🗑️',l:'Deleted'},
+  'Reminder':{c:'#ea580c',i:'⏰',l:'Reminder'},
+  'Mention':{c:'#7c3aed',i:'💬',l:'Mention'},
+  'Comment':{c:'#7c3aed',i:'💬',l:'Comment'},
+  'Help Request':{c:'#0891b2',i:'🤝',l:'Help Request'},
+  'Help Accepted':{c:'#15803d',i:'✅',l:'Help Accepted'},
+  'Meeting Created':{c:'#0891b2',i:'📅',l:'Meeting'},
+  'Meeting Started':{c:'#0891b2',i:'📅',l:'Meeting Started'},
+  'Meeting Ended':{c:'#0891b2',i:'📅',l:'Meeting Ended'},
+  'Meeting Cancelled':{c:'#dc2626',i:'📅',l:'Cancelled'},
+  'Meeting Rescheduled':{c:'#ea580c',i:'📅',l:'Rescheduled'},
+  'Service Test Completed':{c:'#0891b2',i:'🧪',l:'Service Test'},
+  'Normal Announcement':{c:'#2563eb',i:'📢',l:'Announcement'},
+  'Important Announcement':{c:'#ea580c',i:'📢',l:'Important'},
+  'Urgent Announcement':{c:'#dc2626',i:'📢',l:'Urgent'},
+  'HR Message':{c:'#db2777',i:'💬',l:'HR'},
+  'HR Reply':{c:'#db2777',i:'💬',l:'HR Reply'},
+  'HR Update':{c:'#db2777',i:'💬',l:'HR Update'},
+  'Library Request':{c:'#64748b',i:'📚',l:'Library'},
+  'Library Access':{c:'#64748b',i:'📚',l:'Library'},
+};
+function notifTypeMeta(type){ return NOTIF_TYPE_META[type]||{c:'#64748b',i:'🔔',l:type||'Notification'}; }
+
 function renderNotifs(){
   const list=document.getElementById('nd-list');if(!list)return;
   const mine=notifs.filter(n=>{
@@ -589,13 +626,21 @@ function renderNotifs(){
   if(!mine.length){list.innerHTML='<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">All caught up! ✓</div>';updateBadges();return;}
   list.innerHTML=mine.slice(0,12).map(n=>{
     const isRead=n.readBy.some(x=>sameName(x,CU?.name));
-    const typeIcons={'Task Assigned':'📬','Task Started':'▶️','Task Submitted':'📤','Task Approved':'✅','Task Rejected':'🔴','Review Needed':'🔍','Task Updated':'✏️','Status Changed':'🔄','Mention':'💬'};
-    const icon=typeIcons[n.type]||'🔔';
+    const meta=notifTypeMeta(n.type);
+    // The member this notification concerns — whoever performed the
+    // triggering action (assigner, approver, commenter, etc). Shown as
+    // an avatar chip so it's identifiable at a glance, same as every
+    // other member reference in the app, rather than buried in the text.
+    const actor=n.from?DB.team.find(m=>sameName(m.name,n.from)):null;
     return`<div class="ndi ${isRead?'':'unr'}" onclick="clickNotif('${n.id}')">
       <div class="nd-d ${isRead?'r':''}"></div>
-      <div style="flex:1"><div class="nd-txt">${icon} ${n.text}</div>
-      ${n.taskTitle?`<div style="font-size:10px;color:var(--ac);margin-top:1px;font-weight:500">${n.taskTitle}</div>`:''}
-      <div class="nd-m">${n.from?`From ${n.from} · `:''}${fr(n.time)}</div></div>
+      <span style="width:26px;height:26px;border-radius:50%;background:${actor?actor.color:'#94a3b8'};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0" title="${n.from||'System'}">${actor?actor.av:'⚙'}</span>
+      <div style="flex:1;min-width:0">
+        <span style="display:inline-block;font-size:9px;font-weight:800;color:${meta.c};background:${meta.c}18;border:1px solid ${meta.c}33;padding:1px 7px;border-radius:20px;margin-bottom:3px">${meta.i} ${meta.l}</span>
+        <div class="nd-txt">${n.text}</div>
+        ${n.taskTitle?`<div style="font-size:10px;color:var(--ac);margin-top:1px;font-weight:500">${n.taskTitle}</div>`:''}
+        <div class="nd-m">${n.from?`${n.from} · `:''}${fr(n.time)}</div>
+      </div>
     </div>`;
   }).join('');
   updateBadges();
