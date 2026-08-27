@@ -1,30 +1,51 @@
-// §03 ── SUPABASE HELPERS ───────────────────────────────────────────────
+// § 03 ── SUPABASE HELPERS ───────────────────────────────────────────────
+// Every fetch() below goes through this instead of the raw browser fetch.
+// Without a timeout, a request that never gets a response (dropped
+// connection, silent network stall, etc.) leaves its `await` hanging
+// forever — since sbQ/sbInsert/etc. are called from loadFromNotion()
+// inside Promise.all(), one stuck request means the whole load never
+// resolves, never rejects, and the dashboard sits on "Loading data…"
+// indefinitely with no console error at all (nothing ever throws — it
+// just never finishes). This wraps every call in an AbortController with
+// a generous 20s ceiling so that failure mode becomes a normal, visible
+// error (falls back to demo data / shows "Error") instead of an
+// indefinite freeze.
+async function fetchWithTimeout(url, opts={}, ms=20000){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),ms);
+  try{
+    return await fetch(url, {...opts, signal:ctrl.signal});
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function sbQ(table, params=''){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {headers: SB_HEADERS});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}?${params}`, {headers: SB_HEADERS});
     if(!r.ok){ const e=await r.json().catch(()=>({})); console.error('sbQ',table,r.status,e); return null; }
     return await r.json();
-  }catch(e){ console.error('sbQ',e.message); return null; }
+  }catch(e){ console.error('sbQ',table,e.name==='AbortError'?'timed out after 20s':e.message); return null; }
 }
 
 async function sbInsert(table, data){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
     if(!r.ok){ const e=await r.json().catch(()=>({})); console.error('sbInsert',table,r.status,e.message); toast('Save error: '+(e.message||e.details||r.status),'bad'); return null; }
     const d=await r.json();
     scheduleSync();
     return Array.isArray(d)?d[0]:d;
-  }catch(e){ console.error('sbInsert',e.message); return null; }
+  }catch(e){ console.error('sbInsert',table,e.name==='AbortError'?'timed out after 20s':e.message); if(e.name==='AbortError')toast('Save timed out — check your connection','bad'); return null; }
 }
 
 async function sbUpdate(table, id, data){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:SB_HEADERS, body:JSON.stringify(data)});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:SB_HEADERS, body:JSON.stringify(data)});
     if(!r.ok){ const e=await r.json().catch(()=>({})); console.error('sbUpdate',table,r.status,e.message); toast('Update error: '+(e.message||e.details||r.status),'bad'); return null; }
     const d=await r.json();
     scheduleSync();
     return Array.isArray(d)?d[0]:d;
-  }catch(e){ console.error('sbUpdate',e.message); return null; }
+  }catch(e){ console.error('sbUpdate',table,e.name==='AbortError'?'timed out after 20s':e.message); if(e.name==='AbortError')toast('Update timed out — check your connection','bad'); return null; }
 }
 
 // Same as sbInsert/sbUpdate but never surfaces a toast on failure — for
@@ -33,26 +54,26 @@ async function sbUpdate(table, id, data){
 // silently no-ops instead of showing "column not found" to every user.
 async function sbInsertSilent(table, data){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
     if(!r.ok){ console.warn('sbInsertSilent',table,r.status); return null; }
     const d=await r.json();
     return Array.isArray(d)?d[0]:d;
-  }catch(e){ console.warn('sbInsertSilent',e.message); return null; }
+  }catch(e){ console.warn('sbInsertSilent',table,e.name==='AbortError'?'timed out':e.message); return null; }
 }
 async function sbUpdateSilent(table, id, data){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:SB_HEADERS, body:JSON.stringify(data)});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:SB_HEADERS, body:JSON.stringify(data)});
     if(!r.ok){ console.warn('sbUpdateSilent',table,r.status); return null; }
     const d=await r.json();
     return Array.isArray(d)?d[0]:d;
-  }catch(e){ console.warn('sbUpdateSilent',e.message); return null; }
+  }catch(e){ console.warn('sbUpdateSilent',table,e.name==='AbortError'?'timed out':e.message); return null; }
 }
 
 async function sbDelete(table, id){
   try{
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'DELETE', headers:{...SB_HEADERS, 'Prefer':''}});
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {method:'DELETE', headers:{...SB_HEADERS, 'Prefer':''}});
     return r.ok;
-  }catch(e){ console.error('sbDelete',e.message); return false; }
+  }catch(e){ console.error('sbDelete',table,e.name==='AbortError'?'timed out':e.message); return false; }
 }
 
 function setSync(s,l){
