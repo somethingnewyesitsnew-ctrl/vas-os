@@ -57,34 +57,45 @@ async function handleRealtimeNotif(payload){
   const row=payload?.new;
   if(!row||!CU)return;
   if(!REALTIME_NOTIF_TYPES.includes(row.type))return;
+
+  const isOwnEcho=sameName(row.from_name,CU.name);
   const isRelevant=sameName(row.to_name,CU.name)||(row.admins_only&&isAdmin());
-  if(!isRelevant)return;
-  // Skip the echo of our own action — sendNotif() already rendered it
-  // locally on the sender's own screen the instant they performed the
-  // action, so processing the server echo too would just duplicate it.
-  if(sameName(row.from_name,CU.name))return;
-  if(notifs.some(n=>n.id===row.id))return; // already have it somehow
 
-  const n={
-    id:row.id, to:row.to_name||'', from:row.from_name||'',
-    text:row.message, type:row.type, taskTitle:row.task_title||'',
-    linkType:row.link_type||null, linkId:row.link_id||null,
-    adminsOnly:row.admins_only, readBy:row.read_by||[], time:row.created_at
-  };
-  notifs.unshift(n); notifs=notifs.slice(0,60);
-  renderNotifs();
+  // Personal bell/notifs list: only for events actually addressed to
+  // this user (or admin broadcasts), and never our own echoed action —
+  // sendNotif() already rendered that locally the instant it happened.
+  if(isRelevant&&!isOwnEcho&&!notifs.some(n=>n.id===row.id)){
+    const n={
+      id:row.id, to:row.to_name||'', from:row.from_name||'',
+      text:row.message, type:row.type, taskTitle:row.task_title||'',
+      linkType:row.link_type||null, linkId:row.link_id||null,
+      adminsOnly:row.admins_only, readBy:row.read_by||[], time:row.created_at
+    };
+    notifs.unshift(n); notifs=notifs.slice(0,60);
+    renderNotifs();
+    updateBadges();
+  }
 
-  // Refresh whichever entity this event is actually about so anything
-  // already on screen — the dashboard's velocity/today's-meetings
-  // sections included — reflects the real current state, not what was
-  // cached in memory before this event happened.
-  if(n.linkType==='task'&&n.linkId&&typeof fetchAndUpsertTask==='function'){
-    await fetchAndUpsertTask(n.linkId);
-  } else if(n.linkType==='meeting'&&n.linkId&&typeof fetchAndUpsertMeeting==='function'){
-    await fetchAndUpsertMeeting(n.linkId);
-  } else if(n.linkType==='testsession'&&n.linkId&&typeof fetchAndUpsertTestSession==='function'){
-    await fetchAndUpsertTestSession(n.linkId);
-  } else if((n.type==='Reminder'||n.linkType==='announcement'||n.linkType==='hrcom')&&typeof initCommsData==='function'){
+  // Data/dashboard refresh runs for EVERY team event regardless of who
+  // it's addressed to — not gated by isRelevant. Dashboards (including
+  // non-admin member dashboards) show team-wide numbers — leaderboard,
+  // tasks-done counts, Employee of the Week — that change whenever
+  // anyone on the team does anything, not just when something is
+  // addressed to the person currently looking at the screen. Gating
+  // this on isRelevant used to mean non-admins' dashboards only ever
+  // refreshed live for their own tasks or admin broadcasts, and sat
+  // stale for everything else happening elsewhere on the team, while
+  // admin appeared to update "instantly" only because nearly every
+  // action also fires an admins_only broadcast admin always qualifies
+  // for.
+  const linkType=row.link_type||null, linkId=row.link_id||null;
+  if(linkType==='task'&&linkId&&typeof fetchAndUpsertTask==='function'){
+    await fetchAndUpsertTask(linkId);
+  } else if(linkType==='meeting'&&linkId&&typeof fetchAndUpsertMeeting==='function'){
+    await fetchAndUpsertMeeting(linkId);
+  } else if(linkType==='testsession'&&linkId&&typeof fetchAndUpsertTestSession==='function'){
+    await fetchAndUpsertTestSession(linkId);
+  } else if((row.type==='Reminder'||linkType==='announcement'||linkType==='hrcom')&&typeof initCommsData==='function'){
     // Reminders/announcements/HR comms all live in their own tables,
     // loaded in bulk together (see initCommsData) rather than one row at
     // a time — cheap and infrequent enough that re-fetching that small
@@ -93,7 +104,6 @@ async function handleRealtimeNotif(payload){
     await initCommsData();
   }
 
-  updateBadges();
   if(REALTIME_RERENDER_PAGES.includes(page)){
     smartRerender(page, document.getElementById('content'));
   }
