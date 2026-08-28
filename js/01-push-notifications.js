@@ -361,14 +361,43 @@ const PUSH_TITLES = {
   review_requested: '🔍 Review needed',
 };
 
+// Who-did-what phrasing for the push title, e.g. "✅ Aymoon approved your
+// task" instead of a bare "Task approved" — the banner used to say what
+// happened but never who did it. Deliberately excludes the automated/
+// system-triggered types (task_overdue, task_due_soon, meeting_starting)
+// since those aren't performed by a specific person.
+const PUSH_ACTIONS = {
+  task_assigned: 'assigned you a task',
+  task_approved: 'approved your task',
+  task_rejected: 'rejected your task',
+  task_submitted: 'submitted a task for review',
+  task_started: 'started a task',
+  help_requested: 'requested help',
+  help_accepted: 'accepted your help request',
+  help_completed: 'completed a help request',
+  reminder: 'sent you a reminder',
+  meeting_invited: 'invited you to a meeting',
+  announcement: 'posted an announcement',
+  hr_reply: 'replied to HR',
+  review_requested: 'needs your review',
+};
+
+function pushTitleFor(eventType, actorName) {
+  const base = PUSH_TITLES[eventType] || `🔔 ${SYS()}`;
+  const action = PUSH_ACTIONS[eventType];
+  if (!action || !actorName) return base;
+  const icon = base.split(' ')[0]; // reuse the type's existing emoji
+  return `${icon} ${actorName} ${action}`;
+}
+
 function pushBodyFor(eventType, data, sys) {
   const title = data.title || data.desc || '';
   switch (eventType) {
     case 'task_assigned':   return `"${title}" — ${data.priority || 'Normal'} priority${data.due ? ', due ' + data.due : ''}`;
-    case 'task_approved':   return `"${title}" was approved`;
+    case 'task_approved':   return `"${title}"`;
     case 'task_rejected':   return `"${title}" — ${data.reason || 'needs revision'}`;
-    case 'task_submitted':  return `"${title}" is ready for your review`;
-    case 'help_requested':  return `Help needed on "${title}"`;
+    case 'task_submitted':  return `"${title}"`;
+    case 'help_requested':  return `"${title}"`;
     case 'reminder':        return data.desc || 'You have a reminder';
     case 'meeting_invited': return `"${title}" on ${data.date || 'TBD'} at ${data.time || 'TBD'}`;
     case 'announcement':    return data.desc ? data.desc.slice(0, 120) : title;
@@ -382,7 +411,7 @@ async function sendPushToMember(memberId, eventType, data = {}) {
   if (!member) return;
   if(sameName(member.name,CU?.name)) return; // never push to yourself
 
-  const title = PUSH_TITLES[eventType] || `🔔 ${SYS()}`;
+  const title = pushTitleFor(eventType, CU?.name || '');
   const body = pushBodyFor(eventType, data, SYS());
   const url = data.link || appLink('');
 
