@@ -450,7 +450,7 @@ window.confirmRemind=async()=>{
     DB.reminders.unshift({id:row.id,fromId:CU.id,fromName:CU.name,toId:m.id,toName:m.name,taskId:t.id,taskTitle:t.title,msg:row.msg,read:false,at:row.at});
   }
   sendNotif(m.name,msg||defaultMsg,'Reminder',t.title,false,{taskId:t.id});
-  notifyTG(m.id,'reminder',{desc:`⏰ *Reminder from ${CU.name}*\n\n${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
+  notifyTG(m.id,'reminder',{desc:`${msg||defaultMsg}\n\n📋 Task: "${t.title}"\nStatus: ${t.status}`,link:appLink('task-'+t.id)});
   // Admins are watching this too, same as the rest of the task lifecycle
   // notifications — a reminder is a signal something needs attention.
   notifyAdmins(`${CU.name} reminded ${m.name} about "${t.title}"`,'Reminder',t.title,{taskId:t.id});
