@@ -114,6 +114,69 @@ function svgHBar(items,opts={}){
   }).join('')||`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:14px 0">No data</div>`;
 }
 
+function svgDonutChart(data,size=108){
+  const total=data.reduce((s,d)=>s+d.v,0);
+  const r=size/2-10,cx=size/2,cy=size/2,c=2*Math.PI*r;
+  let paths='',offset=0;
+  if(total){
+    data.forEach(d=>{
+      if(!d.v)return;
+      const pct=d.v/total,dash=Math.max(pct*c-2,0),gap=c-dash;
+      paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-(offset*c)}" transform="rotate(-90 ${cx} ${cy})" onclick="navTo('alltasks')" style="cursor:pointer"/>`;
+      offset+=pct;
+    });
+  } else {
+    paths=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bd)" stroke-width="13"/>`;
+  }
+  return `<div style="display:flex;align-items:center;gap:14px">
+    <svg width="${size}" height="${size}" style="flex-shrink:0">${paths}<text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--tx)" font-family="var(--fn)">${total}</text><text x="${cx}" y="${cy+13}" text-anchor="middle" font-size="8.5" font-weight="700" fill="var(--tx3)" font-family="var(--fn)">ACTIVE</text></svg>
+    <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+      ${data.map(d=>`<div onclick="navTo('alltasks')" style="display:flex;align-items:center;gap:7px;cursor:pointer">
+        <span style="width:9px;height:9px;border-radius:3px;background:${d.color};flex-shrink:0"></span>
+        <span style="font-size:11.5px;color:var(--tx2);font-weight:600;flex:1">${d.label}</span>
+        <strong style="font-size:12.5px;color:${d.color}">${d.v}</strong>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function riskGaugeArc(pct,color,label,sub){
+  const r=48,cx=60,cy=58,totalLen=Math.PI*r;
+  const dash=Math.max(0,Math.min(100,pct))/100*totalLen;
+  return `<svg viewBox="0 0 120 66" style="width:100%;max-width:190px;display:block;margin:4px auto 0">
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="var(--bd)" stroke-width="11" stroke-linecap="round"/>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="${color}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${dash} ${totalLen-dash}"/>
+    <text x="${cx}" y="${cy-10}" text-anchor="middle" font-size="15" font-weight="800" fill="${color}" font-family="var(--fn)">${label}</text>
+    <text x="${cx}" y="${cy+2}" text-anchor="middle" font-size="8" font-weight="700" fill="var(--tx3)" font-family="var(--fn)">${sub}</text>
+  </svg>`;
+}
+
+function svgTeamLoadChart(teamLoad,maxLoad){
+  if(!teamLoad.length) return `<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No active task assignments</div>`;
+  const labelW=78,padL=6,padR=28,rowH=30,gap=8,W=460;
+  const barAreaW=W-padL-padR-labelW;
+  const H=teamLoad.length*(rowH+gap)-gap;
+  let defs='',rows='';
+  teamLoad.forEach((row,i)=>{
+    const{m,count,criticalL,highL,overdueL}=row;
+    const y=i*(rowH+gap);
+    const barW=Math.max(8,Math.round(count/maxLoad*barAreaW));
+    const loadColor=count>=6?'#dc2626':count>=4?'#c2410c':count>=2?'#b45309':'#15803d';
+    const gid=`tlg${i}`;
+    defs+=`<linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${loadColor}" stop-opacity=".6"/><stop offset="100%" stop-color="${loadColor}"/></linearGradient>`;
+    const nm=(m.name||'').length>11?(m.name.slice(0,10)+'…'):(m.name||'');
+    const badges=[criticalL?`🔴${criticalL}`:'',highL?`🟠${highL}`:'',overdueL?`⚠${overdueL}`:''].filter(Boolean).join('  ');
+    rows+=`<g style="cursor:pointer" onclick="openMemberDetail('${m.id}')">
+      <text x="${padL}" y="${y+13}" font-size="11" font-weight="700" fill="var(--tx2)" font-family="var(--fn)">${nm}</text>
+      ${badges?`<text x="${padL}" y="${y+25}" font-size="8.5" font-weight="700" fill="${loadColor}" font-family="var(--fn)">${badges}</text>`:''}
+      <rect x="${padL+labelW}" y="${y+rowH/2-8}" width="${barAreaW}" height="16" rx="8" fill="var(--s2)"/>
+      <rect x="${padL+labelW}" y="${y+rowH/2-8}" width="${barW}" height="16" rx="8" fill="url(#${gid})"/>
+      <text x="${padL+labelW+barAreaW+8}" y="${y+rowH/2+5}" font-size="12.5" font-weight="800" fill="${loadColor}" font-family="var(--fn)">${count}</text>
+    </g>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs>${defs}</defs>${rows}</svg>`;
+}
+
 function miniBarColumns(items,opts={}){
   const h=opts.height||64;
   const cols=items.map(it=>{
@@ -1094,19 +1157,12 @@ function rDash(el){
     <!-- PRIORITY RISK -->
     <div class="card" style="min-width:0">
       <div class="ct"><span class="ct-t">🎯 Priority Risk</span></div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px">
-        ${[{l:'Critical',c:'#be123c',v:activeTasks.filter(t=>t.priority==='Critical').length},
-           {l:'High',c:'#c2410c',v:activeTasks.filter(t=>t.priority==='High').length},
-           {l:'Medium',c:'#b45309',v:activeTasks.filter(t=>t.priority==='Medium').length},
-           {l:'Low',c:'#15803d',v:activeTasks.filter(t=>t.priority==='Low').length}
-        ].map(({l,c,v})=>`<div onclick="navTo('alltasks')" style="cursor:pointer">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-            <span style="font-size:11px;font-weight:700;color:${c}">${l}</span>
-            <span style="font-size:13px;font-weight:800;color:${c}">${v}</span>
-          </div>
-          <div style="height:5px;background:${c}18;border-radius:3px"><div style="height:100%;width:${activeTasks.length?Math.round(v/activeTasks.length*100):0}%;background:${c};border-radius:3px"></div></div>
-        </div>`).join('')}
-      </div>
+      ${svgDonutChart([
+        {label:'Critical',color:'#dc2626',v:activeTasks.filter(t=>t.priority==='Critical').length},
+        {label:'High',color:'#c2410c',v:activeTasks.filter(t=>t.priority==='High').length},
+        {label:'Medium',color:'#b45309',v:activeTasks.filter(t=>t.priority==='Medium').length},
+        {label:'Low',color:'#15803d',v:activeTasks.filter(t=>t.priority==='Low').length}
+      ])}
       ${(()=>{
         const crit=activeTasks.filter(t=>t.priority==='Critical').length;
         const high=activeTasks.filter(t=>t.priority==='High').length;
@@ -1115,14 +1171,9 @@ function rDash(el){
         const max=Math.max(score,50);
         const risk=score>=30?'Critical':score>=15?'High':score>=5?'Medium':'Low';
         const rc={Critical:'#dc2626',High:'#c2410c',Medium:'#b45309',Low:'#15803d'}[risk];
-        return`<div style="background:var(--s2);border-radius:8px;padding:9px;border:1px solid var(--bd)">
-          <div style="font-size:10px;font-weight:700;color:var(--tx3);margin-bottom:5px;text-transform:uppercase">Overall Risk</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1;height:7px;background:var(--bd);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:${Math.min(Math.round(score/max*100),100)}%;background:${rc};border-radius:4px"></div>
-            </div>
-            <span style="font-size:12px;font-weight:800;color:${rc};flex-shrink:0">${risk}</span>
-          </div>
+        return`<div onclick="navTo('alltasks')" style="cursor:pointer;background:var(--s2);border-radius:8px;padding:6px 9px 9px;border:1px solid var(--bd);margin-top:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;text-align:center">Overall Risk</div>
+          ${riskGaugeArc(Math.min(Math.round(score/max*100),100),rc,risk,`score ${score}`)}
         </div>`;
       })()}
     </div>
@@ -1130,34 +1181,9 @@ function rDash(el){
     <!-- TEAM LOAD -->
     <div class="card" style="min-width:0">
       <div class="ct"><span class="ct-t">👥 Team Load</span></div>
-      ${teamLoad.length===0?`<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No active task assignments</div>`:`
-      <div style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;padding-right:2px">
-        ${teamLoad.map(({m,count,criticalL,highL,overdueL})=>{
-          const pct=Math.round(count/maxLoad*100);
-          const loadColor=count>=6?'#dc2626':count>=4?'#c2410c':count>=2?'#b45309':'#15803d';
-          const loadLabel=count>=6?'Overloaded':count>=4?'High':count>=2?'Moderate':'Light';
-          return`<div onclick="openMemberDetail('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;background:var(--s2);cursor:pointer;border:1px solid var(--bd)">
-            <span style="width:26px;height:26px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:3px">
-                <span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span>
-                <span style="background:${loadColor}15;color:${loadColor};border:1px solid ${loadColor}30;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0">${count}</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
-                  <div style="height:100%;width:${pct}%;background:${loadColor};border-radius:3px"></div>
-                </div>
-                <span style="font-size:9px;font-weight:700;color:${loadColor};flex-shrink:0">${loadLabel}</span>
-              </div>
-              ${(criticalL||highL||overdueL)?`<div style="display:flex;gap:4px;margin-top:3px">
-                ${criticalL?`<span style="font-size:9px;font-weight:700;color:#be123c">🔴${criticalL}</span>`:''}
-                ${highL?`<span style="font-size:9px;font-weight:700;color:#c2410c">🟠${highL}</span>`:''}
-                ${overdueL?`<span style="font-size:9px;font-weight:700;color:#dc2626">⚠${overdueL}</span>`:''}
-              </div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`}
+      <div style="max-height:360px;overflow-y:auto;padding-right:2px">
+        ${svgTeamLoadChart(teamLoad,maxLoad)}
+      </div>
     </div>
   </div>`;
 
