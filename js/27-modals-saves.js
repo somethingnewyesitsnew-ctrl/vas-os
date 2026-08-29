@@ -299,6 +299,8 @@ function openSvcModal(id){
   if(document.getElementById('sf-type'))document.getElementById('sf-type').value=s?.service_type||'Digital';
   if(document.getElementById('sf-cat'))document.getElementById('sf-cat').value=s?.cat||'Content';
   if(document.getElementById('sf-desc'))document.getElementById('sf-desc').value=s?.desc||'';
+  if(document.getElementById('sf-about'))document.getElementById('sf-about').value=s?.about||'';
+  if(document.getElementById('sf-benefits'))document.getElementById('sf-benefits').value=s?.benefits||'';
   if(document.getElementById('sf-link'))document.getElementById('sf-link').value=s?.link||'';
   if(document.getElementById('sf-location'))document.getElementById('sf-location').value=s?.location_name||'';
   // Populate operator dropdown
@@ -324,6 +326,8 @@ window.saveService=async()=>{
     s.status=document.getElementById('sf-status').value;
     s.service_type=document.getElementById('sf-type')?.value||'Digital';
     s.desc=document.getElementById('sf-desc').value;
+    s.about=document.getElementById('sf-about')?.value||'';
+    s.benefits=document.getElementById('sf-benefits')?.value||'';
     s.operator_name=document.getElementById('sf-operator')?.value||'';
     s.owned_by=document.getElementById('sf-owned')?.value||'';
     s.location_name=document.getElementById('sf-location')?.value||'';
@@ -337,10 +341,13 @@ window.saveService=async()=>{
       status: document.getElementById('sf-status').value,
       service_type: document.getElementById('sf-type')?.value||'Digital',
       desc: document.getElementById('sf-desc').value,
+      about: document.getElementById('sf-about')?.value||'',
+      benefits: document.getElementById('sf-benefits')?.value||'',
       operator_name: document.getElementById('sf-operator')?.value||'',
       owned_by: document.getElementById('sf-owned')?.value||'',
       location_name: document.getElementById('sf-location')?.value||'',
       link: document.getElementById('sf-link')?.value||'',
+      future_plans: [],
     };
     DB.services.push(s);
     const r=await nService(s,s.id); if(r?.url)NID[s.id]=r.url;
@@ -367,13 +374,15 @@ window.saveProject=async()=>{
     member_ids:memberIds,
     link:document.getElementById('pf-link').value||'',
     desc:document.getElementById('pf-desc').value||'',
+    about:document.getElementById('pf-about')?.value||'',
+    benefits:document.getElementById('pf-benefits')?.value||'',
   };
   if(_editId){
     const pr=DB.projects.find(x=>x.id===_editId);if(!pr)return;
     Object.assign(pr,data);
     await nProjectUpd(pr);CM('m-proj');toast('Project updated ✓','ok');
   } else {
-    const pr={id:'p'+gid(),...data,completedAt:null};
+    const pr={id:'p'+gid(),...data,completedAt:null,future_plans:[]};
     DB.projects.push(pr);
     await nProject(pr,pr.id);CM('m-proj');toast('Project created ✓','ok');
   }
@@ -391,6 +400,8 @@ function openProjectModal(id){
   document.getElementById('pf-target').value=pr?.targetDate||'';
   document.getElementById('pf-link').value=pr?.link||'';
   document.getElementById('pf-desc').value=pr?.desc||'';
+  if(document.getElementById('pf-about'))document.getElementById('pf-about').value=pr?.about||'';
+  if(document.getElementById('pf-benefits'))document.getElementById('pf-benefits').value=pr?.benefits||'';
   if(document.getElementById('pf-field')) document.getElementById('pf-field').value=pr?.field_of_work||'';
   // Populate members multi-select
   const pMbrEl=document.getElementById('pf-members');
