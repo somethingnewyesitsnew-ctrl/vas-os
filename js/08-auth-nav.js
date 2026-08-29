@@ -55,7 +55,7 @@ async function startApp(){
     // from Supabase below) — Team/Eval/Backlog/Operators/Companies remain
     // admin-only regardless, but Projects/Services can open up per-member,
     // so their section headers get re-evaluated in the second pass.
-    ['sec-mgmt','sec-ops','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-sl','nav-st']
+    ['sec-mgmt','sec-ops','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-st']
       .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
     // Always show own tasks + meetings + comments + archive + docs —
     // these 4 (plus reminders, already unconditional) show a personal
@@ -80,7 +80,7 @@ async function startApp(){
     if(canDoStrict('services')){const el=document.getElementById('sec-ops');if(el)el.style.display='';}
   } else {
     // Admin — show everything (all start hidden in HTML)
-    ['sec-mgmt','sec-ops','nav-at','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-sl','nav-st','nav-mt','nav-mo','nav-hrc','nav-ann','nav-hr','nav-doc','nav-arc','nav-svct','nav-lib','nav-cm']
+    ['sec-mgmt','sec-ops','nav-at','nav-pr','nav-tm','nav-ev','nav-bl','nav-sv','nav-op','nav-co','nav-st','nav-mt','nav-mo','nav-hrc','nav-ann','nav-hr','nav-doc','nav-arc','nav-svct','nav-lib','nav-cm']
       .forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
   }
   document.getElementById('content').innerHTML='<div class="loading-sc"><div class="loader"></div><div class="loading-tx">Loading data…</div></div>';
