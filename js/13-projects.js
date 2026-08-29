@@ -114,6 +114,7 @@ window.openProjectDetail=(id)=>{
       ${pr.link?`<div class="spf" style="grid-column:1/-1"><div class="spl">Link</div><div class="spv"><a href="${pr.link}" target="_blank" style="color:var(--ac)">${pr.link}</a></div></div>`:''}
     </div>
     ${pr.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${pr.desc}</div></div>`:''}
+    ${renderAboutBenefitsBlock(pr)}
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:5px;margin-top:12px"><span>${tasks.length} total tasks</span><span style="font-weight:700;color:${col}">${pct}%</span></div>
     <div class="prg" style="height:6px;margin-bottom:10px"><div class="prf" style="width:${pct}%;background:${col}"></div></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
@@ -137,6 +138,7 @@ window.openProjectDetail=(id)=>{
       if(!relDocs.length) return '';
       return `<div class="spl" style="margin-bottom:6px">📚 Documentation (${relDocs.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${relDocs.map(d=>`<span onclick="openDoc2('${d.id}')" style="cursor:pointer;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📚 ${d.title}</span>`).join('')}</div>`;
     })()}
+    ${renderFuturePlansBlock('projects',pr)}
     <div id="proj-tasks-wrap"></div>
     <div class="spa">
       <button class="btn bg2 bsm" onclick="openProjectModal('${pr.id}')">✏ Edit</button>
@@ -189,4 +191,83 @@ window.renderProjectTasksList=(projectId, tab)=>{
     }
   }
   wrap.innerHTML=h;
+};
+
+// ── About / Benefits / Future Plans — shared by Projects & Services ──
+// entityType is 'projects' or 'services'; both tables carry the same
+// about/benefits/future_plans columns (see Supabase migration).
+function renderAboutBenefitsBlock(entity){
+  let h='';
+  if(entity.about) h+=`<div class="spf"><div class="spl">About</div><div class="spnote">${entity.about}</div></div>`;
+  if(entity.benefits) h+=`<div class="spf"><div class="spl">Benefits</div><div class="spnote">${entity.benefits}</div></div>`;
+  return h;
+}
+
+function renderFuturePlansBlock(entityType,entity){
+  const plans=entity.future_plans||[];
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="spl" style="margin-bottom:0">🗺 Future Plans (${plans.length})</div>
+      <button class="btn bp bxs" onclick="addFuturePlan('${entityType}','${entity.id}')">+ Add Plan</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      ${plans.length?plans.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
+        <span style="flex:1;font-size:12px;color:var(--tx)">${p.text}</span>
+        ${p.taskId?`<span onclick="openTask('${p.taskId}')" style="cursor:pointer;font-size:10px;font-weight:700;color:#15803d;background:#15803d18;padding:2px 8px;border-radius:100px;flex-shrink:0;white-space:nowrap">✓ Task created</span>`
+          :`<button class="btn bg2 bxs" onclick="convertFuturePlanToTask('${entityType}','${entity.id}','${p.id}')">→ Convert to Task</button>`}
+        <span onclick="deleteFuturePlan('${entityType}','${entity.id}','${p.id}')" style="cursor:pointer;color:var(--tx3);font-size:13px;flex-shrink:0" title="Remove plan">🗑</span>
+      </div>`).join(''):'<div style="font-size:11px;color:var(--tx3)">No future plans yet — click + Add Plan</div>'}
+    </div>`;
+}
+
+function _fpFindEntity(entityType,entityId){
+  const list=entityType==='projects'?DB.projects:DB.services;
+  return list.find(x=>x.id===entityId);
+}
+function _fpSave(entityType,entity){
+  return entityType==='projects'?nProjectUpd(entity):nServiceUpd(entity);
+}
+function _fpReopen(entityType,entityId){
+  entityType==='projects'?openProjectDetail(entityId):openSvcDetail(entityId);
+}
+
+window.addFuturePlan=async(entityType,entityId)=>{
+  const text=prompt('Describe the future plan / next step:');
+  if(!text||!text.trim())return;
+  const ent=_fpFindEntity(entityType,entityId);if(!ent)return;
+  ent.future_plans=ent.future_plans||[];
+  ent.future_plans.push({id:'fp'+gid(),text:text.trim(),taskId:null,at:now()});
+  await _fpSave(entityType,ent);
+  toast('Plan added ✓','ok');
+  _fpReopen(entityType,entityId);
+};
+
+window.deleteFuturePlan=async(entityType,entityId,planId)=>{
+  const ent=_fpFindEntity(entityType,entityId);if(!ent)return;
+  ent.future_plans=(ent.future_plans||[]).filter(p=>p.id!==planId);
+  await _fpSave(entityType,ent);
+  _fpReopen(entityType,entityId);
+};
+
+window.convertFuturePlanToTask=async(entityType,entityId,planId)=>{
+  const ent=_fpFindEntity(entityType,entityId);if(!ent)return;
+  const plan=(ent.future_plans||[]).find(p=>p.id===planId);
+  if(!plan||plan.taskId)return;
+  const t={id:'t'+gid(),title:plan.text,status:'New',priority:'Medium',type:'Feature',
+    assignedTo:'',assignees:[],reviewer:'',
+    service:entityType==='services'?entityId:'',
+    operator:'',company2:null,link:'',
+    projectId:entityType==='projects'?entityId:null,
+    reqBy:CU?.name||'',due:'',est:null,recur:null,actual:null,
+    what:'',tech:'',rejReason:'',createdBy:CU?.name||'',
+    tsCreated:now(),tsAssigned:null,tsOpened:null,tsStarted:null,tsSubmitted:null,tsReviewed:null,tsArchived:null,
+    rejections:[],desc:`Converted from ${entityType==='projects'?'project':'service'} future plan: "${plan.text}"`,
+    respH:null,workH:null,revH:null,cycleH:null};
+  DB.tasks.unshift(t);
+  const r=await nCreateTask(t,t.id); if(r?.id) t.id=r.id;
+  plan.taskId=t.id;
+  await _fpSave(entityType,ent);
+  if(typeof logAction==='function') logAction('Task Created',`${CU?.name||'Someone'} converted a future plan into task "${plan.text}"`,'Success',plan.text,'');
+  if(typeof updateBadges==='function') updateBadges();
+  toast('Converted to task ✓','ok');
+  _fpReopen(entityType,entityId);
 };
