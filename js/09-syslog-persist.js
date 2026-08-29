@@ -63,8 +63,8 @@ const notifyAdminsWA=notifyAdminsTG;
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-const PTITLES={dash:'Dashboard',mytasks:'My Tasks',todos:'My Todos',toreview:'To Review',alltasks:'All Tasks',projects:'Projects',meetings:'Meetings',svctest:'Service Tests',team:'Team',eval:'Team Evaluation',backlog:'Backlog',services:'Services',operators:'Operators',companies:'Companies',docs:'Documentation',archive:'Archive',settings:'Settings',syslog:'System Log'};
-const PACTIONS={dash:'newTask',mytasks:'',todos:'newTodo',toreview:'',alltasks:'newTask',projects:'newProject',meetings:'newMeeting',svctest:'newTest',team:'newMember',eval:'',backlog:'newIdea',services:'newService',operators:'newOperator',companies:'newCompany',docs:'newDoc',archive:'',settings:'',syslog:''};
+const PTITLES={dash:'Dashboard',mytasks:'My Tasks',todos:'My Todos',toreview:'To Review',alltasks:'All Tasks',projects:'Projects',meetings:'Meetings',svctest:'Service Tests',team:'Team',eval:'Team Evaluation',backlog:'Backlog',services:'Services',operators:'Operators',companies:'Companies',docs:'Documentation',archive:'Archive',settings:'Settings'};
+const PACTIONS={dash:'newTask',mytasks:'',todos:'newTodo',toreview:'',alltasks:'newTask',projects:'newProject',meetings:'newMeeting',svctest:'newTest',team:'newMember',eval:'',backlog:'newIdea',services:'newService',operators:'newOperator',companies:'newCompany',docs:'newDoc',archive:'',settings:''};
 const BTNLBLS={newTask:'+ New Task',newMember:'+ Add Member',newIdea:'+ New Idea',newService:'+ Add Service',newOperator:'+ Add Operator',newCompany:'+ Add Company',newDoc:'+ New Doc',newTodo:'+ Add Todo',newProject:'+ New Project',newMeeting:'+ New Meeting'};
 
 function nav(p,el,f=null){
@@ -78,7 +78,7 @@ function nav(p,el,f=null){
   const a=PACTIONS[p]; const btn=document.getElementById('tb-btn');
   if(a&&BTNLBLS[a]){btn.style.display='inline-flex';btn.textContent=BTNLBLS[a];}else btn.style.display='none';
   closeND(); closeSP();
-  window._renders=window._renders||{}; const renders=window._renders={dash:rDash,mytasks:rMyTasks,todos:rTodos,toreview:rToReview,alltasks:rAllTasks,projects:rProjects,team:rTeam,eval:rEval,backlog:rBacklog,services:rServices,operators:rOperators,companies:rCompanies,docs:rDocs,archive:rArchive,meetings:rMeetings,moutcomes:rMeetingOutcomes,svctest:rSvcTest,settings:rSettings,syslog:rSyslog,helprequests:rHelpRequests,reminders:rReminders,hrcoms:rHrComs,announcements:rAnnouncements,reports:rReports,library:rLibrary,comments:rComments};
+  window._renders=window._renders||{}; const renders=window._renders={dash:rDash,mytasks:rMyTasks,todos:rTodos,toreview:rToReview,alltasks:rAllTasks,projects:rProjects,team:rTeam,eval:rEval,backlog:rBacklog,services:rServices,operators:rOperators,companies:rCompanies,docs:rDocs,archive:rArchive,meetings:rMeetings,moutcomes:rMeetingOutcomes,svctest:rSvcTest,settings:rSettings,helprequests:rHelpRequests,reminders:rReminders,hrcoms:rHrComs,announcements:rAnnouncements,reports:rReports,library:rLibrary,comments:rComments};
   const c=document.getElementById('content'); c.innerHTML='';
   if(renders[p])renders[p](c);
 }
