@@ -113,6 +113,8 @@ window.openSvcDetail=(id)=>{
     ${s.link?`<div class="spf" style="grid-column:1/-1"><div class="spl">Link</div><div class="spv"><a href="${s.link}" target="_blank" style="color:var(--ac)">${s.link}</a></div></div>`:''}
   </div>
   ${s.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${s.desc}</div></div>`:''}
+  ${renderAboutBenefitsBlock(s)}
+  ${renderFuturePlansBlock('services',s)}
   <div class="sps">Active Tasks (${active.length})</div>
   ${active.length===0?'<div style="font-size:11px;color:var(--tx3);padding:6px 0">No active tasks</div>':active.slice(0,6).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}</div>`).join('')}
   <div class="spa">
