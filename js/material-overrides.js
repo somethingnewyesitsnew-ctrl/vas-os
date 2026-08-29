@@ -151,30 +151,30 @@ function riskGaugeArc(pct,color,label,sub){
   </svg>`;
 }
 
-function svgTeamLoadChart(teamLoad,maxLoad){
+function teamLoadRows(teamLoad,maxLoad){
   if(!teamLoad.length) return `<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No active task assignments</div>`;
-  const labelW=78,padL=6,padR=28,rowH=30,gap=8,W=460;
-  const barAreaW=W-padL-padR-labelW;
-  const H=teamLoad.length*(rowH+gap)-gap;
-  let defs='',rows='';
-  teamLoad.forEach((row,i)=>{
-    const{m,count,criticalL,highL,overdueL}=row;
-    const y=i*(rowH+gap);
-    const barW=Math.max(8,Math.round(count/maxLoad*barAreaW));
+  return teamLoad.map(({m,count,criticalL,highL,overdueL})=>{
+    const pct=Math.max(6,Math.round(count/maxLoad*100));
     const loadColor=count>=6?'#dc2626':count>=4?'#c2410c':count>=2?'#b45309':'#15803d';
-    const gid=`tlg${i}`;
-    defs+=`<linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${loadColor}" stop-opacity=".6"/><stop offset="100%" stop-color="${loadColor}"/></linearGradient>`;
-    const nm=(m.name||'').length>11?(m.name.slice(0,10)+'…'):(m.name||'');
-    const badges=[criticalL?`🔴${criticalL}`:'',highL?`🟠${highL}`:'',overdueL?`⚠${overdueL}`:''].filter(Boolean).join('  ');
-    rows+=`<g style="cursor:pointer" onclick="openMemberDetail('${m.id}')">
-      <text x="${padL}" y="${y+13}" font-size="11" font-weight="700" fill="var(--tx2)" font-family="var(--fn)">${nm}</text>
-      ${badges?`<text x="${padL}" y="${y+25}" font-size="8.5" font-weight="700" fill="${loadColor}" font-family="var(--fn)">${badges}</text>`:''}
-      <rect x="${padL+labelW}" y="${y+rowH/2-8}" width="${barAreaW}" height="16" rx="8" fill="var(--s2)"/>
-      <rect x="${padL+labelW}" y="${y+rowH/2-8}" width="${barW}" height="16" rx="8" fill="url(#${gid})"/>
-      <text x="${padL+labelW+barAreaW+8}" y="${y+rowH/2+5}" font-size="12.5" font-weight="800" fill="${loadColor}" font-family="var(--fn)">${count}</text>
-    </g>`;
-  });
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs>${defs}</defs>${rows}</svg>`;
+    const loadLabel=count>=6?'Overloaded':count>=4?'High':count>=2?'Moderate':'Light';
+    const chips=[criticalL?`${criticalL}C`:'',highL?`${highL}H`:'',overdueL?`${overdueL}!`:''].filter(Boolean).join(' · ');
+    return `<div onclick="openMemberDetail('${m.id}')" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='transparent'" style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;cursor:pointer;transition:background .15s">
+      <span style="width:30px;height:30px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:5px">
+          <span style="font-size:12.5px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span>
+          <span style="font-size:9px;font-weight:700;color:${loadColor};flex-shrink:0">${loadLabel}</span>
+        </div>
+        <div style="position:relative;height:8px;background:var(--s2);border-radius:100px;overflow:hidden">
+          <div style="position:absolute;inset:0 auto 0 0;width:${pct}%;background:linear-gradient(90deg,${loadColor}99,${loadColor});border-radius:100px;transition:width .6s cubic-bezier(.2,0,0,1)"></div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;min-width:30px">
+        <div style="font-size:16px;font-weight:800;color:${loadColor};line-height:1">${count}</div>
+        ${chips?`<div style="font-size:8px;font-weight:700;color:var(--tx3);white-space:nowrap;margin-top:2px">${chips}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function miniBarColumns(items,opts={}){
@@ -1181,8 +1181,8 @@ function rDash(el){
     <!-- TEAM LOAD -->
     <div class="card" style="min-width:0">
       <div class="ct"><span class="ct-t">👥 Team Load</span></div>
-      <div style="max-height:360px;overflow-y:auto;padding-right:2px">
-        ${svgTeamLoadChart(teamLoad,maxLoad)}
+      <div style="display:flex;flex-direction:column;gap:2px;max-height:360px;overflow-y:auto;padding-right:2px">
+        ${teamLoadRows(teamLoad,maxLoad)}
       </div>
     </div>
   </div>`;
