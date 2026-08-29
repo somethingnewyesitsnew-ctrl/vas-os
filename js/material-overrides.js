@@ -1240,8 +1240,8 @@ async function loadDashLoginWidget(){
     const shared=Object.entries(byDevice).filter(([,names])=>names.size>1);
     const recent=data.slice(0,6);
     box.innerHTML=`<div class="card">
-      <div class="ct"><span>🔐 Recent Logins</span><span onclick="navTo('syslog')" style="font-size:11px;color:var(--ac);cursor:pointer;font-weight:600">Full system log →</span></div>
-      ${shared.length?`<div style="background:var(--rb);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:var(--r);font-weight:600">⚠ ${shared.length} device${shared.length>1?'s have':' has'} been used to log in as more than one account — check System Log</div>`:''}
+      <div class="ct"><span>🔐 Recent Logins</span></div>
+      ${shared.length?`<div style="background:var(--rb);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:var(--r);font-weight:600">⚠ ${shared.length} device${shared.length>1?'s have':' has'} been used to log in as more than one account</div>`:''}
       ${recent.map(e=>{
         const m=DB.team.find(x=>x.name===e.actor_name);
         const flagged=byDevice[e.device_id]&&byDevice[e.device_id].size>1;
@@ -1256,124 +1256,10 @@ async function loadDashLoginWidget(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// SYSTEM LOG — reads from Supabase (activity_log), visible to every
-// admin regardless of device/browser. Flags devices shared across
-// more than one account.
-// ══════════════════════════════════════════════════════════════════════
-let _syslogCache=[];
-
-function rSyslog(el){
-  if(!isAdmin()){
-    el.innerHTML=`<div class="empty"><div class="ei">🔒</div><div class="et">Admin only</div></div>`;
-    return;
-  }
-  el.innerHTML=`<div class="loading-sc"><div class="loader"></div><div class="loading-tx">Loading activity log from the database…</div></div>`;
-  loadSyslogData();
-}
-
-async function loadSyslogData(){
-  const data=await sbQ('activity_log','order=created_at.desc&limit=1000');
-  if(!Array.isArray(data)){
-    const el=document.getElementById('content');
-    if(el && page==='syslog') el.innerHTML=`<div class="empty">
-      <div class="ei">🗄</div>
-      <div class="et">Activity Log table not set up yet</div>
-      <div class="es" style="max-width:420px;margin:0 auto">Run the <code>activity_log</code> setup SQL once in your Supabase SQL editor, then click Refresh. Every action across the whole team will then be logged here with timestamps — not just on this device.</div>
-      <button class="btn bp bsm" style="margin-top:14px" onclick="loadSyslogData()">🔄 Retry</button>
-    </div>`;
-    return;
-  }
-  _syslogCache=data;
-  renderSyslogPage();
-}
-
-function parseUA(ua){
-  ua=ua||'';
-  let browser='Unknown',os='Unknown';
-  if(/Edg\//.test(ua))browser='Edge';
-  else if(/Chrome\//.test(ua)&&!/Chromium/.test(ua))browser='Chrome';
-  else if(/Firefox\//.test(ua))browser='Firefox';
-  else if(/Safari\//.test(ua)&&!/Chrome/.test(ua))browser='Safari';
-  if(/Windows/.test(ua))os='Windows';
-  else if(/Mac OS/.test(ua))os='macOS';
-  else if(/Android/.test(ua))os='Android';
-  else if(/iPhone|iPad/.test(ua))os='iOS';
-  else if(/Linux/.test(ua))os='Linux';
-  return browser==='Unknown'&&os==='Unknown'?'—':`${browser} · ${os}`;
-}
-
-function renderSyslogPage(){
-  const el=document.getElementById('content');
-  if(!el||page!=='syslog')return;
-  const data=_syslogCache;
-
-  const logins=data.filter(e=>e.action==='Login');
-  const byDevice={};
-  logins.forEach(e=>{ (byDevice[e.device_id]=byDevice[e.device_id]||new Set()).add(e.actor_name); });
-  const sharedDevices=Object.entries(byDevice).filter(([,names])=>names.size>1);
-
-  const fMember=document.getElementById('lf-member')?.value||'';
-  const fAction=document.getElementById('lf-action')?.value||'';
-  const fSev=document.getElementById('lf-sev')?.value||'';
-  const fSearch=(document.getElementById('lf-search')?.value||'').toLowerCase();
-
-  let f=data.filter(e=>{
-    if(fMember&&e.actor_name!==fMember)return false;
-    if(fAction&&!(e.action||'').toLowerCase().includes(fAction.toLowerCase()))return false;
-    if(fSev&&e.severity!==fSev)return false;
-    if(fSearch&&!((e.event||'').toLowerCase().includes(fSearch)||(e.action||'').toLowerCase().includes(fSearch)||(e.actor_name||'').toLowerCase().includes(fSearch)))return false;
-    return true;
-  });
-
-  const members=[...new Set(data.map(e=>e.actor_name).filter(Boolean))].sort();
-  const actions=[...new Set(data.map(e=>e.action).filter(Boolean))].sort();
-
-  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <div><div style="font-size:20px;font-weight:500">▤ System Log</div><div style="font-size:12px;color:var(--tx3)">${data.length} events from the database · every user, every device</div></div>
-    <button class="btn bg2 bsm" onclick="loadSyslogData()">🔄 Refresh</button>
-  </div>`;
-
-  if(sharedDevices.length){
-    h+=`<div style="background:var(--rb);border-radius:16px;padding:14px 16px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--r);margin-bottom:8px">⚠ ${sharedDevices.length} device${sharedDevices.length>1?'s':''} used to log in as more than one account</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${sharedDevices.map(([dev,names])=>`<div style="font-size:12px;color:var(--tx2)"><code style="background:var(--s);padding:1px 7px;border-radius:6px;font-size:10px">${(dev||'?').slice(0,16)}…</code> → ${[...names].join(', ')}</div>`).join('')}
-      </div>
-      <div style="font-size:10.5px;color:var(--tx3);margin-top:8px">Heuristic based on browser device fingerprint — a shared work computer can trigger this legitimately, review before assuming credential sharing.</div>
-    </div>`;
-  }
-
-  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-    <input id="lf-search" placeholder="🔍 Search…" oninput="renderSyslogPage()" value="${fSearch}" style="padding:9px 16px;background:var(--s2);border:1px solid transparent;border-radius:100px;font-size:12.5px;outline:none;min-width:170px;font-family:var(--fn)">
-    <select id="lf-member" onchange="renderSyslogPage()" style="padding:9px 16px;background:var(--s2);border-radius:100px;border:none;font-size:12.5px"><option value="">All members</option>${members.map(m=>`<option ${fMember===m?'selected':''}>${m}</option>`).join('')}</select>
-    <select id="lf-action" onchange="renderSyslogPage()" style="padding:9px 16px;background:var(--s2);border-radius:100px;border:none;font-size:12.5px"><option value="">All actions</option>${actions.map(a=>`<option ${fAction===a?'selected':''}>${a}</option>`).join('')}</select>
-    <select id="lf-sev" onchange="renderSyslogPage()" style="padding:9px 16px;background:var(--s2);border-radius:100px;border:none;font-size:12.5px"><option value="">All severity</option>${['Info','Success','Warning','Error'].map(s=>`<option ${fSev===s?'selected':''}>${s}</option>`).join('')}</select>
-  </div>`;
-
-  if(!f.length){
-    h+=`<div class="empty"><div class="ei">▤</div><div class="et">No matching events</div></div>`;
-  } else {
-    const sc={Info:'var(--tx3)',Success:'var(--g)',Warning:'var(--y)',Error:'var(--r)'};
-    h+=`<div class="tw"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Event</th><th>Device</th><th>Severity</th></tr></thead><tbody>`;
-    h+=f.slice(0,400).map(e=>{
-      const m=DB.team.find(x=>x.name===e.actor_name);
-      const devFlag=byDevice[e.device_id]&&byDevice[e.device_id].size>1;
-      return`<tr>
-        <td style="font-family:var(--fnm);font-size:10.5px;color:var(--tx3);white-space:nowrap">${fdt?fdt(e.created_at):e.created_at}</td>
-        <td style="font-size:12px">${m?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:700">${m.av}</span>${e.actor_name}</span>`:(e.actor_name||'—')}</td>
-        <td style="font-size:12px;font-weight:600">${e.action||'—'}${devFlag&&e.action==='Login'?' <span title="This device has logged in as multiple accounts" style="color:var(--r)">⚠</span>':''}</td>
-        <td style="font-size:11.5px;color:var(--tx2);max-width:320px">${e.event||''}</td>
-        <td style="font-size:10.5px;color:var(--tx3)">${parseUA(e.user_agent)}</td>
-        <td><span style="font-size:10px;font-weight:700;color:${sc[e.severity]||'var(--tx3)'};background:${sc[e.severity]||'var(--tx3)'}18;padding:2px 9px;border-radius:100px">${e.severity||'Info'}</span></td>
-      </tr>`;
-    }).join('')+`</tbody></table></div>`;
-    if(f.length>400) h+=`<div style="text-align:center;padding:10px;font-size:11px;color:var(--tx3)">Showing first 400 of ${f.length} matches</div>`;
-  }
-  el.innerHTML=h;
-}
-
-// ══════════════════════════════════════════════════════════════════════
 // DEVICE FINGERPRINT + DATABASE-BACKED ACTIVITY LOG WIRING
+// (System Log page removed — this plumbing stays because the Recent
+// Logins dashboard widget and the shared-device login warning below
+// both still read from the activity_log table.)
 // ══════════════════════════════════════════════════════════════════════
 function getDeviceId(){
   let id=localStorage.getItem('vas_device_id');
@@ -1426,7 +1312,7 @@ async function nLog(e){
 
 /* ════════════════════════════════════════════════════════════════════
    ONE-TIME SUPABASE SETUP — run this once in your Supabase SQL editor
-   to unlock the System Log page + device-sharing detection above.
+   to unlock the Recent Logins widget + device-sharing detection above.
    Nothing else in this file depends on it; everything else already works.
    ════════════════════════════════════════════════════════════════════
 
