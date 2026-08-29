@@ -76,13 +76,13 @@ async function nMemberUpd(m){
 
 async function nService(s, lid){
   showSaving(true);
-  const r = await sbInsert('services', {name:s.name,cat:s.cat,status:s.status,service_type:s.service_type||'Digital',description:s.desc||'',operator_name:s.operator_name||'',owned_by:s.owned_by||'',location_name:s.location_name||'',project_name:s.project_name||'',link:s.link||''});
+  const r = await sbInsert('services', {name:s.name,cat:s.cat,status:s.status,service_type:s.service_type||'Digital',description:s.desc||'',operator_name:s.operator_name||'',owned_by:s.owned_by||'',location_name:s.location_name||'',project_name:s.project_name||'',link:s.link||'',about:s.about||'',benefits:s.benefits||'',future_plans:s.future_plans||[]});
   showSaving(false);
   if(r?.id) s.id=r.id; return r;
 }
 async function nServiceUpd(s){
   showSaving(true);
-  const r = await sbUpdate('services', s.id, {name:s.name,cat:s.cat,status:s.status,service_type:s.service_type||'Digital',description:s.desc||'',operator_name:s.operator_name||'',owned_by:s.owned_by||'',location_name:s.location_name||'',link:s.link||''});
+  const r = await sbUpdate('services', s.id, {name:s.name,cat:s.cat,status:s.status,service_type:s.service_type||'Digital',description:s.desc||'',operator_name:s.operator_name||'',owned_by:s.owned_by||'',location_name:s.location_name||'',link:s.link||'',about:s.about||'',benefits:s.benefits||'',future_plans:s.future_plans||[]});
   showSaving(false); return r;
 }
 
@@ -124,13 +124,13 @@ async function nBacklogUpd(b){
 
 async function nProject(p, lid){
   showSaving(true);
-  const r = await sbInsert('projects', {name:p.name,status:p.status||'Planning',description:p.desc||'',location_name:p.locationName||'',owned_by:p.ownedBy||'',owner_company_id:p.ownerCompanyId||null,started_at:p.startedAt||null,target_date:p.targetDate||null,budget:p.budget??null,link:p.link||'',field_of_work:p.field_of_work||'',member_ids:p.member_ids||[]});
+  const r = await sbInsert('projects', {name:p.name,status:p.status||'Planning',description:p.desc||'',location_name:p.locationName||'',owned_by:p.ownedBy||'',owner_company_id:p.ownerCompanyId||null,started_at:p.startedAt||null,target_date:p.targetDate||null,budget:p.budget??null,link:p.link||'',field_of_work:p.field_of_work||'',member_ids:p.member_ids||[],about:p.about||'',benefits:p.benefits||'',future_plans:p.future_plans||[]});
   showSaving(false);
   if(r?.id) p.id=r.id; return r;
 }
 async function nProjectUpd(p){
   showSaving(true);
-  const r = await sbUpdate('projects', p.id, {name:p.name,status:p.status,description:p.desc||'',location_name:p.locationName||'',owned_by:p.ownedBy||'',owner_company_id:p.ownerCompanyId||null,started_at:p.startedAt||null,target_date:p.targetDate||null,budget:p.budget??null,link:p.link||'',field_of_work:p.field_of_work||'',member_ids:p.member_ids||[]});
+  const r = await sbUpdate('projects', p.id, {name:p.name,status:p.status,description:p.desc||'',location_name:p.locationName||'',owned_by:p.ownedBy||'',owner_company_id:p.ownerCompanyId||null,started_at:p.startedAt||null,target_date:p.targetDate||null,budget:p.budget??null,link:p.link||'',field_of_work:p.field_of_work||'',member_ids:p.member_ids||[],about:p.about||'',benefits:p.benefits||'',future_plans:p.future_plans||[]});
   showSaving(false); return r;
 }
 
