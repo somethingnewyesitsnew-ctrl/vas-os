@@ -171,11 +171,11 @@ function rSvcTest(el){
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:flex-end">
           <div style="flex:1;min-width:120px"><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Operator</label>
             <select id="new-sched-op" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
-              ${allOps.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
+              ${allOps.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}
             </select></div>
           <div style="flex:1;min-width:120px"><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Tester</label>
             <select id="new-sched-mbr" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
-              ${DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}
+              ${DB.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}
             </select></div>
           <div><label style="font-size:10px;font-weight:700;color:var(--tx3);display:block;margin-bottom:3px">Day</label>
             <select id="new-sched-day" style="padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
@@ -190,7 +190,7 @@ function rSvcTest(el){
   try{
     el.innerHTML=h;
   }catch(e){
-    el.innerHTML=`<div class="card" style="text-align:center;padding:30px;color:var(--r)">⚠️ Failed to render: ${e.message}</div>`;
+    el.innerHTML=`<div class="card" style="text-align:center;padding:30px;color:var(--r)">⚠️ Failed to render: ${esc(e.message)}</div>`;
     console.error('rSvcTest error:',e);
   }
 }
@@ -327,7 +327,7 @@ window.openServiceChecklist=(sessionId,serviceName)=>{
   if(svc){
     body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
       <div>
-        <div style="font-size:14px;font-weight:800">${svc.name}</div>
+        <div style="font-size:14px;font-weight:800">${esc(svc.name)}</div>
         <div style="font-size:11px;color:var(--tx3)">${svc.service_type||''} ${svc.cat?'· '+svc.cat:''}</div>
       </div>
       ${svc.link?`<a href="${svc.link}" target="_blank" style="background:var(--ac);color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap">🔗 Open ↗</a>`:''}
@@ -537,7 +537,7 @@ window.convertFailToTask=async(checkId)=>{
     sendNotif(tester.name,`Test failure converted to task: "${c.check_name}" (${c.service_name})`,'Task Assigned',t.title);
     notifyTG(tester.id,'task_assigned',{title:t.title,priority:t.priority,due:'Not set',desc:t.desc,link:appLink('task-'+t.id)});
   }
-  logAction('Task Created',`Service test failure converted to task: "${t.title}"`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title});
+  logAction('Task Created',`Service test failure converted to task: "${esc(t.title)}"`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title});
   updateBadges();
   return t.id;
 };
@@ -581,8 +581,8 @@ function buildScheduleEditor(){
           <td><span style="display:flex;align-items:center;gap:5px">${m?`<span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${m.av}</span>`:''} ${m?.name||'?'}</span></td>
           <td>${DAYS[s.day_of_week]}</td>
           <td><select onchange="updateScheduleReviewer('${s.id}',this.value)" style="padding:5px 7px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:12px;outline:none">
-            <option value="" ${!s.reviewer_id?'selected':''}>Default${defaultReviewer?` (${defaultReviewer.name})`:''}</option>
-            ${DB.team.map(t=>`<option value="${t.id}" ${s.reviewer_id===t.id?'selected':''}>${t.name}</option>`).join('')}
+            <option value="" ${!s.reviewer_id?'selected':''}>Default${defaultReviewer?` (${esc(defaultReviewer.name)})`:''}</option>
+            ${DB.team.map(t=>`<option value="${t.id}" ${s.reviewer_id===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}
           </select></td>
           <td><span style="background:${s.active!==false?'var(--gb)':'var(--s2)'};color:${s.active!==false?'var(--g)':'var(--tx3)'};font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">${s.active!==false?'Active':'Inactive'}</span></td>
           <td><button class="btn bd2 bxs" onclick="deleteSchedule('${s.id}')">✕</button></td>
@@ -592,11 +592,11 @@ function buildScheduleEditor(){
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1;min-width:130px"><label style="font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Operator</label>
         <select id="new-sched-op" style="width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
-          ${allOps.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
+          ${allOps.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}
         </select></div>
       <div style="flex:1;min-width:130px"><label style="font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Member</label>
         <select id="new-sched-mbr" style="width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
-          ${DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}
+          ${DB.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}
         </select></div>
       <div><label style="font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Day</label>
         <select id="new-sched-day" style="padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
@@ -604,8 +604,8 @@ function buildScheduleEditor(){
         </select></div>
       <div style="min-width:130px"><label style="font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Reviewer</label>
         <select id="new-sched-rev" style="width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
-          <option value="">Default${defaultReviewer?` (${defaultReviewer.name})`:''}</option>
-          ${DB.team.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+          <option value="">Default${defaultReviewer?` (${esc(defaultReviewer.name)})`:''}</option>
+          ${DB.team.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}
         </select></div>
       <button class="btn bp" style="padding:9px 16px;font-size:13px" onclick="addScheduleNew()">+ Add</button>
     </div>
