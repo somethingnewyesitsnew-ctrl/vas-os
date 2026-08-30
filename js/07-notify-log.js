@@ -123,26 +123,13 @@ async function loadNotifs(){
   renderNotifs(); updateBadges();
 }
 
-// NOTE: sendNotif/notifyAdmins are redeclared (with link_type/link_id
-// support) later in 27-modals-saves.js, which loads after this file and
-// wins at runtime — kept here only for source consistency in case this
-// file is ever loaded standalone. Keep both in sync.
-async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=false, meta={}){
-  if(!toName&&!adminsOnly) return;
-  const linkType=meta?.taskId?'task':meta?.meetingId?'meeting':meta?.hrComId?'hrcom':meta?.annId?'announcement':null;
-  const linkId=meta?.taskId||meta?.meetingId||meta?.hrComId||meta?.annId||null;
-  const n={id:'n'+gid(),to:toName||'',from:CU?.name||'',text,type,taskTitle,linkType,linkId,adminsOnly,readBy:[],time:now()};
-  notifs.unshift(n); notifs=notifs.slice(0,60);
-  if(n.to===CU?.name||(n.adminsOnly&&isAdmin())) renderNotifs();
-  updateBadges();
-  // Write to Supabase async (silent — never toast on failure for this)
-  (typeof sbInsertSilent==='function'?sbInsertSilent:sbInsert)('notifications',{to_name:toName||'',from_name:CU?.name||'',message:text,type,task_title:taskTitle||'',admins_only:adminsOnly,read_by:[],link_type:linkType,link_id:linkId}).then(r=>{ if(r?.id) n.id=r.id; }).catch(()=>{});
-  localStorage.setItem('v8_notifs_local',JSON.stringify(notifs.slice(0,30)));
-}
-
-function notifyAdmins(text, type='Mention', taskTitle='', meta={}){
-  sendNotif('', text, type, taskTitle, true, meta);
-}
+// sendNotif/notifyAdmins live in 27-modals-saves.js (the version with
+// sameName()-based matching and _linkFromMeta() link support). A stale
+// duplicate pair used to live here too, annotated "keep both in sync" —
+// but they'd drifted out of sync (this copy used strict === name
+// matching and a shorter link-type list) and were fully shadowed by the
+// later definitions anyway, so they were dead code either way. Removed
+// rather than re-synced, to keep one source of truth.
 
 // ── External notify sheet (Telegram auto-sent + Email manual link) ────
 window._notifyMembers={};
@@ -171,7 +158,7 @@ function showExternalNotifySheet(memberIds, taskTitle, taskDesc, taskId){
     return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">
       <span style="width:32px;height:32px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${m.name}</div>
+        <div style="font-size:13px;font-weight:600">${esc(m.name)}</div>
         <div style="font-size:10px;color:var(--tx3)">${m.role||''}${m.telegram?' · Telegram':''}${m.email?' · '+m.email:''}</div>
       </div>
       <div style="display:flex;gap:6px">
@@ -203,9 +190,10 @@ window.openNotifyEmail=(safeId)=>{
   if(url) window.open(url,'_blank'); else toast('No email for this member','bad');
 };
 
-function logAction(action, event, severity='Info', target='', details=''){
-  nLog({action,event,actor:CU?.name||'',actorRole:CU?.role||'',severity,target});
-}
+// (logAction lives in 09-syslog-persist.js — the richer version with
+// syslog persistence + metadata. A stale duplicate stub used to live
+// here too; it was always shadowed by the later definition and so was
+// dead code. Removed to avoid confusion/regression risk on refactor.)
 
 // ══════════════════════════════════════════════════════
 // AUTH
@@ -249,7 +237,7 @@ function filterAssignSearch(q) {
   drop.innerHTML = filtered.map(m =>
     `<div onmousedown="event.preventDefault();addAssignTag('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
       <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
-      <div><div style="font-weight:600">${m.name}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
+      <div><div style="font-weight:600">${esc(m.name)}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
     </div>`
   ).join('');
 }
