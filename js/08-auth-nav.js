@@ -36,7 +36,7 @@ function doLogin(){
   if(CU.id){ try{ sbUpdate('team',CU.id,{last_login:CU.lastLogin}); }catch(e){} }
   // Also update local DB
   const dbm=DB.team.find(m=>m.id===CU.id);if(dbm)dbm.lastLogin=CU.lastLogin;
-  logAction('Login',`${CU.name} logged in`,'Info');
+  logAction('Login',`${esc(CU.name)} logged in`,'Info');
   startApp();
 }
 function buildQuickBtns(){}
@@ -307,7 +307,7 @@ function startReminderChecker(){
         const reminderToast=document.createElement('div');
         reminderToast.className='ts inf';
         reminderToast.style.cssText='cursor:pointer';
-        reminderToast.innerHTML=`⏰ <strong>Reminder:</strong> ${td.title}<div style="font-size:10px;opacity:.7;margin-top:2px">Click to open</div>`;
+        reminderToast.innerHTML=`⏰ <strong>Reminder:</strong> ${esc(td.title)}<div style="font-size:10px;opacity:.7;margin-top:2px">Click to open</div>`;
         reminderToast.onclick=()=>{navTo('todos');reminderToast.remove();};
         document.getElementById('ts-stk').appendChild(reminderToast);
         setTimeout(()=>{reminderToast.style.opacity='0';reminderToast.style.transform='translateX(14px)';reminderToast.style.transition='all .3s';setTimeout(()=>reminderToast.remove(),300);},30000);
@@ -459,7 +459,7 @@ function startReminderChecker(){
   setInterval(checkReminders, 30000);
 }
 
-function doLogout(){logAction('Logout',`${CU.name} logged out`,'Info');if(typeof stopRealtimeNotifs==='function')stopRealtimeNotifs();CU=null;document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='flex';}
+function doLogout(){logAction('Logout',`${esc(CU.name)} logged out`,'Info');if(typeof stopRealtimeNotifs==='function')stopRealtimeNotifs();CU=null;document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='flex';}
 
 // ══════════════════════════════════════════════════════
 // DEMO DATA (fallback when offline)
