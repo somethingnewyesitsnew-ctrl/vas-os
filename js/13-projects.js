@@ -48,7 +48,7 @@ function rProjects(el){
         <div style="padding:14px 16px 12px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:800;line-height:1.3;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pr.name}</div>
+              <div style="font-size:14px;font-weight:800;line-height:1.3;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pr.name)}</div>
               ${pr.field_of_work?`<div style="font-size:10px;color:var(--tx3);font-weight:600;margin-top:1px">${pr.field_of_work}</div>`:''}
             </div>
             <span style="background:${col}18;color:${col};border:1px solid ${col}30;font-size:9px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap">${pr.status}</span>
@@ -75,7 +75,7 @@ function rProjects(el){
           </div>
 
           ${members.length?`<div style="display:flex;align-items:center">
-            ${members.slice(0,5).map((m,i)=>`<span title="${m.name}" style="width:24px;height:24px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;border:2px solid var(--s);margin-left:${i>0?'-7px':'0'};flex-shrink:0">${m.av}</span>`).join('')}
+            ${members.slice(0,5).map((m,i)=>`<span title="${esc(m.name)}" style="width:24px;height:24px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;border:2px solid var(--s);margin-left:${i>0?'-7px':'0'};flex-shrink:0">${m.av}</span>`).join('')}
             ${members.length>5?`<span style="width:24px;height:24px;border-radius:50%;background:var(--s2);border:2px solid var(--s);display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:var(--tx3);margin-left:-7px">+${members.length-5}</span>`:''}
           </div>`:''}
         </div>
@@ -83,7 +83,7 @@ function rProjects(el){
         <div class="ac" onclick="event.stopPropagation()" style="display:flex;gap:5px;padding:8px 12px;border-top:1px solid var(--bd);background:var(--s2)">
           <div class="ib" style="color:var(--ac)" title="Add task to this project" onclick="event.stopPropagation();openTaskModal(null,'${pr.id}')">☑+</div>
           <div class="ib edt" onclick="event.stopPropagation();openProjectModal('${pr.id}')">✏</div>
-          <div class="ib del" style="margin-left:auto" onclick="event.stopPropagation();delItem('projects','${pr.id}','${pr.name.replace(/'/g,"\'")}')">🗑</div>
+          <div class="ib del" style="margin-left:auto" onclick="event.stopPropagation();delItem('projects','${pr.id}')">🗑</div>
         </div>
       </div>`;
     });
@@ -113,14 +113,14 @@ window.openProjectDetail=(id)=>{
       ${pr.budget?`<div class="spf"><div class="spl">Budget</div><div class="spv">$${pr.budget.toLocaleString()}</div></div>`:''}
       ${pr.link?`<div class="spf" style="grid-column:1/-1"><div class="spl">Link</div><div class="spv"><a href="${pr.link}" target="_blank" style="color:var(--ac)">${pr.link}</a></div></div>`:''}
     </div>
-    ${pr.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${pr.desc}</div></div>`:''}
+    ${pr.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${esc(pr.desc)}</div></div>`:''}
     ${renderAboutBenefitsBlock(pr)}
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:5px;margin-top:12px"><span>${tasks.length} total tasks</span><span style="font-weight:700;color:${col}">${pct}%</span></div>
     <div class="prg" style="height:6px;margin-bottom:10px"><div class="prf" style="width:${pct}%;background:${col}"></div></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
       ${[['Done',done,'#15803d'],['Active',active,'#2563eb'],['Total',tasks.length,'#64748b']].map(([l,v,c])=>`<div style="background:${c}12;border:1px solid ${c}25;border-radius:8px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--tx3);font-weight:600;margin-bottom:2px;text-transform:uppercase">${l}</div><div style="font-size:16px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
     </div>
-    ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${m.name}</span>`:''}).join('')}</div>`:''}
+    ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${esc(m.name)}</span>`:''}).join('')}</div>`:''}
     ${(()=>{
       if(typeof hasLibAccess==='function' && !hasLibAccess()) return ''; // respect Library access control
       const relLib=(typeof getLibrary==='function'?getLibrary():[]).filter(it=>it.projectId===pr.id);
@@ -136,13 +136,13 @@ window.openProjectDetail=(id)=>{
     ${(()=>{
       const relDocs=DB.docs.filter(d=>{const t=d.fromTask?DB.tasks.find(x=>x.id===d.fromTask):null;return t&&t.projectId===pr.id;});
       if(!relDocs.length) return '';
-      return `<div class="spl" style="margin-bottom:6px">📚 Documentation (${relDocs.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${relDocs.map(d=>`<span onclick="openDoc2('${d.id}')" style="cursor:pointer;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📚 ${d.title}</span>`).join('')}</div>`;
+      return `<div class="spl" style="margin-bottom:6px">📚 Documentation (${relDocs.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${relDocs.map(d=>`<span onclick="openDoc2('${d.id}')" style="cursor:pointer;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📚 ${esc(d.title)}</span>`).join('')}</div>`;
     })()}
     ${renderFuturePlansBlock('projects',pr)}
     <div id="proj-tasks-wrap"></div>
     <div class="spa">
       <button class="btn bg2 bsm" onclick="openProjectModal('${pr.id}')">✏ Edit</button>
-      <button class="btn bd2 bsm" onclick="delItem('projects','${pr.id}','${pr.name.replace(/'/g,"\'")}');closeSP()">Delete</button>
+      <button class="btn bd2 bsm" onclick="delItem('projects','${pr.id}');closeSP()">Delete</button>
     </div>`
   );
   renderProjectTasksList(pr.id);
@@ -178,8 +178,8 @@ window.renderProjectTasksList=(projectId, tab)=>{
       const ass=DB.team.find(m=>m.id===t.assignedTo);
       return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
         ${spill(t.status)}
-        <span style="font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-        ${ass?`<span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800;flex-shrink:0" title="${ass.name}">${ass.av}</span>`:''}
+        <span style="font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
+        ${ass?`<span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800;flex-shrink:0" title="${esc(ass.name)}">${ass.av}</span>`:''}
         ${ppill(t.priority)}
         <span class="due-badge ${ds.cls}" style="flex-shrink:0">${ds.label}</span>
       </div>`;
@@ -211,7 +211,7 @@ function renderFuturePlansBlock(entityType,entity){
     </div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
       ${plans.length?plans.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
-        <span style="flex:1;font-size:12px;color:var(--tx)">${p.text}</span>
+        <span style="flex:1;font-size:12px;color:var(--tx)">${esc(p.text)}</span>
         ${p.taskId?`<span onclick="openTask('${p.taskId}')" style="cursor:pointer;font-size:10px;font-weight:700;color:#15803d;background:#15803d18;padding:2px 8px;border-radius:100px;flex-shrink:0;white-space:nowrap">✓ Task created</span>`
           :`<button class="btn bg2 bxs" onclick="convertFuturePlanToTask('${entityType}','${entity.id}','${p.id}')">→ Convert to Task</button>`}
         <span onclick="deleteFuturePlan('${entityType}','${entity.id}','${p.id}')" style="cursor:pointer;color:var(--tx3);font-size:13px;flex-shrink:0" title="Remove plan">🗑</span>
@@ -260,13 +260,13 @@ window.convertFuturePlanToTask=async(entityType,entityId,planId)=>{
     reqBy:CU?.name||'',due:'',est:null,recur:null,actual:null,
     what:'',tech:'',rejReason:'',createdBy:CU?.name||'',
     tsCreated:now(),tsAssigned:null,tsOpened:null,tsStarted:null,tsSubmitted:null,tsReviewed:null,tsArchived:null,
-    rejections:[],desc:`Converted from ${entityType==='projects'?'project':'service'} future plan: "${plan.text}"`,
+    rejections:[],desc:`Converted from ${entityType==='projects'?'project':'service'} future plan: "${esc(plan.text)}"`,
     respH:null,workH:null,revH:null,cycleH:null};
   DB.tasks.unshift(t);
   const r=await nCreateTask(t,t.id); if(r?.id) t.id=r.id;
   plan.taskId=t.id;
   await _fpSave(entityType,ent);
-  if(typeof logAction==='function') logAction('Task Created',`${CU?.name||'Someone'} converted a future plan into task "${plan.text}"`,'Success',plan.text,'');
+  if(typeof logAction==='function') logAction('Task Created',`${CU?.name||'Someone'} converted a future plan into task "${esc(plan.text)}"`,'Success',plan.text,'');
   if(typeof updateBadges==='function') updateBadges();
   toast('Converted to task ✓','ok');
   _fpReopen(entityType,entityId);
