@@ -2,7 +2,7 @@
   "name": "Digital Plus OS",
   "short_name": "Digital Plus",
   "description": "Team operations management system",
-  "start_url": "./index.html",
+  "start_url": "./material.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef1f7",
