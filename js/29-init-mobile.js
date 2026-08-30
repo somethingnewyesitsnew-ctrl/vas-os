@@ -222,7 +222,7 @@ function buildMobMore(){
       <div id="mob-push-status"><div style="font-size:11px;color:var(--tx3);padding:8px 0">Checking…</div></div>
     </div>` + sections.map(sec=>`
     <div style="margin-bottom:10px">
-      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:4px 2px 6px">${sec.title}</div>
+      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:4px 2px 6px">${esc(sec.title)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
         ${sec.items.map(pg=>`
         <button onclick="hideMobMore();navTo('${pg.p}');setMobNav('')"
