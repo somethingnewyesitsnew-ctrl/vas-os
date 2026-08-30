@@ -117,11 +117,11 @@ function renderTasks(el,tasks,showMember){
       <select class="fs" id="t-fp" onchange="rr()"><option value="">All priorities</option>${['Critical','High','Medium','Low'].map(p=>`<option ${fp===p?'selected':''} value="${p}">${p}</option>`).join('')}</select>
       <select class="fs" id="t-fday" onchange="rr()" style="${fday?'border-color:var(--ac);color:var(--ac)':''}"><option value="">All dates</option><option value="today" ${fday==='today'?'selected':''}>📅 Today</option><option value="week" ${fday==='week'?'selected':''}>📅 Last 7 days</option><option value="month" ${fday==='month'?'selected':''}>📅 Last 30 days</option></select>
       <select class="fs" id="t-fdue" onchange="rr()" style="${fdue?'border-color:var(--ac);color:var(--ac)':''}">${DUE_OPTS.map(o=>`<option value="${o.v}" ${fdue===o.v?'selected':''}>${o.label}</option>`).join('')}</select>
-      ${showMember?`<select class="fs" id="t-fa" onchange="rr()"><option value="">All members</option>${DB.team.map(m=>`<option ${fa===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>`:''}
-      <select class="fs" id="t-fproj" onchange="rr()"><option value="">All projects</option>${DB.projects.map(p=>`<option value="${p.id}" ${fproj===p.id?'selected':''}>${p.name}</option>`).join('')}</select>
-      <select class="fs" id="t-fco" onchange="rr()"><option value="">All companies</option>${[...DB.companies,...DB.operators].map(c=>`<option value="${c.id}" ${fco===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
-      <select class="fs" id="t-fsvc" onchange="rr()"><option value="">All services</option>${DB.services.map(s=>`<option ${fsvc===s.id?'selected':''} value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select class="fs" id="t-fop" onchange="rr()"><option value="">All operators</option>${[...DB.operators,...DB.companies].map(o=>`<option ${fop===o.id?'selected':''} value="${o.id}">${o.name}</option>`).join('')}</select>
+      ${showMember?`<select class="fs" id="t-fa" onchange="rr()"><option value="">All members</option>${DB.team.map(m=>`<option ${fa===m.id?'selected':''} value="${m.id}">${esc(m.name)}</option>`).join('')}</select>`:''}
+      <select class="fs" id="t-fproj" onchange="rr()"><option value="">All projects</option>${DB.projects.map(p=>`<option value="${p.id}" ${fproj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+      <select class="fs" id="t-fco" onchange="rr()"><option value="">All companies</option>${[...DB.companies,...DB.operators].map(c=>`<option value="${c.id}" ${fco===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+      <select class="fs" id="t-fsvc" onchange="rr()"><option value="">All services</option>${DB.services.map(s=>`<option ${fsvc===s.id?'selected':''} value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+      <select class="fs" id="t-fop" onchange="rr()"><option value="">All operators</option>${[...DB.operators,...DB.companies].map(o=>`<option ${fop===o.id?'selected':''} value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
     </div>
     ${urgCnt&&!fdue?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
       ${tasks.filter(tk=>getDueStatus(tk).key==='overdue').length?`<span class="due-badge ds-overdue" onclick="setDueFilter('overdue')" style="cursor:pointer">${tasks.filter(tk=>getDueStatus(tk).key==='overdue').length} overdue</span>`:''}
@@ -150,7 +150,7 @@ function renderTasks(el,tasks,showMember){
         const assigneeHtml=(()=>{
           const ids=tk.assignees?.length?tk.assignees:[tk.assignedTo].filter(Boolean);
           const mbrs=ids.map(id=>DB.team.find(x=>x.id===id)).filter(Boolean);
-          return mbrs.length?mbrs.slice(0,3).map(mb=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:4px;white-space:nowrap"><span style="width:20px;height:20px;border-radius:50%;background:${mb.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800;flex-shrink:0">${mb.av}</span><span style="font-size:12px;font-weight:600;color:var(--tx)">${mb.name}</span></span>`).join(''):'<span style="color:var(--tx3);font-size:12px">—</span>';
+          return mbrs.length?mbrs.slice(0,3).map(mb=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:4px;white-space:nowrap"><span style="width:20px;height:20px;border-radius:50%;background:${mb.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800;flex-shrink:0">${mb.av}</span><span style="font-size:12px;font-weight:600;color:var(--tx)">${esc(mb.name)}</span></span>`).join(''):'<span style="color:var(--tx3);font-size:12px">—</span>';
         })();
         return`<tr class="cl" style="${rowStyle}" onclick="openTask('${tk.id}')">
           ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-chk" value="${tk.id}" style="width:14px;height:14px;cursor:pointer"></td>`:''}
@@ -161,7 +161,7 @@ function renderTasks(el,tasks,showMember){
           </td>
           <td>${spill(tk.status)}</td><td>${ppill(tk.priority)}</td>
           ${showMember&&!isMob?`<td>${assigneeHtml}</td>`:''}
-          <td style="font-size:12px;color:var(--tx2);font-weight:500">${(()=>{const pr=DB.projects.find(p=>p.id===tk.projectId);return pr?`<span style="background:var(--al);color:var(--ac);border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">${pr.name}</span>`:'—';})()}</td>
+          <td style="font-size:12px;color:var(--tx2);font-weight:500">${(()=>{const pr=DB.projects.find(p=>p.id===tk.projectId);return pr?`<span style="background:var(--al);color:var(--ac);border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px">${esc(pr.name)}</span>`:'—';})()}</td>
           <td style="font-size:12px;color:var(--tx2);font-weight:500">${tk.reqBy||'—'}</td>
           <td style="font-size:12px;color:var(--tx2);font-weight:500">${op?.name||'—'}</td>
           <td style="font-family:var(--fnm);font-size:12px;color:var(--tx2);font-weight:600">${tk.est!=null?tk.est+'h':'—'}</td>
@@ -173,7 +173,7 @@ function renderTasks(el,tasks,showMember){
           <td onclick="event.stopPropagation()"><div class="act-c">
             <div class="ib edt" onclick="openTaskModal('${tk.id}')" title="Edit">✏</div>
             <div class="ib" onclick="duplicateTask('${tk.id}')" title="Duplicate — same assignee/service/operator/reviewer, new name">⎘</div>
-            <div class="ib del" onclick="delItem('tasks','${tk.id}','${tk.title.replace(/'/g,"\'")}')">🗑</div>
+            <div class="ib del" onclick="delItem('tasks','${tk.id}')">🗑</div>
           </div></td>
         </tr>`;
       }).join('')+`</tbody></table></div>`;
