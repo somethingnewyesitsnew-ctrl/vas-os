@@ -124,7 +124,7 @@ function rDash(el){
           <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Employee of the Week</div>
           <div style="display:flex;align-items:center;gap:7px">
             <span style="width:22px;height:22px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
-            <span style="font-size:13px;font-weight:800;color:var(--tx)">${bow.m.name}</span>
+            <span style="font-size:13px;font-weight:800;color:var(--tx)">${esc(bow.m.name)}</span>
             <span style="font-size:11px;color:#15803d;font-weight:600">${bow.doneW} task${bow.doneW!==1?'s':''} done</span>
           </div>
           ${bowNote?`<div style="font-size:10px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bowNote}</div>`:''}
@@ -164,7 +164,7 @@ function rDash(el){
             ${ms.rate!==null?`<span style="font-size:11px;font-weight:600;background:${bColor}18;color:${bColor};padding:1px 8px;border-radius:20px">${ms.rate}% · ${ms.attended.length}/${ms.invited.length}</span>`:''}
             <span style="font-size:11px;color:var(--tx3)">${mLines[0]||''}</span>
           </div>
-          ${ms.missed.length?`<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">${ms.missed.slice(0,3).map(m=>`<span onclick="openMeetingDetail('${m.id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer">⚠ ${m.title}</span>`).join('')}</div>`:''}
+          ${ms.missed.length?`<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">${ms.missed.slice(0,3).map(m=>`<span onclick="openMeetingDetail('${m.id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer">⚠ ${esc(m.title)}</span>`).join('')}</div>`:''}
         </div>
       </div>`;
     }
@@ -183,7 +183,7 @@ function rDash(el){
         ${doneThisWeek.length?`<div style="margin-top:4px">
           ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
             <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-            <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+            <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
             <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
           </div>`).join('')}
           ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
@@ -195,7 +195,7 @@ function rDash(el){
         <div class="ct"><span class="ct-t">📋 My Active Tasks</span></div>
         ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           ${spill(t.status)}
-          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
           <span class="${ds.cls}" style="font-size:10px;flex-shrink:0">${ds.label}</span>
         </div>`;}).join('')+
         (mine.length>6?`<div style="font-size:11px;color:var(--ac);margin-top:8px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
@@ -208,7 +208,7 @@ function rDash(el){
       h+=`<div class="card" style="margin-bottom:12px"><div class="ct">📅 Today's Meetings</div>
         ${todayMeetings.map(m=>`<div onclick="openMeetingDetail('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <span style="font-size:15px;font-weight:800;color:var(--ac);width:46px;flex-shrink:0">${m.meeting_time||'—'}</span>
-          <div><div style="font-size:13px;font-weight:600">${m.title}</div><div style="font-size:11px;color:var(--tx3)">${m.location||m.meeting_type||''} · ${m.duration_minutes||60}min</div></div>
+          <div><div style="font-size:13px;font-weight:600">${esc(m.title)}</div><div style="font-size:11px;color:var(--tx3)">${m.location||m.meeting_type||''} · ${m.duration_minutes||60}min</div></div>
           ${spill(m.status)}
         </div>`).join('')}
       </div>`;
@@ -361,7 +361,7 @@ function rDash(el){
         ${todayMeetings.length?todayMeetings.slice(0,3).map(m=>`<div onclick="openMeetingDetail('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <div style="min-width:34px;text-align:center;flex-shrink:0;font-size:11px;font-weight:900;color:var(--ac)">${(m.meeting_time||'—').slice(0,5)}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📅 ${m.title}</div>
+            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📅 ${esc(m.title)}</div>
             <div style="font-size:10px;color:var(--tx3)">${m.duration_minutes||60}min · ${m.meeting_type||''}</div>
           </div>
         </div>`).join(''):''}
@@ -414,7 +414,7 @@ function rDash(el){
           <span style="width:30px;height:30px;border-radius:50%;background:${bestW.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${bestW.m.av}</span>
           <div style="flex:1;min-width:0">
             <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.05em">🏆 Best</div>
-            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bestW.m.name}</div>
+            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(bestW.m.name)}</div>
             <div style="font-size:10px;color:#15803d">${bestW.doneW} done</div>
           </div>
           <div style="font-size:18px;font-weight:800;color:#15803d;flex-shrink:0">${bestW.score>0?'+':''}${bestW.score}</div>
@@ -423,7 +423,7 @@ function rDash(el){
           <span style="width:30px;height:30px;border-radius:50%;background:${worstW.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${worstW.m.av}</span>
           <div style="flex:1;min-width:0">
             <div style="font-size:10px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:.05em">⚠ Focus</div>
-            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${worstW.m.name}</div>
+            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(worstW.m.name)}</div>
             <div style="font-size:10px;color:#dc2626">${worstW.overdueW>0?worstW.overdueW+' overdue':''}${worstW.doneW===0?' 0 done':''}</div>
           </div>
           <div style="font-size:18px;font-weight:800;color:#dc2626;flex-shrink:0">${worstW.score>0?'+':''}${worstW.score}</div>
@@ -468,15 +468,15 @@ function rDash(el){
         allTasks.forEach(t=>{
           (t.timeline||[]).forEach(ev=>{
             let icon='📋',color='#64748b',text='';
-            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${ev.by}</strong> requested help from ${ev.helpMember||'?'} on <em>${t.title}</em>`;}
-            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${ev.by}</strong> accepted help from ${ev.helperName||'?'} — <em>${t.title}</em> continues`;}
-            else{icon='📋';color='#64748b';text=`<strong>${ev.by||'?'}</strong> — ${ev.event} on <em>${t.title}</em>`;}
+            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${ev.by}</strong> requested help from ${ev.helpMember||'?'} on <em>${esc(t.title)}</em>`;}
+            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${ev.by}</strong> accepted help from ${ev.helperName||'?'} — <em>${esc(t.title)}</em> continues`;}
+            else{icon='📋';color='#64748b';text=`<strong>${ev.by||'?'}</strong> — ${ev.event} on <em>${esc(t.title)}</em>`;}
             events.push({ts:ev.at,icon,color,text,targetId:t.id,targetType:'task',actor:ev.by||''});
           });
           // Task status changes derived from timestamps
-          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${mn(t.assignedTo)||'?'}</strong> started <em>${t.title}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${mn(t.assignedTo)||'?'}</strong> submitted <em>${t.title}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${mn(t.reviewer)||'Admin'}</strong> approved <em>${t.title}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
+          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${mn(t.assignedTo)||'?'}</strong> started <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${mn(t.assignedTo)||'?'}</strong> submitted <em>${esc(t.title)}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${mn(t.reviewer)||'Admin'}</strong> approved <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
         });
 
         // ── Meetings ──────────────────────────────────────
@@ -487,10 +487,10 @@ function rDash(el){
           const icon=status==='Completed'?'✅':status==='Cancelled'?'❌':'📅';
           const color=status==='Completed'?'#15803d':status==='Cancelled'?'#dc2626':'#2563eb';
           const label=status==='Completed'?'completed meeting':'scheduled meeting';
-          events.push({ts,icon,color,text:`<strong>${creator}</strong> ${label} <em>${m.title}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
+          events.push({ts,icon,color,text:`<strong>${creator}</strong> ${label} <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
           // Attendance events
           Object.entries(m.attendance||{}).forEach(([name,status])=>{
-            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${name}</strong> attended <em>${m.title}</em>`,targetId:m.id,targetType:'meeting',actor:name});
+            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${name}</strong> attended <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:name});
           });
         });
 
@@ -508,7 +508,7 @@ function rDash(el){
         return top.map(ev=>`<div onclick="${ev.targetType==='task'&&ev.targetId?`openTask('${ev.targetId}')`:ev.targetType==='meeting'&&ev.targetId?`openMeetingDetail('${ev.targetId}')`:''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:${ev.targetId?'pointer':'default'}">
           <span style="font-size:13px;flex-shrink:0;line-height:1.5">${ev.icon}</span>
           <div style="flex:1;overflow:hidden;min-width:0">
-            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.text}</div>
+            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.text)}</div>
             <div style="font-size:10px;color:var(--tx3);margin-top:1px">${fr(ev.ts)}</div>
           </div>
         </div>`).join('');
@@ -521,7 +521,7 @@ function rDash(el){
       ${urg.length===0?`<div style="padding:16px 0;text-align:center;font-size:12px;color:var(--g);font-weight:600">✓ All clear</div>`:
         urg.map(t=>{const ds2=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <span class="${ds2.cls}" style="font-size:9px;flex-shrink:0;white-space:nowrap">${ds2.label}</span>
-          <div style="flex:1;overflow:hidden;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
+          <div style="flex:1;overflow:hidden;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div><div style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)||'—'}</div></div>
         </div>`;}).join('')}
     </div>
 
@@ -583,7 +583,7 @@ function rDash(el){
           <span style="width:32px;height:32px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:13px;font-weight:700;color:var(--tx)">${m.name}</span>
+              <span style="font-size:13px;font-weight:700;color:var(--tx)">${esc(m.name)}</span>
               <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
                 ${criticalL?`<span style="background:#fdf2f4;color:#be123c;border:1px solid #fca5a5;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px">🔴 ${criticalL}</span>`:''}
                 ${highL?`<span style="background:#fff7f3;color:#c2410c;border:1px solid #fed7aa;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px">🟠 ${highL}</span>`:''}
@@ -643,7 +643,7 @@ function rDash(el){
         ${teamPerf.map(({m,active,done,od,inrev,recent_d,rate})=>`<tr class="cl" onclick="openMemberDetail('${m.id}')">
           <td><span style="display:flex;align-items:center;gap:8px">
             <span style="width:28px;height:28px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
-            <span style="font-size:13px;font-weight:700">${m.name}</span>
+            <span style="font-size:13px;font-weight:700">${esc(m.name)}</span>
           </span></td>
           <td style="font-size:12px;color:var(--tx3)">${m.role}</td>
           <td><span style="font-size:16px;font-weight:800;color:${active>=5?'#dc2626':active>=2?'#b45309':'var(--tx)'}">${active}</span></td>
