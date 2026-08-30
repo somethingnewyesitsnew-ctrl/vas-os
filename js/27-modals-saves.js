@@ -5,12 +5,12 @@ function openTaskModal(id, presetProjectId){
   document.getElementById('tf-btn').textContent=t?'Save Changes':'Create Task';
   // Tag-style assignee picker
   initAssignPicker(t?.assignees||( t?.assignedTo?[t.assignedTo]:[] ));
-  document.getElementById('tf-reviewer').innerHTML='<option value="">None</option>'+DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  document.getElementById('tf-reviewer').innerHTML='<option value="">None</option>'+DB.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   // Company dropdown (pure companies, not operators)
-  document.getElementById('tf-company').innerHTML='<option value="">None</option>'+DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  document.getElementById('tf-service').innerHTML='<option value="">None</option>'+DB.services.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  document.getElementById('tf-operator').innerHTML='<option value="">None</option>'+[...DB.operators,...DB.companies].map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
-  if(document.getElementById('tf-project')) document.getElementById('tf-project').innerHTML='<option value="">None</option>'+DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('tf-company').innerHTML='<option value="">None</option>'+DB.companies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  document.getElementById('tf-service').innerHTML='<option value="">None</option>'+DB.services.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  document.getElementById('tf-operator').innerHTML='<option value="">None</option>'+[...DB.operators,...DB.companies].map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');
+  if(document.getElementById('tf-project')) document.getElementById('tf-project').innerHTML='<option value="">None</option>'+DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   document.getElementById('tf-title').value=t?.title||'';
   document.getElementById('tf-priority').value=t?.priority||'High';
   document.getElementById('tf-type').value=t?.type||'Feature';
@@ -76,7 +76,7 @@ function openMemberModal(id){
   const mtEl=document.getElementById('mf-mtype');
   if(mtEl){
     const types=getMemberTypes();
-    mtEl.innerHTML='<option value="">— None —</option>'+types.map(t=>`<option value="${t.name}" ${m?.memberType===t.name?'selected':''}>${t.name}</option>`).join('');
+    mtEl.innerHTML='<option value="">— None —</option>'+types.map(t=>`<option value="${esc(t.name)}" ${m?.memberType===t.name?'selected':''}>${esc(t.name)}</option>`).join('');
   }
   if(document.getElementById('mf-username'))document.getElementById('mf-username').value=m?.username||'';
   if(document.getElementById('mf-password'))document.getElementById('mf-password').value=m?.password||'abohamood@1.';
@@ -196,7 +196,7 @@ window.saveTask=async()=>{
     t.projectId=document.getElementById('tf-project')?.value||null;
     t.due=document.getElementById('tf-due').value;
     t.reqBy=document.getElementById('tf-reqby').value; t.desc=document.getElementById('tf-desc').value;
-    logAction('Task Updated',`${CU.name} updated "${title}"`,'Info',title,'');
+    logAction('Task Updated',`${esc(CU.name)} updated "${title}"`,'Info',title,'');
     await nUpdateTask(t);
     CM('m-task'); toast('Task updated ✓','ok');
     if(page==='alltasks'||page==='mytasks')nav(page,document.querySelector('.ni.on'));
@@ -218,7 +218,7 @@ window.saveTask=async()=>{
       desc:document.getElementById('tf-desc').value,respH:null,workH:null,revH:null,cycleH:null};
     DB.tasks.unshift(t);
     const ass=DB.team.find(m=>m.id===assignedTo2);
-    logAction('Task Created',`${CU.name} created "${title}" → ${ass?.name||'?'}`,'Success',title,'');
+    logAction('Task Created',`${esc(CU.name)} created "${title}" → ${ass?.name||'?'}`,'Success',title,'');
     const r=await nCreateTask(t,t.id); if(r?.id) t.id=r.id; // use Supabase UUID
     // If converted from a Todo, remove it
     if(window._pendingTodoId){
@@ -274,14 +274,14 @@ window.saveMember=async()=>{
     m.av=mkAv(name);
     if(document.getElementById('mf-username')?.value) m.username=document.getElementById('mf-username').value.trim().toLowerCase();
     if(document.getElementById('mf-password')?.value) m.password=document.getElementById('mf-password').value;
-    logAction('Member Updated',`${CU.name} updated "${name}"`,'Info',name,'');
+    logAction('Member Updated',`${esc(CU.name)} updated "${name}"`,'Info',name,'');
     await nMemberUpd(m); CM('m-mbr'); toast('Member updated ✓','ok');
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   } else {
     const colors=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626'];
     const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),permOverrides,autoRemindersActive,av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
     DB.team.push(m);
-    logAction('Member Added',`${CU.name} added "${name}"`,'Success',name,'');
+    logAction('Member Added',`${esc(CU.name)} added "${name}"`,'Success',name,'');
     const r=await nMember(m,m.id); if(r?.url)NID[m.id]=r.url;
     CM('m-mbr'); toast(`${name} added ✓`,'ok');
     if(page==='team')nav('team',document.querySelector('.ni.on'));
@@ -306,13 +306,13 @@ function openSvcModal(id){
   // Populate operator dropdown
   const opEl=document.getElementById('sf-operator');
   if(opEl){
-    opEl.innerHTML='<option value="">None</option>'+DB.operators.map(o=>`<option value="${o.name}" ${s?.operator_name===o.name?'selected':''}>${o.name}</option>`).join('');
+    opEl.innerHTML='<option value="">None</option>'+DB.operators.map(o=>`<option value="${esc(o.name)}" ${s?.operator_name===o.name?'selected':''}>${esc(o.name)}</option>`).join('');
     if(s?.operator_name)opEl.value=s.operator_name;
   }
   // Populate company dropdown
   const coEl=document.getElementById('sf-owned');
   if(coEl){
-    coEl.innerHTML='<option value="">None</option>'+[...DB.companies,...DB.operators].map(c=>`<option value="${c.name}" ${s?.owned_by===c.name?'selected':''}>${c.name}</option>`).join('');
+    coEl.innerHTML='<option value="">None</option>'+[...DB.companies,...DB.operators].map(c=>`<option value="${esc(c.name)}" ${s?.owned_by===c.name?'selected':''}>${esc(c.name)}</option>`).join('');
     if(s?.owned_by)coEl.value=s.owned_by;
   }
   OM('m-svc');
@@ -406,10 +406,10 @@ function openProjectModal(id){
   // Populate members multi-select
   const pMbrEl=document.getElementById('pf-members');
   if(pMbrEl){
-    pMbrEl.innerHTML=DB.team.map(m=>`<option value="${m.id}" ${(pr?.member_ids||[]).includes(m.id)?'selected':''}>${m.name} — ${m.role}</option>`).join('');
+    pMbrEl.innerHTML=DB.team.map(m=>`<option value="${m.id}" ${(pr?.member_ids||[]).includes(m.id)?'selected':''}>${esc(m.name)} — ${m.role}</option>`).join('');
   }
   document.getElementById('pf-owned').innerHTML='<option value="">None</option>'+
-    [...DB.companies,...DB.operators].map(c=>`<option value="${c.id}" ${pr?.ownerCompanyId===c.id?'selected':''}>${c.name}</option>`).join('');
+    [...DB.companies,...DB.operators].map(c=>`<option value="${c.id}" ${pr?.ownerCompanyId===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
   if(pr?.ownerCompanyId) document.getElementById('pf-owned').value=pr.ownerCompanyId;
   // Apply saved project lists
   try{
@@ -462,14 +462,14 @@ window.saveDoc=async()=>{
   if(_editId){
     const d=DB.docs.find(x=>x.id===_editId);if(!d)return;
     d.title=title; d.type=document.getElementById('df-type').value; d.status=document.getElementById('df-status').value; d.content=content;
-    logAction('Document Updated',`${CU.name} updated doc "${title}"`,'Info',title,'');
+    logAction('Document Updated',`${esc(CU.name)} updated doc "${title}"`,'Info',title,'');
     await nDocUpd(d); CM('m-doc'); toast('Document updated ✓','ok');
     window._docsAll=[...DB.docs];
     if(page==='docs')nav('docs',document.querySelector('.ni.on'));
   } else {
     const doc={id:'d'+gid(),title,type:document.getElementById('df-type').value,status:document.getElementById('df-status').value,author:CU.id||'',fromTask:null,content,at:now()};
     DB.docs.unshift(doc); window._docsAll=[...DB.docs];
-    logAction('Document Created',`${CU.name} created doc "${title}"`,'Success',title,'');
+    logAction('Document Created',`${esc(CU.name)} created doc "${title}"`,'Success',title,'');
     const r=await nDoc(doc,doc.id); if(r?.url)NID[doc.id]=r.url;
     CM('m-doc'); toast('Document saved ✓','ok');
     if(page==='docs')nav('docs',document.querySelector('.ni.on'));
@@ -480,7 +480,7 @@ window.saveBacklog=async()=>{
   const title=document.getElementById('bf-title').value.trim();if(!title){toast('Title required','bad');return;}
   const b={id:'b'+gid(),title,status:'New Idea',cat:document.getElementById('bf-cat').value,priority:document.getElementById('bf-prio').value,by:CU.name,desc:document.getElementById('bf-desc').value,why:document.getElementById('bf-why').value,notes:'',at:now()};
   DB.backlog.unshift(b);
-  logAction('Backlog Submitted',`${CU.name} submitted idea "${title}"`,'Info',title,'');
+  logAction('Backlog Submitted',`${esc(CU.name)} submitted idea "${title}"`,'Info',title,'');
   const r=await nBacklog(b,b.id); if(r?.url)NID[b.id]=r.url;
   CM('m-bl'); toast('Idea submitted ✓','ok');
   if(page==='backlog')nav('backlog',document.querySelector('.ni.on'));
@@ -648,7 +648,7 @@ function renderNotifs(){
       <span style="width:26px;height:26px;border-radius:50%;background:${actor?actor.color:'#94a3b8'};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0" title="${n.from||'System'}">${actor?actor.av:'⚙'}</span>
       <div style="flex:1;min-width:0">
         <span style="display:inline-block;font-size:9px;font-weight:800;color:${meta.c};background:${meta.c}18;border:1px solid ${meta.c}33;padding:1px 7px;border-radius:20px;margin-bottom:3px">${meta.i} ${meta.l}</span>
-        <div class="nd-txt">${n.text}</div>
+        <div class="nd-txt">${esc(n.text)}</div>
         ${n.taskTitle?`<div style="font-size:10px;color:var(--ac);margin-top:1px;font-weight:500">${n.taskTitle}</div>`:''}
         <div class="nd-m">${n.from?`${n.from} · `:''}${fr(n.time)}</div>
       </div>
