@@ -79,7 +79,7 @@ function rMeetings(el){
             ${m.status==='Started'?`<button class="btn bg2 bxs" onclick="event.stopPropagation();endMeetingWithOutcomes('${m.id}')">■ End</button>`:''}
             ${m.status==='Scheduled'||m.status==='Started'?`<button class="btn bd2 bxs" onclick="event.stopPropagation();cancelMeetingFull('${m.id}')">✕</button>`:''}
             <div class="ib edt" onclick="event.stopPropagation();openMeetingModal('${m.id}')">✏</div>
-            <div class="ib del" onclick="event.stopPropagation();delItem('meetings','${m.id}','${m.title.replace(/'/g,"\'")}')">🗑</div>
+            <div class="ib del" onclick="event.stopPropagation();delItem('meetings','${m.id}')">🗑</div>
           </div>`:''}
         </div>
       </div>`;
@@ -182,7 +182,7 @@ window.openMeetingDetail=(id)=>{
   </div>`;
 
   // Tasks created from this meeting
-  const mTasks=DB.tasks.filter(t=>t.meetingId===m.id||(t.desc&&t.desc.includes(`meeting: "${m.title}"`))|| (t.desc&&t.desc.includes(`meeting on`)&&t.desc.includes(m.title)));
+  const mTasks=DB.tasks.filter(t=>t.meetingId===m.id||(t.desc&&t.desc.includes(`meeting: "${esc(m.title)}"`))|| (t.desc&&t.desc.includes(`meeting on`)&&t.desc.includes(m.title)));
   body+=`<div class="sps" style="display:flex;align-items:center;justify-content:space-between">
     <span>Action Items / Tasks (${mTasks.length})</span>
     <div style="display:flex;gap:8px;align-items:center">
@@ -194,7 +194,7 @@ window.openMeetingDetail=(id)=>{
     mTasks.forEach(t=>{
       body+=`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
         ${spill(t.status)}
-        <span style="flex:1;font-size:12px;font-weight:500">${t.title}</span>
+        <span style="flex:1;font-size:12px;font-weight:500">${esc(t.title)}</span>
         ${ppill(t.priority)}
         ${t.assignedTo?`<span style="font-size:10px;color:var(--tx3)">${mn(t.assignedTo)}</span>`:''}
       </div>`;
@@ -203,7 +203,7 @@ window.openMeetingDetail=(id)=>{
     body+=`<div style="font-size:12px;color:var(--tx3);padding:8px 0;font-style:italic">No action items yet.</div>`;
   }
   // Inline add-action-item form (hidden by default)
-  const teamOpts2=DB.team.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  const teamOpts2=DB.team.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
   const defDue2=(()=>{const d=new Date();d.setDate(d.getDate()+3);return d.toISOString().split('T')[0];})();
   body+=`<div id="post-action-form" style="display:none;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-top:8px">
     <div style="font-size:11px;font-weight:800;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">New Action Item</div>
@@ -242,19 +242,19 @@ window.openMeetingDetail=(id)=>{
       <div>
         <div style="font-size:10px;color:var(--tx3);margin-bottom:3px;font-weight:600">Project (optional)</div>
         <select id="pa-project" style="width:100%;padding:6px 8px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
-          <option value="">— None —</option>${DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+          <option value="">— None —</option>${DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}
         </select>
       </div>
       <div>
         <div style="font-size:10px;color:var(--tx3);margin-bottom:3px;font-weight:600">Operator (optional)</div>
         <select id="pa-operator" style="width:100%;padding:6px 8px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
-          <option value="">— None —</option>${DB.operators.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
+          <option value="">— None —</option>${DB.operators.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}
         </select>
       </div>
       <div>
         <div style="font-size:10px;color:var(--tx3);margin-bottom:3px;font-weight:600">Company (optional)</div>
         <select id="pa-company" style="width:100%;padding:6px 8px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px;outline:none">
-          <option value="">— None —</option>${DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+          <option value="">— None —</option>${DB.companies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -292,7 +292,7 @@ window.openMeetingDetail=(id)=>{
     ${(m.status==='Scheduled'||m.status==='Started')?`<button class="btn bg2 bsm" onclick="postponeMeeting('${m.id}')">${(m.created_by===CU.name||isAdmin())?'Postpone':'Request Postpone'}</button>`:''}
     ${(m.status==='Scheduled'||m.status==='Started')?`<button class="btn bd2 bsm" onclick="cancelMeetingFull('${m.id}')">${(m.created_by===CU.name||isAdmin())?'Cancel':'Request Cancel'}</button>`:''}
     ${canEdit?`<button class="btn bg2 bsm" onclick="openMeetingModal('${m.id}')">Edit</button>`:''}
-    ${(isAdmin()||m.created_by===CU.name)?`<button class="btn bd2 bsm" onclick="delItem('meetings','${m.id}','${m.title.replace(/'/g,"\\'")}');closeSP()">Delete</button>`:''}
+    ${(isAdmin()||m.created_by===CU.name)?`<button class="btn bd2 bsm" onclick="delItem('meetings','${m.id}');closeSP()">Delete</button>`:''}
   </div>`;
 
   openSP(m.title,'',body);
@@ -365,7 +365,7 @@ function filterInvSearch(q){
   drop.style.display='block';
   drop.innerHTML=filtered.map(m=>`<div onmousedown="event.preventDefault();addInvitee('${m.name.replace(/'/g,"\'")}')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
     <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
-    <div><div style="font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--tx3)">${m.role}</div></div>
+    <div><div style="font-weight:600">${esc(m.name)}</div><div style="font-size:11px;color:var(--tx3)">${m.role}</div></div>
   </div>`).join('');
 }
 
@@ -395,11 +395,11 @@ function openMeetingModal(id){
   document.getElementById('mf-desc').value=m?.description||'';
   // Populate related-to dropdowns
   const projSel=document.getElementById('mf-project');
-  if(projSel) projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${m?.project_id===p.id?'selected':''}>${p.name}</option>`).join('');
+  if(projSel) projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${m?.project_id===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
   const svcSel=document.getElementById('mf-service');
-  if(svcSel) svcSel.innerHTML='<option value="">— None —</option>'+(DB.services||[]).map(s=>`<option value="${s.id}" ${m?.service_id===s.id?'selected':''}>${s.name}</option>`).join('');
+  if(svcSel) svcSel.innerHTML='<option value="">— None —</option>'+(DB.services||[]).map(s=>`<option value="${s.id}" ${m?.service_id===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
   const opSel=document.getElementById('mf-operator');
-  if(opSel) opSel.innerHTML='<option value="">— None —</option>'+([ ...DB.operators,...DB.companies]).map(o=>`<option value="${o.id}" ${m?.operator_id===o.id?'selected':''}>${o.name}</option>`).join('');
+  if(opSel) opSel.innerHTML='<option value="">— None —</option>'+([ ...DB.operators,...DB.companies]).map(o=>`<option value="${o.id}" ${m?.operator_id===o.id?'selected':''}>${esc(o.name)}</option>`).join('');
   initInviteePicker(m?.invitees||[]);
   OM('m-meeting');
 }
@@ -434,7 +434,7 @@ window.saveMeeting=async()=>{
     const m={id:'meet'+gid(),...data,status:'Scheduled',created_by:CU.name,attendance:{},started_at:null,ended_at:null,cancelled_at:null,created_at:now()};
     DB.meetings.push(m);
     await nMeeting(m);CM('m-meeting');
-    logAction('Meeting Created',`${CU.name} created meeting "${title}" on ${fd(date)} at ${time}`,'Info',title,`Invitees: ${invitees.join(', ')||'None'}`,{meetingId:m.id,memberName:CU.name});
+    logAction('Meeting Created',`${esc(CU.name)} created meeting "${title}" on ${fd(date)} at ${time}`,'Info',title,`Invitees: ${invitees.join(', ')||'None'}`,{meetingId:m.id,memberName:CU.name});
     invitees.forEach(name=>{
       if(name!==CU.name){
         sendNotif(name,`You're invited to: "${title}" on ${fd(date)} at ${time}${recur?` · repeats ${recur}`:''}`, 'Mention', title, false, {meetingId:m.id});
@@ -549,7 +549,7 @@ function rMeetingOutcomes(el){
               ${spill(t.status)}
               <span style="flex:1;font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title.replace('Meeting Outcome: ','')}</span>
               ${ppill(t.priority)}
-              ${ass?`<span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${ass.av}</span><span style="font-size:11px;color:var(--tx2);font-weight:600">${ass.name}</span></span>`:'<span style="font-size:11px;color:var(--tx3)">Unassigned</span>'}
+              ${ass?`<span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${ass.av}</span><span style="font-size:11px;color:var(--tx2);font-weight:600">${esc(ass.name)}</span></span>`:'<span style="font-size:11px;color:var(--tx3)">Unassigned</span>'}
               <span class="due-badge ${ds.cls}" style="flex-shrink:0">${ds.label}</span>
             </div>`;
           }).join('')}
