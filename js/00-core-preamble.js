@@ -44,7 +44,7 @@
 // announcements, library entries, meeting titles, member names/notes...)
 // gets interpolated into innerHTML, it should be run through this first
 // to prevent stored XSS. Usage: `${escapeHtml(t.title)}` instead of
-// `${t.title}` anywhere the value came from a text input/textarea.
+// `${esc(t.title)}` anywhere the value came from a text input/textarea.
 function escapeHtml(str){
   if(str===null||str===undefined) return '';
   return String(str)
