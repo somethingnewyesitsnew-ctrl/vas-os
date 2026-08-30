@@ -357,16 +357,25 @@ function startReminderChecker(){
     });
 
     // ── Service test reminders + task creation ───────────────────────
+    // Task creation runs BROAD: triggered by ANY team member's app load,
+    // for ALL schedules due today — not just the logged-in member's own.
+    // This means a due test always gets its task+notification created
+    // even if the assigned member never opens the app that day, as long
+    // as someone on the team does. Personal nudge reminders (tomorrow /
+    // 8am / noon) stay scoped to the assigned member's own device, since
+    // they're just supplementary heads-ups, not the source of truth.
     if(DB.testSchedules?.length){
       const todayDow=new Date().getDay();
       const todayStr=new Date().toISOString().split('T')[0];
       const tomorrowDow=new Date(Date.now()+86400000).getDay();
       const tomorrowStr=new Date(Date.now()+86400000).toISOString().split('T')[0];
       const hr=new Date().getHours();
-      const myScheds=DB.testSchedules.filter(s=>s.day_of_week===todayDow&&s.active!==false&&s.member_id===CU?.id);
+      const allTodayScheds=DB.testSchedules.filter(s=>s.day_of_week===todayDow&&s.active!==false);
+      const myScheds=allTodayScheds.filter(s=>s.member_id===CU?.id);
       const tomorrowScheds=DB.testSchedules.filter(s=>s.day_of_week===tomorrowDow&&s.active!==false&&s.member_id===CU?.id);
+      const defaultReviewerId=DB.team.find(t=>t.name==='Aymen')?.id||null;
 
-      // Tomorrow reminder
+      // Tomorrow reminder (self only)
       tomorrowScheds.forEach(s=>{
         const remKey='tomorrow_'+s.id+'_'+tomorrowStr;
         if(!svcTestFired.has(remKey)){
@@ -378,26 +387,28 @@ function startReminderChecker(){
         }
       });
 
-      myScheds.forEach(s=>{
+      // Task creation (broad — any schedule due today, any member)
+      allTodayScheds.forEach(s=>{
+        const m=DB.team.find(t=>t.id===s.member_id);
+        if(!m)return;
         const op=[...DB.operators,...DB.companies].find(o=>o.id===s.operator_id);
         const opName=op?.name||'?';
-        const alreadyDone=DB.testSessions?.some(ts=>ts.test_date===todayStr&&ts.tester_id===CU?.id&&ts.operator_id===s.operator_id&&ts.status==='Completed');
 
-        // Create task for today's test
         const taskKey='task_'+s.id+'_'+todayStr;
         if(!svcTestFired.has(taskKey)){
-          const hasTask=DB.tasks.some(t=>t.title?.includes('Service Test')&&t.assignedTo===CU?.id&&t.due===todayStr&&(t.operator===s.operator_id||t.desc?.includes(opName)));
+          const hasTask=DB.tasks.some(t=>t.title?.includes('Service Test')&&t.assignedTo===m.id&&t.due===todayStr&&(t.operator===s.operator_id||t.desc?.includes(opName)));
           if(!hasTask){
             svcTestFired.add(taskKey);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
             const opSvcs=(DB.services||[]).filter(sv=>sv.operator_name===opName||(sv.company_id||sv.operator_id)===s.operator_id).map(sv=>sv.name).join(', ')||'All services';
             const checks=getCheckTemplates().map((c,i)=>`${i+1}. ${c}`).join('\n');
+            const reviewerId=s.reviewer_id||defaultReviewerId;
             const newTask={
               id:'t'+gid(),title:`Service Test — ${opName} (${todayStr})`,
               status:'New',priority:'High',type:'Service Test',
-              assignedTo:CU.id,assignees:[CU.id],reviewer:null,
-              reqBy:'System',createdBy:'System',due:todayStr,est:2,actual:null,
+              assignedTo:m.id,assignees:[m.id],reviewer:reviewerId,
+              reqBy:'System',createdBy:'System',due:todayStr,est:null,actual:null,
               operator:s.operator_id,service:null,
-              desc:`🧪 Service Test Task\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ Test Items:\n${checks}\n\nClick ▶ Start below — it'll take you straight into the checklist for each service. Mark each item working or fail, add a note if something's broken. Any fails you flag get turned into tasks automatically.`,
+              desc:`🧪 Service Test Task\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ Test Items:\n${checks}\n\nClick ▶ Set Estimate & Start below — it'll take you straight into the checklist for each service. Mark each item working or fail, add a note if something's broken. Any fails you flag get turned into tasks automatically.`,
               link:'',recur:null,tsCreated:now(),tsOpened:null,tsStarted:null,
               tsSubmitted:null,tsReviewed:null,tsArchived:null,
               what:'',tech:'',rejReason:'',rejections:[],comments:[]
@@ -405,27 +416,40 @@ function startReminderChecker(){
             DB.tasks.unshift(newTask);
             nCreateTask(newTask,newTask.id).then(r=>{if(r?.id)newTask.id=r.id;});
             updateBadges();
-            notifyTG(CU.id,'default',{desc:`🧪 *Service Test Task Created*\n\nHi ${CU.name}! Your service test task for today is ready.\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 ${todayStr}\n\n✅ Test Items:\n${checks}\n\nOpen the app to complete your test.`,link:''});
-            sendNotif(CU.name,`Service test task created: ${opName}`,'Mention','Service Test');
-            toast(`🧪 Test task created: ${opName}`,'ok',8000);
+            notifyTG(m.id,'task_assigned',{title:newTask.title,priority:'High',due:todayStr,desc:newTask.desc,link:appLink('task-'+newTask.id)});
+            sendNotif(m.name,`New task assigned: "${newTask.title}" — High priority`,'Task Assigned',newTask.title);
+            if(reviewerId){
+              const rev=DB.team.find(t=>t.id===reviewerId);
+              if(rev&&rev.id!==m.id){
+                sendNotif(rev.name,`You are reviewer for new task: "${newTask.title}" (assigned to ${m.name})`,'Task Assigned',newTask.title);
+                notifyTG(rev.id,'review_requested',{title:newTask.title,priority:'High',link:appLink('task-'+newTask.id)});
+              }
+            }
+            if(m.id===CU?.id) toast(`🧪 Test task created: ${opName}`,'ok',8000);
           }
         }
+      });
 
-        if(!alreadyDone){
-          // 8am reminder
-          const key8=`8am_${s.id}_${todayStr}`;
-          if(hr>=8&&hr<9&&!svcTestFired.has(key8)){
-            svcTestFired.add(key8);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
-            notifyTG(CU.id,'default',{desc:`🌅 *Good Morning — Test Reminder*\n\nHi ${CU.name}!\n\nYou have a service test to complete today.\n\n🏢 Operator: ${opName}\n📅 ${todayStr}\n\nPlease complete all test items and submit for review.`,link:''});
-            toast(`🧪 8am: Service test due today — ${opName}`,'inf',10000);
-          }
-          // 12pm reminder
-          const key12=`12pm_${s.id}_${todayStr}`;
-          if(hr>=12&&hr<13&&!svcTestFired.has(key12)){
-            svcTestFired.add(key12);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
-            notifyTG(CU.id,'default',{desc:`⏰ *Noon Reminder — Test Pending*\n\nHi ${CU.name}! You still have a pending service test.\n\n🏢 Operator: ${opName}\n⏰ Please complete before end of day.`,link:''});
-            toast(`⏰ 12pm: Test still pending — ${opName}`,'warn',10000);
-          }
+      // Same-day personal nudges (self only — supplementary to the task's own due-date reminders)
+      myScheds.forEach(s=>{
+        const op=[...DB.operators,...DB.companies].find(o=>o.id===s.operator_id);
+        const opName=op?.name||'?';
+        const alreadyDone=DB.testSessions?.some(ts=>ts.test_date===todayStr&&ts.tester_id===CU?.id&&ts.operator_id===s.operator_id&&ts.status==='Completed');
+        if(alreadyDone)return;
+
+        // 8am reminder
+        const key8=`8am_${s.id}_${todayStr}`;
+        if(hr>=8&&hr<9&&!svcTestFired.has(key8)){
+          svcTestFired.add(key8);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
+          notifyTG(CU.id,'default',{desc:`🌅 *Good Morning — Test Reminder*\n\nHi ${CU.name}!\n\nYou have a service test to complete today.\n\n🏢 Operator: ${opName}\n📅 ${todayStr}\n\nPlease complete all test items and submit for review.`,link:''});
+          toast(`🧪 8am: Service test due today — ${opName}`,'inf',10000);
+        }
+        // 12pm reminder
+        const key12=`12pm_${s.id}_${todayStr}`;
+        if(hr>=12&&hr<13&&!svcTestFired.has(key12)){
+          svcTestFired.add(key12);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
+          notifyTG(CU.id,'default',{desc:`⏰ *Noon Reminder — Test Pending*\n\nHi ${CU.name}! You still have a pending service test.\n\n🏢 Operator: ${opName}\n⏰ Please complete before end of day.`,link:''});
+          toast(`⏰ 12pm: Test still pending — ${opName}`,'warn',10000);
         }
       });
     }
