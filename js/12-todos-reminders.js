@@ -29,7 +29,7 @@ function rTodos(el){
           <div class="act-c" onclick="event.stopPropagation()">
             <div class="ib edt" onclick="openTodoModal('${td.id}')" title="Edit">✏</div>
             <div class="ib" onclick="convertTodoToTask('${td.id}')" title="Convert to task" style="color:var(--ac);font-size:10px;font-weight:700">→T</div>
-            <div class="ib del" onclick="delItem('todos','${td.id}','${td.title.replace(/'/g,"\\'")}')">🗑</div>
+            <div class="ib del" onclick="delItem('todos','${td.id}')">🗑</div>
           </div>
         </div>`;
       });
@@ -56,7 +56,7 @@ window.openTodo=(id)=>{
   <div class="spa">
     ${td.status!=='Done'?`<button class="btn bk bsm" onclick="toggleTodo('${td.id}');closeSP()">✓ Mark Done</button>`:`<button class="btn bg2 bsm" onclick="toggleTodo('${td.id}');closeSP()">↩ Reopen</button>`}
     <button class="btn bg2 bsm" onclick="openTodoModal('${td.id}')">✏ Edit</button>
-    <button class="btn bd2 bsm" onclick="delItem('todos','${td.id}','${td.title.replace(/'/g,"\\'")}');closeSP()">🗑 Delete</button>
+    <button class="btn bd2 bsm" onclick="delItem('todos','${td.id}');closeSP()">🗑 Delete</button>
   </div>`;
   document.getElementById('sp-pnl').classList.add('open');
 };
@@ -138,10 +138,10 @@ function rToReview(el){
         const waitColor=hoursWaiting>48?'var(--r)':hoursWaiting>24?'var(--y)':'var(--tx3)';
         return`<tr class="cl" onclick="openTask('${tk.id}')">
           <td>
-            <div style="font-size:13px;font-weight:700;color:var(--tx)">${tk.title}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--tx)">${esc(tk.title)}</div>
             ${hoursWaiting>0?`<div style="font-size:10px;color:${waitColor};margin-top:1px">⏱ Waiting ${hoursWaiting}h</div>`:''}
           </td>
-          <td style="font-size:12px">${t===0?(ass?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${ass.av}</span>${ass.name}</span>`:'—'):(rev?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:18px;height:18px;border-radius:50%;background:${rev.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${rev.av}</span>${rev.name}</span>`:'<span style="color:var(--tx3);font-size:11px">No reviewer</span>')}</td>
+          <td style="font-size:12px">${t===0?(ass?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${ass.av}</span>${esc(ass.name)}</span>`:'—'):(rev?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:18px;height:18px;border-radius:50%;background:${rev.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${rev.av}</span>${esc(rev.name)}</span>`:'<span style="color:var(--tx3);font-size:11px">No reviewer</span>')}</td>
           <td>${ppill(tk.priority)}</td>
           <td style="font-size:11px;color:var(--tx2)">${sn(tk.service)}</td>
           <td style="font-size:11px;color:var(--tx3);font-family:var(--fnm)">${fr(tk.tsSubmitted)}</td>
