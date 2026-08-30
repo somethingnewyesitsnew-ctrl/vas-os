@@ -65,7 +65,7 @@ function rServices(el){
         const tCol=tc[s.service_type||s.cat]||'#64748b';
         h+=`<div class="mc" onclick="openSvcDetail('${s.id}')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:700;flex:1;margin-right:6px;line-height:1.3">${s.name}</div>
+            <div style="font-size:13px;font-weight:700;flex:1;margin-right:6px;line-height:1.3">${esc(s.name)}</div>
             <span style="background:${col}18;color:${col};border:1px solid ${col}28;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0">${s.status}</span>
           </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px">
@@ -80,7 +80,7 @@ function rServices(el){
           </div>
           <div class="ac" onclick="event.stopPropagation()">
             <div class="ib edt" onclick="event.stopPropagation();openSvcModal('${s.id}')">✏</div>
-            <div class="ib del" onclick="event.stopPropagation();delItem('services','${s.id}','${s.name.replace(/'/g,"\'")}')">🗑</div>
+            <div class="ib del" onclick="event.stopPropagation();delItem('services','${s.id}')">🗑</div>
           </div>
         </div>`;
       });
@@ -112,14 +112,14 @@ window.openSvcDetail=(id)=>{
     <div class="spf"><div class="spl">Project</div><div class="spv">${s.project_name||'—'}</div></div>
     ${s.link?`<div class="spf" style="grid-column:1/-1"><div class="spl">Link</div><div class="spv"><a href="${s.link}" target="_blank" style="color:var(--ac)">${s.link}</a></div></div>`:''}
   </div>
-  ${s.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${s.desc}</div></div>`:''}
+  ${s.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${esc(s.desc)}</div></div>`:''}
   ${renderAboutBenefitsBlock(s)}
   ${renderFuturePlansBlock('services',s)}
   <div class="sps">Active Tasks (${active.length})</div>
-  ${active.length===0?'<div style="font-size:11px;color:var(--tx3);padding:6px 0">No active tasks</div>':active.slice(0,6).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}</div>`).join('')}
+  ${active.length===0?'<div style="font-size:11px;color:var(--tx3);padding:6px 0">No active tasks</div>':active.slice(0,6).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${esc(t.title)}</span>${ppill(t.priority)}</div>`).join('')}
   <div class="spa">
     <button class="btn bg2 bsm" onclick="openSvcModal('${s.id}')">✏ Edit Service</button>
-    <button class="btn bd2 bsm" onclick="delItem('services','${s.id}','${s.name.replace(/'/g,"\'")}');closeSP()">🗑 Delete</button>
+    <button class="btn bd2 bsm" onclick="delItem('services','${s.id}');closeSP()">🗑 Delete</button>
   </div>`;
   openSP(s.name,'',body);
 };
@@ -133,7 +133,7 @@ function rOperators(el){
     const svcCount=DB.services.filter(s=>s.operator_name===o.name).length;
     const col=sc[o.status]||'var(--tx3)';
     return`<div class="card" style="cursor:pointer" onclick="openEntityDetail('${o.id}','op')">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><div style="font-size:14px;font-weight:700">${o.name}</div><span style="background:${col}15;color:${col};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px solid ${col}25">${o.status||'Active'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><div style="font-size:14px;font-weight:700">${esc(o.name)}</div><span style="background:${col}15;color:${col};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px solid ${col}25">${o.status||'Active'}</span></div>
       <div style="font-size:12px;color:var(--tx2)">📍 ${o.country||'—'}</div>
       ${o.contact?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">👤 ${o.contact}</div>`:''}
       ${o.email?`<div style="font-size:11px;color:var(--tx3)">✉ ${o.email}</div>`:''}
@@ -142,7 +142,7 @@ function rOperators(el){
         <span>📡 ${svcCount} service${svcCount!==1?'s':''}</span>
         <span>📋 ${tot} tasks</span>
       </div>
-      <div class="act-c" style="margin-top:10px"><div class="ib edt" onclick="event.stopPropagation();openOperatorModal('${o.id}')">✏</div><div class="ib del" onclick="event.stopPropagation();delItem('operators','${o.id}','${o.name}')">🗑</div></div>
+      <div class="act-c" style="margin-top:10px"><div class="ib edt" onclick="event.stopPropagation();openOperatorModal('${o.id}')">✏</div><div class="ib del" onclick="event.stopPropagation();delItem('operators','${o.id}')">🗑</div></div>
     </div>`;
   }).join('')+`</div>`;
 }
@@ -155,12 +155,12 @@ function rCompanies(el){
   el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px">`+
   DB.companies.map(c=>{const col=tc[c.type]||'var(--tx3)';
     return`<div class="card" style="cursor:pointer" onclick="openEntityDetail('${c.id}','co')">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><div style="font-size:14px;font-weight:700">${c.name}</div><span style="background:${col}15;color:${col};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px solid ${col}25">${c.type||'Partner'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><div style="font-size:14px;font-weight:700">${esc(c.name)}</div><span style="background:${col}15;color:${col};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px solid ${col}25">${c.type||'Partner'}</span></div>
       <div style="font-size:12px;color:var(--tx2)">📍 ${c.country||'—'}</div>
       ${c.contact?`<div style="font-size:11px;color:var(--tx3);margin-top:2px">👤 ${c.contact}</div>`:''}
       ${c.email?`<div style="font-size:11px;color:var(--tx3)">✉ ${c.email}</div>`:''}
-      ${c.notes?`<div style="margin-top:6px;font-size:11px;color:var(--tx2);font-style:italic">${c.notes}</div>`:''}
-      <div class="act-c" style="margin-top:10px"><div class="ib edt" onclick="event.stopPropagation();openCompanyModal('${c.id}')">✏</div><div class="ib del" onclick="event.stopPropagation();delItem('companies','${c.id}','${c.name}')">🗑</div></div>
+      ${c.notes?`<div style="margin-top:6px;font-size:11px;color:var(--tx2);font-style:italic">${esc(c.notes)}</div>`:''}
+      <div class="act-c" style="margin-top:10px"><div class="ib edt" onclick="event.stopPropagation();openCompanyModal('${c.id}')">✏</div><div class="ib del" onclick="event.stopPropagation();delItem('companies','${c.id}')">🗑</div></div>
     </div>`;
   }).join('')+`</div>`;
 }
@@ -183,23 +183,23 @@ window.openEntityDetail=(id,type)=>{
     <div class="spf"><div class="spl">Email</div><div class="spv">${c.email||'—'}</div></div>
     <div class="spf"><div class="spl">Phone</div><div class="spv">${c.phone||'—'}</div></div>
   </div>
-  ${c.notes?`<div class="spf"><div class="spl">Notes</div><div class="spnote">${c.notes}</div></div>`:''}
+  ${c.notes?`<div class="spf"><div class="spl">Notes</div><div class="spnote">${esc(c.notes)}</div></div>`:''}
   ${relServices.length?`<div class="sps">Services (${relServices.length})</div>
   ${relServices.map(s=>{const sc={Live:'#15803d','In Development':'#2563eb',Paused:'#ca8a04',Deprecated:'#dc2626'};const col=sc[s.status]||'#64748b';return`<div onclick="openSvcDetail('${s.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
     <span style="background:${col}18;color:${col};border:1px solid ${col}28;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0">${s.status}</span>
-    <span style="font-size:12px;font-weight:600;flex:1">${s.name}</span>
+    <span style="font-size:12px;font-weight:600;flex:1">${esc(s.name)}</span>
     ${s.service_type?`<span style="font-size:10px;color:var(--tx3)">${s.service_type}</span>`:''}
   </div>`;}).join('')}`:''}
   ${relProjects.length?`<div class="sps">Projects (${relProjects.length})</div>
   ${relProjects.map(p=>{const pc={Active:'#2563eb',Planning:'#7c3aed',Completed:'#15803d','On Hold':'#ca8a04',Cancelled:'#dc2626'};const col=pc[p.status]||'#64748b';return`<div onclick="openProjectDetail('${p.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
     <span style="background:${col}18;color:${col};border:1px solid ${col}28;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0">${p.status}</span>
-    <span style="font-size:12px;font-weight:600;flex:1">${p.name}</span>
+    <span style="font-size:12px;font-weight:600;flex:1">${esc(p.name)}</span>
   </div>`;}).join('')}`:''}
   <div class="sps">Related Tasks (${tasks.length})</div>
-  ${tasks.slice(0,5).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span></div>`).join('')}
+  ${tasks.slice(0,5).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${esc(t.title)}</span></div>`).join('')}
   <div class="spa">
     <button class="btn bg2 bsm" onclick="${type==='op'?`openOperatorModal('${c.id}')`:`openCompanyModal('${c.id}')`}">✏ Edit</button>
-    <button class="btn bd2 bsm" onclick="delItem('${type==='op'?'operators':'companies'}','${c.id}','${c.name}');closeSP()">🗑 Delete</button>
+    <button class="btn bd2 bsm" onclick="delItem('${type==='op'?'operators':'companies'}','${c.id}');closeSP()">🗑 Delete</button>
   </div>`;
   document.getElementById('sp-pnl').classList.add('open');
 };
