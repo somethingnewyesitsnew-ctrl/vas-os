@@ -41,7 +41,7 @@ function showTutStep(){
     <button onclick="skipTutorial()" style="background:none;border:none;font-size:16px;color:var(--tx3);cursor:pointer;padding:0;line-height:1">✕</button>
   </div>
   <div style="height:3px;background:var(--bd);border-radius:2px;margin-bottom:14px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#7c3aed,#2563eb);border-radius:2px;transition:width .3s"></div></div>
-  <div style="font-size:16px;font-weight:800;color:var(--tx);margin-bottom:9px;line-height:1.3">${step.title}</div>
+  <div style="font-size:16px;font-weight:800;color:var(--tx);margin-bottom:9px;line-height:1.3">${esc(step.title)}</div>
   <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:18px">${step.body}</div>
   <div style="display:flex;align-items:center;gap:7px">
     ${_tutStep>0?`<button onclick="tutPrev()" style="padding:8px 14px;background:var(--s2);border:1px solid var(--bd);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx)">← Back</button>`:''}
