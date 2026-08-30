@@ -29,7 +29,7 @@ function rHrComs(el){
             <div style="flex:1;min-width:0">
               <div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:3px">${escapeHtml(com.title)}</div>
               <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-                ${sender?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${sender.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${sender.av}</span><span style="font-size:11px;font-weight:600;color:var(--tx2)">${sender.name}</span></span>`:''}
+                ${sender?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${sender.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${sender.av}</span><span style="font-size:11px;font-weight:600;color:var(--tx2)">${esc(sender.name)}</span></span>`:''}
                 <span style="font-size:10px;color:var(--tx3)">${fdt(com.at)}</span>
                 ${unread?`<span style="background:var(--ac);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px">NEW</span>`:''}
               </div>
@@ -42,7 +42,7 @@ function rHrComs(el){
             const rIsHr=rSender?.role?.toLowerCase().includes('hr')||rSender?.access==='HR'||isAdmin();
             return`<div style="margin-top:8px;padding:9px 12px;background:${rIsHr?'var(--al)':'var(--s2)'};border:1px solid ${rIsHr?'#bfdbfe':'var(--bd)'};border-radius:8px;border-left:3px solid ${rIsHr?'var(--ac)':'var(--bd)'}">
               <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
-                ${rSender?`<span style="width:16px;height:16px;border-radius:50%;background:${rSender.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${rSender.av}</span><span style="font-size:11px;font-weight:700;color:${rIsHr?'var(--ac)':'var(--tx)'}">${rSender.name}${rIsHr?' (HR)':''}</span>`:''}
+                ${rSender?`<span style="width:16px;height:16px;border-radius:50%;background:${rSender.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${rSender.av}</span><span style="font-size:11px;font-weight:700;color:${rIsHr?'var(--ac)':'var(--tx)'}">${esc(rSender.name)}${rIsHr?' (HR)':''}</span>`:''}
                 <span style="font-size:10px;color:var(--tx3);margin-left:auto">${fdt(r.at)}</span>
               </div>
               <div style="font-size:12px;color:var(--tx2);line-height:1.5">${escapeHtml(r.body)}</div>
@@ -176,7 +176,7 @@ function rAnnouncements(el){
               ${isUnread?`<span style="background:${col};color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px">NEW</span>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              ${author?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:16px;height:16px;border-radius:50%;background:${author.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${author.av}</span><span style="font-size:11px;color:var(--tx2);font-weight:600">${author.name}</span></span>`:''}
+              ${author?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:16px;height:16px;border-radius:50%;background:${author.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${author.av}</span><span style="font-size:11px;color:var(--tx2);font-weight:600">${esc(author.name)}</span></span>`:''}
               <span style="font-size:10px;color:var(--tx3)">${fdt(a.at)}</span>
               <span style="background:${col}15;color:${col};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${a.priority}</span>
               <span style="font-size:10px;color:var(--tx3)">${a.audience==='all'?'👥 Everyone':`👤 ${(a.audienceNames||[]).join(', ')}`}</span>
@@ -202,7 +202,7 @@ window.openAnnouncementModal=()=>{
     <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px;font-weight:600">
       <input type="checkbox" value="${m.id}" style="width:15px;height:15px;cursor:pointer">
       <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800;flex-shrink:0">${m.av}</span>
-      ${m.name} <span style="color:var(--tx3);font-weight:400;font-size:11px">${m.role||''}</span>
+      ${esc(m.name)} <span style="color:var(--tx3);font-weight:400;font-size:11px">${m.role||''}</span>
     </label>`).join('');
   document.getElementById('ann-title').value='';
   document.getElementById('ann-body').value='';
@@ -223,7 +223,7 @@ window.submitAnnouncement=async()=>{
   if(!saved){toast('Failed to publish — check connection','bad');return;}
   DB.announcements=DB.announcements||[];
   DB.announcements.unshift({id:row.id,fromId:CU.id,fromName:CU.name,title,body,priority,audience:row.audience,audienceIds,audienceNames,readBy:[],at:row.at});
-  logAction('Announcement Posted',`${CU.name} posted "${title}" (${priority}) to ${row.audience==='all'?'everyone':audienceNames.join(', ')||'selected members'}`,'Info',title,'',{memberName:CU.name});
+  logAction('Announcement Posted',`${esc(CU.name)} posted "${title}" (${priority}) to ${row.audience==='all'?'everyone':audienceNames.join(', ')||'selected members'}`,'Info',title,'',{memberName:CU.name});
   const recipients=isAll?DB.team:DB.team.filter(m=>audienceIds.includes(m.id));
   recipients.filter(m=>m.id!==CU.id).forEach(m=>{
     sendNotif(m.name,`New ${priority} announcement: "${title}"`,`${priority} Announcement`,title,false,{annId:row.id});
@@ -367,7 +367,7 @@ function rReports(el){
   memberStats.forEach(({m,total,done,ov,rej,wh,cr,sparkSvg})=>{
     const c=cr>=70?'#15803d':cr>=40?'#d97706':'#dc2626';
     h+=`<tr class="cl" onclick="window._navMember='${m.id}';navTo('alltasks')">
-      <td><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${m.av}</span><span style="font-size:12px;font-weight:700">${m.name}</span></span></td>
+      <td><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800">${m.av}</span><span style="font-size:12px;font-weight:700">${esc(m.name)}</span></span></td>
       <td style="font-size:11px;color:var(--tx3)">${m.role||'—'}</td>
       <td style="font-weight:700">${total}</td>
       <td style="font-weight:700;color:#15803d">${done}</td>
@@ -394,7 +394,7 @@ function rReports(el){
     svcStats.forEach(({s,total,done,active,ov})=>{
       const c={Live:'#15803d','In Development':'#2563eb',Paused:'#ca8a04',Deprecated:'#dc2626'}[s.status]||'#64748b';
       h+=`<tr class="cl" onclick="openSvcDetail('${s.id}')">
-        <td style="font-size:12px;font-weight:700">${s.name}</td>
+        <td style="font-size:12px;font-weight:700">${esc(s.name)}</td>
         <td style="font-size:11px;color:var(--tx2)">${s.operator_name||'—'}</td>
         <td><span style="background:${c}18;color:${c};font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px">${s.status}</span></td>
         <td style="font-weight:700">${total}</td>
@@ -425,8 +425,8 @@ function rReports(el){
       const days=t.due?Math.round((new Date()-new Date(t.due))/864e5):null;
       const svc=DB.services.find(s=>s.id===t.service);
       h+=`<tr class="cl" onclick="openTask('${t.id}')">
-        <td style="font-size:12px;font-weight:700;color:#dc2626">${t.title}</td>
-        <td>${m?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${m.av}</span>${m.name}</span>`:'—'}</td>
+        <td style="font-size:12px;font-weight:700;color:#dc2626">${esc(t.title)}</td>
+        <td>${m?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800">${m.av}</span>${esc(m.name)}</span>`:'—'}</td>
         <td>${ppill(t.priority)}</td>
         <td style="font-size:11px;font-weight:700;color:#dc2626">${t.due||'—'}</td>
         <td style="font-size:12px;font-weight:800;color:#dc2626">${days!==null?days+'d':'—'}</td>
@@ -464,7 +464,7 @@ function rReports(el){
     h+=`<div style="background:var(--s);border:1px solid var(--bd);border-radius:11px;padding:14px">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
         <span style="width:34px;height:34px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${m.name}</div><div style="font-size:10px;color:var(--tx3)">${m.role||'Member'}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(m.name)}</div><div style="font-size:10px;color:var(--tx3)">${m.role||'Member'}</div></div>
         <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:${cc}">${cr}%</div><div style="font-size:9px;color:${cc};font-weight:700">RATE</div></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:9px">
@@ -497,7 +497,7 @@ window.openMemberReport=(memberId)=>{
   const selPeriod='week';
   window.renderMemberReport=(mid,per)=>{ window._mrPeriod=per; openMemberReport(mid); };
   // Open in side panel with a loading placeholder, then render for real.
-  openSP(`📋 ${m.name}'s Report`,'',`<div id="mr-body"></div>`);
+  openSP(`📋 ${esc(m.name)}'s Report`,'',`<div id="mr-body"></div>`);
   setTimeout(()=>openMemberReport_render(m,selPeriod,PERIODS),50);
 };
 
@@ -581,7 +581,7 @@ async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
   <!-- Identity -->
   <div style="display:flex;align-items:center;gap:12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:14px">
     <span style="width:40px;height:40px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
-    <div style="flex:1"><div style="font-size:14px;font-weight:800">${m.name}</div>
+    <div style="flex:1"><div style="font-size:14px;font-weight:800">${esc(m.name)}</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">${PILL(m.role||'Member','#2563eb')}${PILL(m.access||'Member','#7c3aed')}${PILL(m.status||'Active',m.status==='Active'||!m.status?'#15803d':'#d97706')}</div></div>
   </div>
 
@@ -598,28 +598,28 @@ async function openMemberReport_renderInner(m,period,PERIODS,from,to,inR,label){
     return`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:var(--s2);border-radius:7px">
       <span style="font-size:13px;flex-shrink:0;line-height:1.4">${icon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;color:var(--tx);line-height:1.4">${n.message}</div>
+        <div style="font-size:11px;color:var(--tx);line-height:1.4">${esc(n.message)}</div>
         <div style="font-size:9px;color:var(--tx3);margin-top:2px">${n.type}${n.taskTitle?' · '+n.taskTitle:''} · ${fdt(n.at)}</div>
       </div>
       <span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap;background:${n.read?'#f0fdf4':'#fffbeb'};color:${n.read?'#15803d':'#b45309'};border:1px solid ${n.read?'#86efac':'#fde68a'}">${n.read?'✓ Read':'◌ Unread'}</span>
     </div>`;
   }).join('')}
-  </div>`:`<div style="font-size:12px;color:var(--tx3);padding:8px 0;margin-bottom:4px">No notifications were sent to ${m.name} in this period.</div>`}
+  </div>`:`<div style="font-size:12px;color:var(--tx3);padding:8px 0;margin-bottom:4px">No notifications were sent to ${esc(m.name)} in this period.</div>`}
 
   ${periodTasks.length?SP('📋 Tasks ('+periodTasks.length+')'):''}
   ${periodTasks.length?`<div class="tw" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>Task</th><th>Status</th><th>Est</th><th>Actual</th><th>Var</th></tr></thead><tbody>
-  ${periodTasks.map(t=>{const v=t.est&&t.actual?Math.round((t.actual-t.est)/t.est*100):null;const vc=v===null?'var(--tx3)':Math.abs(v)<=20?'#15803d':Math.abs(v)<=50?'#d97706':'#dc2626';return`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:11px;font-weight:700;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td><td>${spill(t.status)}</td><td style="font-size:10px">${t.est!=null?t.est+'h':'—'}</td><td style="font-size:10px;color:#0891b2">${t.actual!=null?t.actual+'h':'—'}</td><td style="font-size:10px;font-weight:700;color:${vc}">${v!==null?(v>0?'+':'')+v+'%':'—'}</td></tr>`;}).join('')}
+  ${periodTasks.map(t=>{const v=t.est&&t.actual?Math.round((t.actual-t.est)/t.est*100):null;const vc=v===null?'var(--tx3)':Math.abs(v)<=20?'#15803d':Math.abs(v)<=50?'#d97706':'#dc2626';return`<tr onclick="openTask('${t.id}')" class="cl"><td style="font-size:11px;font-weight:700;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</td><td>${spill(t.status)}</td><td style="font-size:10px">${t.est!=null?t.est+'h':'—'}</td><td style="font-size:10px;color:#0891b2">${t.actual!=null?t.actual+'h':'—'}</td><td style="font-size:10px;font-weight:700;color:${vc}">${v!==null?(v>0?'+':'')+v+'%':'—'}</td></tr>`;}).join('')}
   </tbody></table></div>`:''}
 
   ${reviewedByMe.length?SP('🔍 Reviews Done ('+reviewedByMe.length+')'):''}
-  ${reviewedByMe.length?`<div style="display:flex;flex-direction:column;gap:4px">${reviewedByMe.slice(0,5).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--s2);border-radius:7px;cursor:pointer;font-size:12px"><span style="font-size:10px">✅</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</span><span style="font-size:10px;color:var(--tx3)">${fdt(t.tsReviewed)}</span></div>`).join('')}</div>`:''}
+  ${reviewedByMe.length?`<div style="display:flex;flex-direction:column;gap:4px">${reviewedByMe.slice(0,5).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--s2);border-radius:7px;cursor:pointer;font-size:12px"><span style="font-size:10px">✅</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span><span style="font-size:10px;color:var(--tx3)">${fdt(t.tsReviewed)}</span></div>`).join('')}</div>`:''}
 
   ${myMeetings.length?SP('📅 Meetings ('+myMeetings.length+')'):''}
-  ${myMeetings.length?`<div style="display:flex;flex-direction:column;gap:4px">${myMeetings.slice(0,6).map(mt=>{const k=Object.keys(mt.attendance||{}).find(k=>k.toLowerCase()===m.name.toLowerCase());const att=k?mt.attendance[k]:'invited';return`<div onclick="openMeetingDetail('${mt.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--s2);border-radius:7px;cursor:pointer;font-size:12px"><span style="font-size:10px">${att==='present'?'✅':att==='absent'?'❌':'📅'}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mt.title}</span><span style="font-size:10px;color:var(--tx3)">${fd(mt.meeting_date)}</span></div>`;}).join('')}</div>`:''}
+  ${myMeetings.length?`<div style="display:flex;flex-direction:column;gap:4px">${myMeetings.slice(0,6).map(mt=>{const k=Object.keys(mt.attendance||{}).find(k=>k.toLowerCase()===m.name.toLowerCase());const att=k?mt.attendance[k]:'invited';return`<div onclick="openMeetingDetail('${mt.id}')" style="display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--s2);border-radius:7px;cursor:pointer;font-size:12px"><span style="font-size:10px">${att==='present'?'✅':att==='absent'?'❌':'📅'}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(mt.title)}</span><span style="font-size:10px;color:var(--tx3)">${fd(mt.meeting_date)}</span></div>`;}).join('')}</div>`:''}
 
   ${helpGiven.length||helpRequested.length?SP('🤝 Help Requests'):''}
-  ${helpGiven.length?`<div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:4px">GIVEN (${helpGiven.length})</div><div style="display:flex;flex-direction:column;gap:3px">${helpGiven.map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:#f0fdf4;border-radius:7px;cursor:pointer;font-size:11px"><span>🤝</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</span>${spill(t.status)}</div>`).join('')}</div>`:''}
-  ${helpRequested.length?`<div style="font-size:10px;font-weight:700;color:#ea580c;margin:6px 0 4px">REQUESTED (${helpRequested.length})</div><div style="display:flex;flex-direction:column;gap:3px">${helpRequested.map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:#fff7ed;border-radius:7px;cursor:pointer;font-size:11px"><span>⏸</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</span>${spill(t.status)}</div>`).join('')}</div>`:''}
+  ${helpGiven.length?`<div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:4px">GIVEN (${helpGiven.length})</div><div style="display:flex;flex-direction:column;gap:3px">${helpGiven.map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:#f0fdf4;border-radius:7px;cursor:pointer;font-size:11px"><span>🤝</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>${spill(t.status)}</div>`).join('')}</div>`:''}
+  ${helpRequested.length?`<div style="font-size:10px;font-weight:700;color:#ea580c;margin:6px 0 4px">REQUESTED (${helpRequested.length})</div><div style="display:flex;flex-direction:column;gap:3px">${helpRequested.map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:#fff7ed;border-radius:7px;cursor:pointer;font-size:11px"><span>⏸</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title)}</span>${spill(t.status)}</div>`).join('')}</div>`:''}
 
   ${remSent.length||remReceived.length?SP('🔔 Reminders (Sent: '+remSent.length+' · Received: '+remReceived.length+')'):''}
   ${remSent.slice(0,4).map(r=>`<div style="background:var(--s2);border-radius:7px;padding:6px 10px;margin-bottom:4px;font-size:11px"><strong>→ ${r.toName}</strong>${r.taskTitle?' · '+r.taskTitle:''} <span style="color:var(--tx3);font-size:10px">${fdt(r.at)}</span></div>`).join('')}
@@ -695,8 +695,8 @@ function rHelpRequests(el){
         h+=`<div onclick="openTask('${tk.id}')" style="background:var(--s);border:1px solid ${isActionable?'var(--ac)':'var(--bd)'};border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .15s${isActionable?';box-shadow:0 0 0 2px var(--ac)22':''}" onmouseenter="this.style.boxShadow='var(--shmd)'" onmouseleave="this.style.boxShadow='${isActionable?'0 0 0 2px var(--ac)22':''}'">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:800;color:var(--tx);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tk.title}</div>
-              ${parent?`<div style="font-size:11px;color:var(--tx3)">↳ For task: <span style="color:var(--ac);font-weight:600;cursor:pointer" onclick="event.stopPropagation();openTask('${parent.id}')">${parent.title}</span></div>`:''}
+              <div style="font-size:13px;font-weight:800;color:var(--tx);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(tk.title)}</div>
+              ${parent?`<div style="font-size:11px;color:var(--tx3)">↳ For task: <span style="color:var(--ac);font-weight:600;cursor:pointer" onclick="event.stopPropagation();openTask('${parent.id}')">${esc(parent.title)}</span></div>`:''}
             </div>
             <span style="background:${statusColor}18;color:${statusColor};border:1px solid ${statusColor}30;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0">${tk.status}</span>
           </div>
