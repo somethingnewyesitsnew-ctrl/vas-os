@@ -126,7 +126,7 @@ function rReminders(el){
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
               ${tab===2?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--tx)">${fromM?.name||r.fromName||'?'} <span style="color:var(--tx3);font-weight:500">→</span> ${toM?.name||r.toName||'?'}</span>`:`
               <span style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase">${shownLabel}:</span>
-              ${shown?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:20px;border-radius:50%;background:${shown.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800">${shown.av}</span><span style="font-size:12px;font-weight:700;color:var(--tx)">${shown.name}</span></span>`:'<span style="font-size:12px;color:var(--tx3)">Unknown</span>'}`}
+              ${shown?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:20px;border-radius:50%;background:${shown.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:800">${shown.av}</span><span style="font-size:12px;font-weight:700;color:var(--tx)">${esc(shown.name)}</span></span>`:'<span style="font-size:12px;color:var(--tx3)">Unknown</span>'}`}
               <span style="font-size:10px;color:var(--tx3);margin-left:auto">${fdt(r.at)}</span>
             </div>
             ${(()=>{
@@ -137,14 +137,14 @@ function rReminders(el){
               if(linkedTask){
                 const isHelp=linkedTask.type==='Help Request';
                 chips+=`<div onclick="openTask('${linkedTask.id}')" style="display:inline-flex;align-items:center;gap:6px;background:${isHelp?'#fff7ed':'var(--al)'};border:1px solid ${isHelp?'#fed7aa':'#bfdbfe'};border-radius:7px;padding:6px 11px;margin-bottom:8px;cursor:pointer;font-size:11px;font-weight:700;color:${isHelp?'#c2410c':'var(--ac)'}">
-                  ${isHelp?'🤝':'☑'} ${linkedTask.title}
+                  ${isHelp?'🤝':'☑'} ${esc(linkedTask.title)}
                   <span style="font-weight:500;margin-left:4px">${spill(linkedTask.status)}</span>
                   ${linkedTask.due?`<span style="font-size:10px;color:var(--tx3)">· Due ${fd(linkedTask.due)}</span>`:''}
                 </div>`;
               }
               if(linkedMeeting){
                 chips+=`<div onclick="openMeetingDetail('${linkedMeeting.id}')" style="display:inline-flex;align-items:center;gap:6px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;padding:6px 11px;margin-bottom:8px;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed">
-                  📅 ${linkedMeeting.title}
+                  📅 ${esc(linkedMeeting.title)}
                   <span style="font-size:10px;color:var(--tx3)">· ${fd(linkedMeeting.meeting_date)}</span>
                 </div>`;
               }
