@@ -572,13 +572,18 @@ function buildTestReports(){
 
 function buildScheduleEditor(){
   const allOps=[...DB.operators,...DB.companies.filter(c=>c.type!=='Partner')];
+  const defaultReviewer=DB.team.find(t=>t.name==='Aymen');
   return`<div class="card"><div class="ct"><span class="ct-t">Test Schedule</span></div>
-    <div class="tw" style="margin-bottom:14px"><table><thead><tr><th>Operator</th><th>Tester</th><th>Day</th><th>Status</th><th></th></tr></thead><tbody>
-      ${DB.testSchedules.length===0?'<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:16px">No schedules yet</td></tr>':
+    <div class="tw" style="margin-bottom:14px"><table><thead><tr><th>Operator</th><th>Tester</th><th>Day</th><th>Reviewer</th><th>Status</th><th></th></tr></thead><tbody>
+      ${DB.testSchedules.length===0?'<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:16px">No schedules yet</td></tr>':
         DB.testSchedules.map(s=>{const op=[...DB.operators,...DB.companies].find(o=>o.id===s.operator_id);const m=DB.team.find(t=>t.id===s.member_id);return`<tr>
           <td style="font-weight:600">📡 ${op?.name||'?'}</td>
           <td><span style="display:flex;align-items:center;gap:5px">${m?`<span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${m.av}</span>`:''} ${m?.name||'?'}</span></td>
           <td>${DAYS[s.day_of_week]}</td>
+          <td><select onchange="updateScheduleReviewer('${s.id}',this.value)" style="padding:5px 7px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:12px;outline:none">
+            <option value="" ${!s.reviewer_id?'selected':''}>Default${defaultReviewer?` (${defaultReviewer.name})`:''}</option>
+            ${DB.team.map(t=>`<option value="${t.id}" ${s.reviewer_id===t.id?'selected':''}>${t.name}</option>`).join('')}
+          </select></td>
           <td><span style="background:${s.active!==false?'var(--gb)':'var(--s2)'};color:${s.active!==false?'var(--g)':'var(--tx3)'};font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">${s.active!==false?'Active':'Inactive'}</span></td>
           <td><button class="btn bd2 bxs" onclick="deleteSchedule('${s.id}')">✕</button></td>
         </tr>`;}).join('')}
@@ -597,20 +602,31 @@ function buildScheduleEditor(){
         <select id="new-sched-day" style="padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
           ${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}
         </select></div>
+      <div style="min-width:130px"><label style="font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:4px">Reviewer</label>
+        <select id="new-sched-rev" style="width:100%;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none">
+          <option value="">Default${defaultReviewer?` (${defaultReviewer.name})`:''}</option>
+          ${DB.team.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+        </select></div>
       <button class="btn bp" style="padding:9px 16px;font-size:13px" onclick="addScheduleNew()">+ Add</button>
     </div>
   </div>`;
 }
 
 window.addScheduleNew=async()=>{
-  const operatorId=document.getElementById('new-sched-op')?.value;const memberId=document.getElementById('new-sched-mbr')?.value;const dayOfWeek=parseInt(document.getElementById('new-sched-day')?.value||'1');
+  const operatorId=document.getElementById('new-sched-op')?.value;const memberId=document.getElementById('new-sched-mbr')?.value;const dayOfWeek=parseInt(document.getElementById('new-sched-day')?.value||'1');const reviewerId=document.getElementById('new-sched-rev')?.value||null;
   if(!operatorId||!memberId){toast('Select operator and member','bad');return;}
   const exists=DB.testSchedules.find(s=>s.operator_id===operatorId&&s.member_id===memberId&&s.day_of_week===dayOfWeek&&s.active!==false);
   if(exists){toast('Already scheduled','bad');return;}
-  const s={operator_id:operatorId,member_id:memberId,day_of_week:dayOfWeek,active:true};
+  const s={operator_id:operatorId,member_id:memberId,day_of_week:dayOfWeek,active:true,reviewer_id:reviewerId};
   const r=await sbSaveSchedule(s);if(r?.id){s.id=r.id;DB.testSchedules.push(s);toast('Added ✓','ok');nav('svctest',document.querySelector('[data-p="svctest"]'));}
 };
 window.addSchedule=window.addScheduleNew;
+window.updateScheduleReviewer=async(id,reviewerId)=>{
+  const s=DB.testSchedules.find(x=>x.id===id);if(!s)return;
+  s.reviewer_id=reviewerId||null;
+  await sbUpdateScheduleReviewer(id,s.reviewer_id);
+  toast('Reviewer updated ✓','ok');
+};
 window.deleteSchedule=async(id)=>{await sbDelSchedule(id);DB.testSchedules=DB.testSchedules.filter(s=>s.id!==id);nav('svctest',document.querySelector('[data-p="svctest"]'));};
 
 
