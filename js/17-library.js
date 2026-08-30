@@ -36,7 +36,7 @@ function renderLibAccessSummary(){
   return `<div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:9px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:700;color:var(--tx3);white-space:nowrap">👥 Library access:</span>
     ${granted.length?granted.map(m=>`<span onclick="openMemberDetail('${m.id}')" style="display:inline-flex;align-items:center;gap:5px;background:var(--s);border:1px solid var(--bd);border-radius:20px;padding:2px 9px 2px 3px;cursor:pointer;font-size:11px;font-weight:600">
-      <span style="width:16px;height:16px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800;flex-shrink:0">${m.av}</span>${m.name}
+      <span style="width:16px;height:16px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:800;flex-shrink:0">${m.av}</span>${esc(m.name)}
     </span>`).join(''):'<span style="font-size:11px;color:var(--tx3)">Admins only right now</span>'}
     <button onclick="navTo('team')" style="margin-left:auto;font-size:10px;font-weight:700;color:var(--ac);background:none;border:none;cursor:pointer;white-space:nowrap">Manage in Team →</button>
   </div>`;
@@ -74,9 +74,9 @@ function rLibrary(el){
     return true;
   }).sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
 
-  const projOpts=DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  const svcOpts=(DB.services||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  const opOpts=[...DB.operators,...DB.companies].map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
+  const projOpts=DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const svcOpts=(DB.services||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  const opOpts=[...DB.operators,...DB.companies].map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('');
 
   const pendingReqs=getLibRequests().filter(r=>r.status==='Pending');
 
@@ -129,7 +129,7 @@ function rLibrary(el){
               <div style="width:36px;height:36px;border-radius:10px;background:var(--al);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📖</div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:14px;font-weight:800;color:var(--tx);line-height:1.3;margin-bottom:3px">${escapeHtml(it.topic)}</div>
-                ${it.desc?`<div style="font-size:12px;color:var(--tx3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${it.desc}</div>`:''}
+                ${it.desc?`<div style="font-size:12px;color:var(--tx3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(it.desc)}</div>`:''}
               </div>
             </div>
             ${canEdit?`<div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
@@ -140,9 +140,9 @@ function rLibrary(el){
           ${it.notes?`<div style="background:var(--s2);border-left:3px solid var(--ac);padding:8px 10px;border-radius:0 7px 7px 0;font-size:11px;color:var(--tx2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escapeHtml(it.notes)}</div>`:''}
           ${it.link?`<div style="display:flex;align-items:center;gap:5px;color:var(--ac);font-size:11px;font-weight:600;overflow:hidden">🔗<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:3px">${it.link.replace(/^https?:\/\//, '').slice(0,50)}</span></div>`:''}
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:6px">
-            ${proj?`<span style="background:var(--al);color:var(--ac);border:1px solid var(--ac)22;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◉ ${proj.name}</span>`:''}
-            ${svc?`<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◐ ${svc.name}</span>`:''}
-            ${op?`<span style="background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◑ ${op.name}</span>`:''}
+            ${proj?`<span style="background:var(--al);color:var(--ac);border:1px solid var(--ac)22;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◉ ${esc(proj.name)}</span>`:''}
+            ${svc?`<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◐ ${esc(svc.name)}</span>`:''}
+            ${op?`<span style="background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">◑ ${esc(op.name)}</span>`:''}
             ${(it.tags||[]).map(t=>`<span style="background:var(--s2);border:1px solid var(--bd);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;color:var(--tx3)">#${t.trim()}</span>`).join('')}
           </div>
         </div>
@@ -196,9 +196,9 @@ window.openLibEntry=(id)=>{
   }
   if(proj||svc||op){
     body+=`<div class="sps">Linked To</div>`;
-    if(proj) body+=`<div onclick="openProjectDetail('${proj.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◉ <strong>Project:</strong> ${proj.name}</div>`;
-    if(svc) body+=`<div onclick="openSvcDetail('${svc.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◐ <strong>Service:</strong> ${svc.name}</div>`;
-    if(op) body+=`<div onclick="openEntityDetail('${op.id}','${DB.operators.find(o=>o.id===op.id)?'op':'co'}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◑ <strong>Operator:</strong> ${op.name}</div>`;
+    if(proj) body+=`<div onclick="openProjectDetail('${proj.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◉ <strong>Project:</strong> ${esc(proj.name)}</div>`;
+    if(svc) body+=`<div onclick="openSvcDetail('${svc.id}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◐ <strong>Service:</strong> ${esc(svc.name)}</div>`;
+    if(op) body+=`<div onclick="openEntityDetail('${op.id}','${DB.operators.find(o=>o.id===op.id)?'op':'co'}')" style="font-size:12px;margin-bottom:5px;cursor:pointer;color:var(--ac)">◑ <strong>Operator:</strong> ${esc(op.name)}</div>`;
   }
   if((it.tags||[]).length){
     body+=`<div class="sps">Tags</div>`;
@@ -219,7 +219,7 @@ window.requestLibAccess=()=>{
   const req={id:'lr'+gid(),memberId:CU.id,memberName:CU.name,reason,status:'Pending',at:now()};
   reqs.push(req);
   saveLibRequests(reqs);
-  logAction('Library Access Requested',`${CU.name} requested library access${reason?' — Reason: '+reason:''}`, 'Info','Library','');
+  logAction('Library Access Requested',`${esc(CU.name)} requested library access${reason?' — Reason: '+reason:''}`, 'Info','Library','');
   toast('Request sent ✓ — admins have been notified','ok',5000);
   // Notify all admins + PMs
   DB.team.filter(m=>isAdminMember(m)).forEach(m=>{
@@ -275,7 +275,7 @@ window.approveLibAccess=(reqId)=>{
     sendNotif(m.name,`Your Library access request has been approved by ${CU.name}`,'Library Access','Library');
     notifyTG(m.id,'default',{desc:`✅ Library Access Approved\n\nHi ${m.name}! ${CU.name} has approved your Library access. You can now access the Library.`,link:appLink('library')});
   }
-  logAction('Library Access Approved',`${CU.name} approved library access for ${r.memberName}`,'Success','Library',`Requested: ${fd(r.at?.slice(0,10))}`);
+  logAction('Library Access Approved',`${esc(CU.name)} approved library access for ${r.memberName}`,'Success','Library',`Requested: ${fd(r.at?.slice(0,10))}`);
   toast(`Access granted to ${r.memberName} ✓`,'ok');
   closeSP();
   nav('library',document.querySelector('[data-p="library"]'));
@@ -291,7 +291,7 @@ window.rejectLibAccess=(reqId)=>{
     sendNotif(m.name,`Your Library access request was declined by ${CU.name}`,'Library Access','Library');
     notifyTG(m.id,'default',{desc:`❌ Library Access Declined\n\nHi ${m.name}! Your Library access request was not approved by ${CU.name}. Contact your manager for more info.`,link:appLink('')});
   }
-  logAction('Library Access Rejected',`${CU.name} rejected library access for ${r.memberName}`,'Warning','Library','');
+  logAction('Library Access Rejected',`${esc(CU.name)} rejected library access for ${r.memberName}`,'Warning','Library','');
   toast(`Request rejected`,'ok');
   closeSP();
   nav('library',document.querySelector('[data-p="library"]'));
@@ -308,11 +308,11 @@ window.openLibModal=(id, presetProjectId)=>{
   document.getElementById('lb-notes').value=it?.notes||'';
   document.getElementById('lb-tags').value=(it?.tags||[]).join(', ');
   const projSel=document.getElementById('lb-project');
-  projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${(it?.projectId||presetProjectId)===p.id?'selected':''}>${p.name}</option>`).join('');
+  projSel.innerHTML='<option value="">— None —</option>'+DB.projects.map(p=>`<option value="${p.id}" ${(it?.projectId||presetProjectId)===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
   const svcSel=document.getElementById('lb-service');
-  svcSel.innerHTML='<option value="">— None —</option>'+(DB.services||[]).map(s=>`<option value="${s.id}" ${it?.serviceId===s.id?'selected':''}>${s.name}</option>`).join('');
+  svcSel.innerHTML='<option value="">— None —</option>'+(DB.services||[]).map(s=>`<option value="${s.id}" ${it?.serviceId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
   const opSel=document.getElementById('lb-operator');
-  opSel.innerHTML='<option value="">— None —</option>'+([ ...DB.operators,...DB.companies]).map(o=>`<option value="${o.id}" ${it?.operatorId===o.id?'selected':''}>${o.name}</option>`).join('');
+  opSel.innerHTML='<option value="">— None —</option>'+([ ...DB.operators,...DB.companies]).map(o=>`<option value="${o.id}" ${it?.operatorId===o.id?'selected':''}>${esc(o.name)}</option>`).join('');
   document.getElementById('lb-btn').dataset.editId=id||'';
   OM('m-lib');
 };
@@ -327,10 +327,10 @@ window.saveLibEntry=()=>{
   if(editId){
     const it=items.find(x=>x.id===editId);
     if(it){Object.assign(it,data);it.updatedAt=now();}
-    logAction('Library Updated',`${CU.name} updated library entry "${topic}"`,'Info','Library','');
+    logAction('Library Updated',`${esc(CU.name)} updated library entry "${topic}"`,'Info','Library','');
   } else {
     items.unshift({id:'lb'+gid(),...data,createdBy:CU?.name||'',at:now()});
-    logAction('Library Entry Added',`${CU.name} added library entry "${topic}"`,'Success','Library','');
+    logAction('Library Entry Added',`${esc(CU.name)} added library entry "${topic}"`,'Success','Library','');
   }
   saveLibrary(items);
   CM('m-lib');
@@ -342,7 +342,7 @@ window.deleteLibEntry=(id)=>{
   const it=getLibrary().find(x=>x.id===id);
   if(!confirm(`Delete "${it?.topic||'this entry'}"?`))return;
   saveLibrary(getLibrary().filter(x=>x.id!==id));
-  logAction('Library Deleted',`${CU.name} deleted library entry "${it?.topic||id}"`,'Warning','Library','');
+  logAction('Library Deleted',`${esc(CU.name)} deleted library entry "${it?.topic||id}"`,'Warning','Library','');
   toast('Entry deleted','ok');
   nav('library',document.querySelector('[data-p="library"]'));
 };
