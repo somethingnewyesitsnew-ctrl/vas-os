@@ -12,11 +12,11 @@ function rDocs(el){
     <div class="fb" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">
       <input class="si" id="ds2" placeholder="Search docs…" oninput="fDocs()" style="min-width:160px">
       <select class="fs" id="dt2" onchange="fDocs()"><option value="">All types</option>${Object.keys(tc).map(t=>`<option>${t}</option>`).join('')}</select>
-      ${full?`<select class="fs" id="df-mbr" onchange="fDocs()"><option value="">All authors</option>${DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select>`:''}
-      <select class="fs" id="df-svc" onchange="fDocs()"><option value="">All services</option>${DB.services.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select class="fs" id="df-op" onchange="fDocs()"><option value="">All operators</option>${DB.operators.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}</select>
-      ${full?`<select class="fs" id="df-co" onchange="fDocs()"><option value="">All companies</option>${DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>`:''}
-      <select class="fs" id="df-proj" onchange="fDocs()"><option value="">All projects</option>${DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+      ${full?`<select class="fs" id="df-mbr" onchange="fDocs()"><option value="">All authors</option>${DB.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select>`:''}
+      <select class="fs" id="df-svc" onchange="fDocs()"><option value="">All services</option>${DB.services.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+      <select class="fs" id="df-op" onchange="fDocs()"><option value="">All operators</option>${DB.operators.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
+      ${full?`<select class="fs" id="df-co" onchange="fDocs()"><option value="">All companies</option>${DB.companies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>`:''}
+      <select class="fs" id="df-proj" onchange="fDocs()"><option value="">All projects</option>${DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
       <select class="fs" id="df-date" onchange="fDocs()"><option value="">All dates</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select>
     </div>
     <div id="dg2" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px"></div>`;
@@ -54,14 +54,14 @@ window.fDocs=()=>{
   g.innerHTML=f.map(d=>{const auth=DB.team.find(m=>m.id===d.author);const col=tc[d.type]||'var(--tx3)';
     return`<div class="card" style="cursor:pointer" onclick="openDoc2('${d.id}')">
       <div style="display:flex;justify-content:space-between;gap:7px;margin-bottom:5px">
-        <div style="font-size:12px;font-weight:700;line-height:1.3">${d.title}${d.fromTask?'<span style="font-size:9px;font-weight:700;padding:1px 5px;background:var(--al);color:var(--ac);border-radius:4px;margin-left:5px">AUTO</span>':''}</div>
+        <div style="font-size:12px;font-weight:700;line-height:1.3">${esc(d.title)}${d.fromTask?'<span style="font-size:9px;font-weight:700;padding:1px 5px;background:var(--al);color:var(--ac);border-radius:4px;margin-left:5px">AUTO</span>':''}</div>
         <span style="background:${col}12;color:${col};font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0">${d.type.split(' ')[0].toUpperCase()}</span>
       </div>
       <div style="font-size:11px;color:var(--tx2);line-height:1.5;margin-bottom:7px">${(d.content||'').slice(0,100)}${(d.content||'').length>100?'…':''}</div>
       <div style="font-size:10px;color:var(--tx3);margin-bottom:8px">${auth?'✍ '+auth.name+' · ':''}${fr(d.at)}</div>
       <div class="act-c" onclick="event.stopPropagation()">
         ${isAdmin()?`<div class="ib edt" onclick="openDocModal('${d.id}')">✏</div>
-        <div class="ib del" onclick="delItem('docs','${d.id}','${d.title.replace(/'/g,"\\'")}')">🗑</div>`:''}
+        <div class="ib del" onclick="delItem('docs','${d.id}')">🗑</div>`:''}
       </div>
     </div>`;
   }).join('')+(f.length===0?'<div class="empty"><div class="ei">📚</div><div class="et">No documents match</div></div>':'');
@@ -77,12 +77,12 @@ window.openDoc2=(id)=>{
     <div class="spf"><div class="spl">Author</div><div class="spv">${auth?auth.name:'—'}</div></div>
     <div class="spf"><div class="spl">Type</div><div class="spv">${d.type}</div></div>
   </div>
-  ${src?`<div class="spf"><div class="spl">Source Task</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openTask('${src.id}')">${src.title}</div></div>`:''}
-  ${proj?`<div class="spf"><div class="spl">Project</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openProjectDetail('${proj.id}')">◉ ${proj.name}</div></div>`:''}
+  ${src?`<div class="spf"><div class="spl">Source Task</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openTask('${src.id}')">${esc(src.title)}</div></div>`:''}
+  ${proj?`<div class="spf"><div class="spl">Project</div><div class="spv" style="cursor:pointer;color:var(--ac)" onclick="openProjectDetail('${proj.id}')">◉ ${esc(proj.name)}</div></div>`:''}
   <div class="spf"><div class="spl">Content</div><div class="spnote">${d.content||''}</div></div>
   <div class="spa">
     ${isAdmin()?`<button class="btn bg2 bsm" onclick="openDocModal('${d.id}')">✏ Edit</button>
-    <button class="btn bd2 bsm" onclick="delItem('docs','${d.id}','${d.title.replace(/'/g,"\\'")}');closeSP()">🗑 Delete</button>`:''}
+    <button class="btn bd2 bsm" onclick="delItem('docs','${d.id}');closeSP()">🗑 Delete</button>`:''}
   </div>`;
   document.getElementById('sp-pnl').classList.add('open');
 };
@@ -116,11 +116,11 @@ function rArchive(el){
 
       h+=`<div class="fb" style="flex-wrap:wrap;gap:6px">
         <input class="si" id="arc-s" placeholder="Search archive…" oninput="arcRender()" value="${sq}" style="min-width:160px">
-        <select class="fs" id="arc-svc" onchange="arcRender()"><option value="">All services</option>${DB.services.map(s=>`<option ${fSvc===s.id?'selected':''} value="${s.id}">${s.name}</option>`).join('')}</select>
-        <select class="fs" id="arc-mbr" onchange="arcRender()"><option value="">All members</option>${DB.team.map(m=>`<option ${fMbr===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
-        <select class="fs" id="arc-op" onchange="arcRender()"><option value="">All operators</option>${DB.operators.map(o=>`<option ${fOp===o.id?'selected':''} value="${o.id}">${o.name}</option>`).join('')}</select>
-        <select class="fs" id="arc-rev" onchange="arcRender()"><option value="">All reviewers</option>${DB.team.map(m=>`<option ${fRev===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
-        <select class="fs" id="arc-req" onchange="arcRender()"><option value="">All requesters</option>${DB.team.map(m=>`<option ${fReq===m.id?'selected':''} value="${m.id}">${m.name}</option>`).join('')}</select>
+        <select class="fs" id="arc-svc" onchange="arcRender()"><option value="">All services</option>${DB.services.map(s=>`<option ${fSvc===s.id?'selected':''} value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+        <select class="fs" id="arc-mbr" onchange="arcRender()"><option value="">All members</option>${DB.team.map(m=>`<option ${fMbr===m.id?'selected':''} value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+        <select class="fs" id="arc-op" onchange="arcRender()"><option value="">All operators</option>${DB.operators.map(o=>`<option ${fOp===o.id?'selected':''} value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
+        <select class="fs" id="arc-rev" onchange="arcRender()"><option value="">All reviewers</option>${DB.team.map(m=>`<option ${fRev===m.id?'selected':''} value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+        <select class="fs" id="arc-req" onchange="arcRender()"><option value="">All requesters</option>${DB.team.map(m=>`<option ${fReq===m.id?'selected':''} value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
         <input class="fs" type="date" id="arc-from" onchange="arcRender()" value="${fFrom}" title="Completed from">
         <input class="fs" type="date" id="arc-to" onchange="arcRender()" value="${fTo}" title="Completed to">
       </div>`;
@@ -136,7 +136,7 @@ function rArchive(el){
       const v=a.est&&a.actual?Math.round((a.actual-a.est)/a.est*100):null;
       const oc={Successful:'var(--g)',Partial:'var(--y)',Reverted:'var(--r)'}[a.outcome];
       h+=`<tr class="cl" onclick="openArcItem('${a.id}')">
-        <td>${a.title}</td><td style="font-size:11px;color:var(--tx2)">${a.type||'—'}</td>
+        <td>${esc(a.title)}</td><td style="font-size:11px;color:var(--tx2)">${a.type||'—'}</td>
         ${full?`<td style="font-size:11px">${cb?cb.name:a.by||'—'}</td>`:''}
         <td style="font-size:11px;color:var(--tx2)">${cr?cr.name:a.reviewer||'—'}</td>
         <td style="font-size:11px;color:var(--tx2)">${sn(a.svc)}</td>
@@ -144,7 +144,7 @@ function rArchive(el){
         <td>${a.est||'—'}</td><td>${a.actual||'—'}</td>
         <td><span style="background:${oc||'var(--s2)'}15;color:${oc||'var(--tx3)'};font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">${a.outcome||'—'}</span></td>
         <td style="font-size:11px;color:var(--tx2)">${fd(a.done)}</td>
-        <td onclick="event.stopPropagation()"><div class="act-c">${isAdmin()?`<div class="ib del" onclick="delItem('archive','${a.id}','${a.title.replace(/'/g,"\\'")}')">🗑</div>`:''}</div></td>
+        <td onclick="event.stopPropagation()"><div class="act-c">${isAdmin()?`<div class="ib del" onclick="delItem('archive','${a.id}')">🗑</div>`:''}</div></td>
       </tr>`;
     });
     h+=`</tbody></table></div>`;
@@ -246,7 +246,7 @@ window.endMeetingWithOutcomes=async(id)=>{
   window._endMeetingId=id;
   window._meetingActionItems=[];
 
-  const teamOpts=DB.team.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
+  const teamOpts=DB.team.map(t=>`<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
   const invList=[...new Set([m.created_by,...(m.invitees||[])])];
 
   let body=`
@@ -343,7 +343,7 @@ window.postTaskComment=async(taskId)=>{
   // notifyAdminsTG(), same split used across the rest of the task lifecycle.
   notifyAdmins(`${CU.name} commented on "${t.title}": ${text.slice(0,150)}`,'Comment',t.title,{taskId:t.id});
   notifyAdminsTG(`💬 New Comment\n\n${CU.name} commented on "${t.title}"\n\n"${text.slice(0,150)}"`,appLink('task-'+t.id));
-  logAction('Comment Posted',`${CU.name} commented on "${t.title}"`, 'Info', t.title, text.slice(0,100),{taskId:t.id,taskTitle:t.title});
+  logAction('Comment Posted',`${esc(CU.name)} commented on "${esc(t.title)}"`, 'Info', t.title, text.slice(0,100),{taskId:t.id,taskTitle:t.title});
   toast('Comment posted ✓','ok');
   updateBadges();
   setTimeout(()=>openTask(taskId),60);
@@ -402,7 +402,7 @@ window.savePostMeetingAction=async(meetingId)=>{
     operator:operatorId||null,        // maps to company_id in taskPayload
     company2:companyId||null,         // maps to company_id2 in taskPayload
     service:null,
-    desc:`Action item from meeting: "${m.title}" on ${fd(m.meeting_date)}`,
+    desc:`Action item from meeting: "${esc(m.title)}" on ${fd(m.meeting_date)}`,
     link:'',
     tsCreated:now(),tsAssigned:assigneeMember?now():null,tsOpened:null,tsStarted:null,
     tsSubmitted:null,tsReviewed:null,tsArchived:null,
@@ -452,7 +452,7 @@ window.saveMeetingNotes=async(id)=>{
 window.addMeetingActionItem=(meetingId)=>{
   const idx=window._aiCounter++;
   const m=DB.meetings.find(x=>x.id===meetingId);
-  const teamOpts=DB.team.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
+  const teamOpts=DB.team.map(t=>`<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
   const todayPlus=new Date();todayPlus.setDate(todayPlus.getDate()+3);
   const defDue=todayPlus.toISOString().split('T')[0];
 
@@ -548,7 +548,7 @@ window.confirmEndMeeting=async(id)=>{
       due:ai.due||null,
       est:null, recur:null,
       meetingId:m.id,   // ← link back to the meeting
-      desc:`Action item from meeting: "${m.title}" on ${fd(m.meeting_date)}${outcomes?'\n\nMeeting notes:\n'+outcomes:''}`,
+      desc:`Action item from meeting: "${esc(m.title)}" on ${fd(m.meeting_date)}${outcomes?'\n\nMeeting notes:\n'+outcomes:''}`,
       link:'',
       tsCreated:now(),tsAssigned:assigneeMember?now():null,tsOpened:null,tsStarted:null,
       tsSubmitted:null,tsReviewed:null,tsArchived:null,
@@ -576,7 +576,7 @@ window.confirmEndMeeting=async(id)=>{
   const extIds=[...new Set(items.filter(ai=>ai.assignee).map(ai=>{
     const mbr=DB.team.find(x=>x.name===ai.assignee||x.id===ai.assignee);return mbr?.id;
   }).filter(Boolean))];
-  if(extIds.length) showExternalNotifySheet(extIds,`Action items from: ${m.title}`,'Meeting action items — see All Tasks for details',null);
+  if(extIds.length) showExternalNotifySheet(extIds,`Action items from: ${esc(m.title)}`,'Meeting action items — see All Tasks for details',null);
 
   window._meetingActionItems=[];
   closeSP();
