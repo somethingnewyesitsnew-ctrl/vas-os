@@ -46,7 +46,7 @@ function filterMentionDrop(ev){
   drop.innerHTML=matches.slice(0,8).map(m=>
     `<div onmousedown="event.preventDefault();insertMention('${m.name.replace(/'/g,"\\'")}',${hit.start})" style="display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px" onmouseenter="this.style.background='var(--al)'" onmouseleave="this.style.background=''">
       <span style="width:20px;height:20px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
-      <span style="font-weight:600">${m.name}</span>
+      <span style="font-weight:600">${esc(m.name)}</span>
     </div>`
   ).join('');
 }
@@ -98,7 +98,7 @@ window.openTask=(id)=>{
   if(isMine&&!t.tsOpened){
     t.tsOpened=now();
     t.respH=hb(t.tsCreated,t.tsOpened);
-    logAction('Task Opened',`${CU.name} opened task "${t.title}"`,'Info',t.title,'First view — timestamp recorded');
+    logAction('Task Opened',`${esc(CU.name)} opened task "${esc(t.title)}"`,'Info',t.title,'First view — timestamp recorded');
     nUpdateTask(t);
     toast('Task opened — timestamp recorded ⏱','inf');
   }
@@ -116,7 +116,7 @@ window.openTask=(id)=>{
   </div>`;
 
   body+=`<div class="sp2">
-    <div class="spf"><div class="spl">Assigned To</div><div class="spv" ${ass?`style="cursor:pointer;color:var(--ac)" onclick="openMemberDetail('${t.assignedTo}')"`:''}>${ass?`<span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff">${ass.av}</span>${ass.name}</span>`:'—'}</div></div>
+    <div class="spf"><div class="spl">Assigned To</div><div class="spv" ${ass?`style="cursor:pointer;color:var(--ac)" onclick="openMemberDetail('${t.assignedTo}')"`:''}>${ass?`<span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff">${ass.av}</span>${esc(ass.name)}</span>`:'—'}</div></div>
     <div class="spf"><div class="spl">Reviewer</div><div class="spv">${rev?rev.name:'—'}</div></div>
     <div class="spf"><div class="spl">Service</div><div class="spv" ${svc?`style="cursor:pointer;color:var(--ac)" onclick="openSvcDetail('${t.service}')"`:''}>${svc?svc.name:'—'}</div></div>
     <div class="spf"><div class="spl">Operator</div><div class="spv">${op?op.name:'—'}</div></div>
@@ -156,7 +156,7 @@ window.openTask=(id)=>{
       body+=`<div onclick="openTask('${h.id}')" style="display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;margin-bottom:6px">
         ${spill(h.status)}
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:700">${h.title}</div>
+          <div style="font-size:12px;font-weight:700">${esc(h.title)}</div>
           <div style="font-size:10px;color:var(--tx3)">${helper?helper.name:'?'} · ${fdt(h.tsCreated)}</div>
         </div>
         <span class="due-badge ${hds.cls}">${hds.label}</span>
@@ -314,7 +314,7 @@ window.confirmReEstimate=async()=>{
   t.reEstimates=t.reEstimates||[];
   t.reEstimates.push({oldEst,newEst,reason,at:now(),by:CU.name});
   t.est=newEst;
-  logAction('Re-Estimated',`${CU.name} re-estimated "${t.title}" from ${oldEst}h to ${newEst}h — ${reason}`,'Warning',t.title,'');
+  logAction('Re-Estimated',`${esc(CU.name)} re-estimated "${esc(t.title)}" from ${oldEst}h to ${newEst}h — ${reason}`,'Warning',t.title,'');
   notifyAdmins(`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title,{taskId:t.id});
   if(t.reviewer){const rv=DB.team.find(m=>m.id===t.reviewer);if(rv)sendNotif(rv.name,`${CU.name} re-estimated "${t.title}": ${oldEst}h → ${newEst}h. Reason: ${reason}`,'Re-Estimate',t.title,false,{taskId:t.id});}
   await nUpdateTask(t);
@@ -326,7 +326,7 @@ window.reqHelp=(id)=>{
   _pendTask=id;
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const sel=document.getElementById('help-member');
-  sel.innerHTML=DB.team.filter(m=>m.id!==CU.id&&m.id!==t.assignedTo).map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  sel.innerHTML=DB.team.filter(m=>m.id!==CU.id&&m.id!==t.assignedTo).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   document.getElementById('help-due').value=t.due||'';
   document.getElementById('help-desc').value='';
   OM('m-help');
@@ -341,7 +341,7 @@ window.confirmHelpRequest=async()=>{
   const helper=DB.team.find(m=>m.id===helperId);
   const helpTask={
     id:'t'+gid(),
-    title:`🤝 Help Needed: ${t.title}`,
+    title:`🤝 Help Needed: ${esc(t.title)}`,
     status:'New',priority:t.priority,
     type:'Help Request',
     assignedTo:helperId,assignees:[helperId],
@@ -349,7 +349,7 @@ window.confirmHelpRequest=async()=>{
     reqBy:CU.name,createdBy:CU.name,
     parentTaskId:t.id,
     due:due||null,est:null,recur:null,
-    desc:`${CU.name} needs your help with task "${t.title}".\n\nWhat's needed:\n${desc}\n\nWork this task normally — set your estimate, start, then submit when done. ${CU.name} will review and accept or reject your submission.`,
+    desc:`${esc(CU.name)} needs your help with task "${esc(t.title)}".\n\nWhat's needed:\n${desc}\n\nWork this task normally — set your estimate, start, then submit when done. ${esc(CU.name)} will review and accept or reject your submission.`,
     link:'',tsCreated:now(),tsAssigned:now(),tsOpened:null,tsStarted:null,
     tsSubmitted:null,tsReviewed:null,tsArchived:null,
     actual:null,what:'',tech:'',rejReason:'',rejections:[]
@@ -373,7 +373,7 @@ window.confirmHelpRequest=async()=>{
   notifyAdmins(`${CU.name} requested help from ${helper?.name||'?'} on "${t.title}"`,'Help Request',t.title,{taskId:t.id});
   if(helper) notifyTG(helper.id,'help_requested',{title:t.title,desc,link:appLink('task-'+helpTask.id)});
   notifyAdminsTG(`🤝 Help Request\n\n${CU.name} requested help from ${helper?.name||'?'}\nTask: "${t.title}"`,appLink('task-'+t.id));
-  logAction('Help Requested',`${CU.name} requested help from ${helper?.name||'?'} for "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:helper?.id,memberName:helper?.name});
+  logAction('Help Requested',`${esc(CU.name)} requested help from ${helper?.name||'?'} for "${esc(t.title)}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:helper?.id,memberName:helper?.name});
   CM('m-help');toast(`Help request sent to ${helper?.name||'?'} ✓`,'ok');openTask(_pendTask);updateBadges();
 };
 
@@ -407,16 +407,16 @@ window.delHelpTask=async(id)=>{
 // the pre-filled (but still editable) message text.
 function reminderContextMsg(t){
   const ds=getDueStatus(t);
-  if(ds.key==='overdue') return `"${t.title}" is ${ds.label.replace('d overdue','day(s) overdue')} — it was due ${fd(t.due)}. Please take action.`;
+  if(ds.key==='overdue') return `"${esc(t.title)}" is ${ds.label.replace('d overdue','day(s) overdue')} — it was due ${fd(t.due)}. Please take action.`;
   if(t.status==='New'&&t.tsCreated&&!t.tsOpened){
     const hrs=Math.floor((Date.now()-new Date(t.tsCreated))/3600000);
-    return `"${t.title}" was assigned ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} ago and hasn't been opened yet. Please take a look.`;
+    return `"${esc(t.title)}" was assigned ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} ago and hasn't been opened yet. Please take a look.`;
   }
   if(t.status==='In Progress'&&t.tsStarted){
     const hrs=Math.floor((Date.now()-new Date(t.tsStarted))/3600000);
-    if(hrs>=12) return `"${t.title}" has been In Progress for ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} with no update. How's it going?`;
+    if(hrs>=12) return `"${esc(t.title)}" has been In Progress for ${hrs>=24?Math.floor(hrs/24)+'d':hrs+'h'} with no update. How's it going?`;
   }
-  return `Reminder: "${t.title}" is still ${t.status}. Please take action.`;
+  return `Reminder: "${esc(t.title)}" is still ${t.status}. Please take action.`;
 }
 
 window.reqRemind=(id)=>{
@@ -424,7 +424,7 @@ window.reqRemind=(id)=>{
   const t=DB.tasks.find(tk=>tk.id===id);if(!t)return;
   const sel=document.getElementById('remind-member');
   const candidates=[t.assignedTo,t.reviewer,...(t.assignees||[])].filter((x,i,a)=>x&&a.indexOf(x)===i&&x!==CU.id);
-  sel.innerHTML=candidates.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<option value="${m.id}">${m.name}</option>`:''}).join('')||DB.team.filter(m=>m.id!==CU.id).map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  sel.innerHTML=candidates.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<option value="${m.id}">${esc(m.name)}</option>`:''}).join('')||DB.team.filter(m=>m.id!==CU.id).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   // Pre-fill with a message specific to why this task needs a nudge —
   // admin can edit or clear it before sending; not just decoration.
   document.getElementById('remind-msg').value=reminderContextMsg(t);
@@ -447,7 +447,7 @@ window.confirmRemind=async()=>{
   // Admins are watching this too, same as the rest of the task lifecycle
   // notifications — a reminder is a signal something needs attention.
   notifyAdmins(`${CU.name} reminded ${m.name} about "${t.title}"`,'Reminder',t.title,{taskId:t.id});
-  logAction('Reminder Sent',`${CU.name} reminded ${m.name} about "${t.title}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:m.id,memberName:m.name});
+  logAction('Reminder Sent',`${esc(CU.name)} reminded ${esc(m.name)} about "${esc(t.title)}"`,'Info',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:m.id,memberName:m.name});
   CM('m-remind');toast(`Reminder sent to ${m.name} ✓`,'ok');
   updateBadges();
 };
@@ -456,7 +456,7 @@ window.confirmStart=async()=>{
   if(!h||h<=0){toast('Enter a valid estimate','bad');return;}
   const t=DB.tasks.find(tk=>tk.id===_pendTask);if(!t)return;
   t.est=h; t.status='In Progress'; t.tsStarted=now();
-  logAction('Task Started',`${CU.name} started "${t.title}" — ${h}h estimate`,'Success',t.title,'',{taskId:t.id,taskTitle:t.title});
+  logAction('Task Started',`${esc(CU.name)} started "${esc(t.title)}" — ${h}h estimate`,'Success',t.title,'',{taskId:t.id,taskTitle:t.title});
   const revMember=DB.team.find(m=>m.id===t.reviewer);
   if(revMember) sendNotif(revMember.name,`${CU.name} started "${t.title}" (Est: ${h}h) — awaiting review when done`,'Task Started',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} started task: "${t.title}" — ${h}h estimated`,'Task Started',t.title,{taskId:t.id});
@@ -508,13 +508,13 @@ window.confirmSubmit=async()=>{
   t.what=what; t.tech=document.getElementById('sub-tech').value;
   t.status='Pending Review'; t.tsSubmitted=submitTime;
   t.workH=actual;
-  logAction('Task Submitted',`${CU.name} submitted "${t.title}" — ${actual?actual+'h actual':'time not tracked'}`,'Success',t.title,'');
+  logAction('Task Submitted',`${esc(CU.name)} submitted "${esc(t.title)}" — ${actual?actual+'h actual':'time not tracked'}`,'Success',t.title,'');
   const revMember2=DB.team.find(m=>m.id===t.reviewer);
   if(revMember2) sendNotif(revMember2.name,`Review needed: "${t.title}" — ${actual?actual+'h actual':'auto-timed'} by ${CU.name}`,'Review Needed',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} submitted "${t.title}" for review (${actual?actual+'h':' time auto-tracked'})`,'Task Submitted',t.title,{taskId:t.id});
   if(revMember2) notifyTG(revMember2.id,'task_submitted',{title:t.title,priority:t.priority,link:appLink('task-'+t.id)});
   notifyAdminsTG(`📤 Task Submitted for Review\n\n${CU.name} submitted "${t.title}"\n${actual?'Actual: '+actual+'h':''}\nReviewer: ${revMember2?.name||'Not set'}`,appLink('task-'+t.id));
-  logAction('Task Submitted',`${CU.name} submitted "${t.title}" for review`,'Info',t.title,actual?`Actual: ${actual}h`:'',{taskId:t.id,taskTitle:t.title,memberId:revMember2?.id,memberName:revMember2?.name});
+  logAction('Task Submitted',`${esc(CU.name)} submitted "${esc(t.title)}" for review`,'Info',t.title,actual?`Actual: ${actual}h`:'',{taskId:t.id,taskTitle:t.title,memberId:revMember2?.id,memberName:revMember2?.name});
   await nUpdateTask(t);
   CM('m-sub'); toast('Submitted for review ✓','ok'); openTask(_pendTask); updateBadges();
 };
@@ -536,19 +536,19 @@ window.approveTask=async(id)=>{
 
   // Auto-create documentation from what was done
   if(t.what){
-    const doc={id:'d'+gid(),title:`${t.title} — Documentation`,type:'Task Documentation',status:'Published',author:t.assignedTo,fromTask:t.id,content:`${t.what}${t.tech?'\n\nTechnical Notes:\n'+t.tech:''}`,at:now()};
+    const doc={id:'d'+gid(),title:`${esc(t.title)} — Documentation`,type:'Task Documentation',status:'Published',author:t.assignedTo,fromTask:t.id,content:`${t.what}${t.tech?'\n\nTechnical Notes:\n'+t.tech:''}`,at:now()};
     DB.docs.unshift(doc); window._docsAll=[...DB.docs];
     nDoc(doc, doc.id);
-    logAction('Document Created',`Auto-doc: "${doc.title}"`,'Success',doc.title,'Auto from task approval');
+    logAction('Document Created',`Auto-doc: "${esc(doc.title)}"`,'Success',doc.title,'Auto from task approval');
   }
 
-  logAction('Task Approved',`${CU.name} approved "${t.title}"`,'Success',t.title,`Cycle: ${ch}h`);
+  logAction('Task Approved',`${esc(CU.name)} approved "${esc(t.title)}"`,'Success',t.title,`Cycle: ${ch}h`);
   await nUpdateTask(t);
   const assMember=DB.team.find(m=>m.id===t.assignedTo);
   if(assMember) sendNotif(assMember.name,`Your task "${t.title}" was APPROVED by ${CU.name} — archived + doc created`,'Task Approved',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} approved "${t.title}" — cycle time: ${ch?ch+'h':'unknown'}`,'Task Approved',t.title,{taskId:t.id});
   if(assMember) notifyTG(assMember.id,'task_approved',{title:t.title,link:appLink('task-'+t.id)});
-  logAction('Task Approved',`${CU.name} approved "${t.title}"`, 'Success', t.title, `Cycle: ${ch?ch+'h':'?'}`,{taskId:t.id,taskTitle:t.title,memberId:assMember?.id,memberName:assMember?.name});
+  logAction('Task Approved',`${esc(CU.name)} approved "${esc(t.title)}"`, 'Success', t.title, `Cycle: ${ch?ch+'h':'?'}`,{taskId:t.id,taskTitle:t.title,memberId:assMember?.id,memberName:assMember?.name});
 
   // Auto-spawn next recurrence if set
   if(t.recur){
@@ -662,13 +662,13 @@ window.rejectTask=async(id)=>{
   t.rejReason=reason; t.status='Rejected'; t.tsReviewed=now();
   if(!t.rejections)t.rejections=[];
   t.rejections.push({at:now(),by:CU.id,reason});
-  logAction('Task Rejected',`${CU.name} rejected "${t.title}"`,'Warning',t.title,reason);
+  logAction('Task Rejected',`${esc(CU.name)} rejected "${esc(t.title)}"`,'Warning',t.title,reason);
   await nUpdateTask(t);
   const assMember2=DB.team.find(m=>m.id===t.assignedTo);
   if(assMember2) sendNotif(assMember2.name,`Your task "${t.title}" was REJECTED by ${CU.name}. Reason: ${reason}`,'Task Rejected',t.title,false,{taskId:t.id});
   notifyAdmins(`${CU.name} rejected "${t.title}" — reason: ${reason}`,'Task Rejected',t.title,{taskId:t.id});
   if(assMember2) notifyTG(assMember2.id,'task_rejected',{title:t.title,reason,link:appLink('task-'+t.id)});
-  logAction('Task Rejected',`${CU.name} rejected "${t.title}" — ${reason}`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:assMember2?.id,memberName:assMember2?.name});
+  logAction('Task Rejected',`${esc(CU.name)} rejected "${esc(t.title)}" — ${reason}`,'Warning',t.title,'',{taskId:t.id,taskTitle:t.title,memberId:assMember2?.id,memberName:assMember2?.name});
   toast('Rejected — member notified ✓','ok'); closeSP(); updateBadges();
   if(page==='toreview')nav('toreview',document.querySelector('.ni.on'));
 };
@@ -715,7 +715,7 @@ window.chStatus=async(id,status)=>{
     t.revH=hb(t.tsSubmitted,t.tsReviewed);
     t.cycleH=hb(t.tsCreated,t.tsArchived);
   }
-  logAction('Status Changed',`${CU.name}: "${t.title}" → ${status}`,'Info',t.title,'');
+  logAction('Status Changed',`${esc(CU.name)}: "${esc(t.title)}" → ${status}`,'Info',t.title,'');
   await nUpdateTask(t);
   const assMbr=DB.team.find(m=>m.id===t.assignedTo);
   if(assMbr&&assMbr.name!==CU?.name) sendNotif(assMbr.name,`Your task "${t.title}" status changed to: ${status} (by ${CU.name})`,'Status Changed',t.title,false,{taskId:t.id});
