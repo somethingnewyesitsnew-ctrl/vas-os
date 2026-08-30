@@ -162,7 +162,7 @@ function teamLoadRows(teamLoad,maxLoad){
       <span style="width:30px;height:30px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${m.av}</span>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:5px">
-          <span style="font-size:12.5px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span>
+          <span style="font-size:12.5px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.name)}</span>
           <span style="font-size:9px;font-weight:700;color:${loadColor};flex-shrink:0">${loadLabel}</span>
         </div>
         <div style="position:relative;height:8px;background:var(--s2);border-radius:100px;overflow:hidden">
@@ -276,7 +276,7 @@ function rProjects(el){
             <span style="background:${col}18;color:${col};font-size:10.5px;font-weight:700;padding:3px 11px;border-radius:100px;display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block"></span>${pr.status}</span>
             ${projectCountdown(pr)}
           </div>
-          <div style="font-size:16px;font-weight:600;line-height:1.3;color:var(--tx);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pr.name}</div>
+          <div style="font-size:16px;font-weight:600;line-height:1.3;color:var(--tx);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pr.name)}</div>
           <div style="display:flex;flex-wrap:wrap;gap:11px;margin-bottom:13px;color:var(--tx3)">
             ${owner?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--tx2);font-weight:500">${icon('building')} ${owner}</span>`:''}
             ${pr.locationName?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--tx2);font-weight:500">${icon('pin')} ${pr.locationName}</span>`:''}
@@ -301,7 +301,7 @@ function rProjects(el){
           </div>
           ${members.length?`<div style="display:flex;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center">
-              ${members.slice(0,5).map((m,i)=>`<span title="${m.name}" style="width:26px;height:26px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff;border:2px solid var(--s);margin-left:${i>0?'-8px':'0'};flex-shrink:0">${m.av}</span>`).join('')}
+              ${members.slice(0,5).map((m,i)=>`<span title="${esc(m.name)}" style="width:26px;height:26px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff;border:2px solid var(--s);margin-left:${i>0?'-8px':'0'};flex-shrink:0">${m.av}</span>`).join('')}
               ${members.length>5?`<span style="width:26px;height:26px;border-radius:50%;background:var(--s2);border:2px solid var(--s);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--tx3);margin-left:-8px">+${members.length-5}</span>`:''}
             </div>
             <span style="font-size:10.5px;color:var(--tx3);font-weight:600">${members.length} member${members.length!==1?'s':''}</span>
@@ -310,7 +310,7 @@ function rProjects(el){
         <div class="ac" onclick="event.stopPropagation()" style="display:flex;gap:4px;padding:10px 14px;border-top:1px solid var(--bd);background:var(--s2);margin-top:auto">
           <div class="ib" style="color:var(--ac)" title="Add task to this project" onclick="event.stopPropagation();openTaskModal(null,'${pr.id}')">${icon('list',13)}</div>
           <div class="ib edt" onclick="event.stopPropagation();openProjectModal('${pr.id}')">✏</div>
-          <div class="ib del" style="margin-left:auto" onclick="event.stopPropagation();delItem('projects','${pr.id}','${pr.name.replace(/'/g,"\\'")}')">🗑</div>
+          <div class="ib del" style="margin-left:auto" onclick="event.stopPropagation();delItem('projects','${pr.id}')">🗑</div>
         </div>
       </div>`;
     });
@@ -350,13 +350,13 @@ window.openProjectDetail=(id)=>{
       ${pr.budget?`<div class="spf"><div class="spl">Budget</div><div class="spv">$${pr.budget.toLocaleString()}</div></div>`:''}
       ${pr.link?`<div class="spf" style="grid-column:1/-1"><div class="spl">Link</div><div class="spv"><a href="${pr.link}" target="_blank" style="color:var(--ac)">${pr.link}</a></div></div>`:''}
     </div>
-    ${pr.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${pr.desc}</div></div>`:''}
+    ${pr.desc?`<div class="spf"><div class="spl">Description</div><div class="spnote">${esc(pr.desc)}</div></div>`:''}
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:5px;margin-top:12px"><span>${tasks.length} total tasks</span><span style="font-weight:700;color:${col}">${pct}%</span></div>
     <div class="prg" style="height:6px;margin-bottom:10px"><div class="prf" style="width:${pct}%;background:${col}"></div></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
       ${[['Done',done,'#146C2E'],['Active',active,'#3762E4'],['Total',tasks.length,'#767B8D']].map(([l,v,c])=>`<div style="background:${c}12;border:1px solid ${c}25;border-radius:8px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--tx3);font-weight:600;margin-bottom:2px;text-transform:uppercase">${l}</div><div style="font-size:16px;font-weight:700;color:${c}">${v}</div></div>`).join('')}
     </div>
-    ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${m.name}</span>`:''}).join('')}</div>`:''}
+    ${members.length?`<div class="spl" style="margin-bottom:6px">Team (${members.length})</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">${members.map(mid=>{const m=DB.team.find(x=>x.id===mid);return m?`<span style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}33;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px">${esc(m.name)}</span>`:''}).join('')}</div>`:''}
 
     <div id="proj-tasks-wrap"></div>
 
@@ -387,7 +387,7 @@ window.openProjectDetail=(id)=>{
       const lid=actEl.dataset.lid;
       const tab=actEl.dataset.tab;
       if(act==='edit-project') openProjectModal(spBd._curProjectId);
-      else if(act==='delete-project'){const p=DB.projects.find(x=>x.id===spBd._curProjectId);if(p)delItem('projects',p.id,p.name.replace(/'/g,"'"));closeSP();}
+      else if(act==='delete-project'){const p=DB.projects.find(x=>x.id===spBd._curProjectId);if(p)delItem('projects',p.id);closeSP();}
       else if(act==='open-task') openTask(tid);
       else if(act==='add-task') openTaskModal(null,spBd._curProjectId);
       else if(act==='view-all-tasks'){closeSP();window._navProject=spBd._curProjectId;navTo('alltasks');}
@@ -431,8 +431,8 @@ window.renderProjectTasksList=(projectId,tab)=>{
       const ass=DB.team.find(m=>m.id===t.assignedTo);
       return`<div data-act="open-task" data-tid="${t.id}" style="display:flex;align-items:center;gap:7px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer">
         ${spill(t.status)}
-        <span style="font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
-        ${ass?`<span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800;flex-shrink:0" title="${ass.name}">${ass.av}</span>`:''}
+        <span style="font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
+        ${ass?`<span style="width:18px;height:18px;border-radius:50%;background:${ass.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;color:#fff;font-weight:800;flex-shrink:0" title="${esc(ass.name)}">${ass.av}</span>`:''}
         ${ppill(t.priority)}
         <span class="due-badge ${ds.cls}" style="flex-shrink:0">${ds.label}</span>
       </div>`;
@@ -469,7 +469,7 @@ window.renderProjectDocsList=(projectId)=>{
   const relDocs=DB.docs.filter(d=>{const t=d.fromTask?DB.tasks.find(x=>x.id===d.fromTask):null;return t&&t.projectId===projectId;});
   if(!relDocs.length){ wrap.innerHTML=''; return; }
   wrap.innerHTML=`<div class="spl" style="margin-bottom:8px">📚 Documentation (${relDocs.length})</div>
-  <div style="display:flex;flex-wrap:wrap;gap:6px">${relDocs.map(d=>`<span data-act="open-doc" data-did="${d.id}" style="cursor:pointer;background:var(--gb);color:var(--g);border:none;font-size:10.5px;font-weight:700;padding:4px 11px;border-radius:100px">📚 ${d.title}</span>`).join('')}</div>`;
+  <div style="display:flex;flex-wrap:wrap;gap:6px">${relDocs.map(d=>`<span data-act="open-doc" data-did="${d.id}" style="cursor:pointer;background:var(--gb);color:var(--g);border:none;font-size:10.5px;font-weight:700;padding:4px 11px;border-radius:100px">📚 ${esc(d.title)}</span>`).join('')}</div>`;
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -674,7 +674,7 @@ function rDash(el){
           <div class="ct" style="margin-bottom:16px"><span class="ct-t" style="font-weight:800;font-size:16px">📋 My Tasks</span></div>
           ${mine.length?mine.slice(0,6).map(t=>{const ds=getDueStatus(t);return`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);cursor:pointer">
             ${spill(t.status)}
-            <span style="flex:1;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+            <span style="flex:1;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
             <span class="${ds.cls}" style="font-size:11px;flex-shrink:0">${ds.label}</span>
           </div>`;}).join('')+
           (mine.length>6?`<div style="font-size:12px;color:var(--ac);margin-top:10px;cursor:pointer" onclick="navTo('mytasks')">View all ${mine.length} tasks →</div>`:'')
@@ -689,8 +689,8 @@ function rDash(el){
           </div>
           <div style="display:flex;flex-direction:column;gap:9px">
             ${noteLines.map(l=>l.emphasis?
-              `<div style="font-size:13px;font-weight:800;color:${l.c};background:${l.c}15;border:1px solid ${l.c}30;border-radius:9px;padding:8px 10px;line-height:1.4">${l.text}</div>`
-              :`<div style="font-size:11px;color:var(--tx2);line-height:1.5">${l.text}</div>`
+              `<div style="font-size:13px;font-weight:800;color:${l.c};background:${l.c}15;border:1px solid ${l.c}30;border-radius:9px;padding:8px 10px;line-height:1.4">${esc(l.text)}</div>`
+              :`<div style="font-size:11px;color:var(--tx2);line-height:1.5">${esc(l.text)}</div>`
             ).join('')}
           </div>
         </div>
@@ -709,7 +709,7 @@ function rDash(el){
           ${doneThisWeek.length?`<div>
             ${doneThisWeek.slice(0,4).map(t=>`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:pointer">
               <span style="width:7px;height:7px;border-radius:50%;background:#15803d;flex-shrink:0"></span>
-              <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</span>
+              <span style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>
               <span style="font-size:10px;color:var(--tx3);flex-shrink:0">${fr(t.tsReviewed)}</span>
             </div>`).join('')}
             ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
@@ -722,7 +722,7 @@ function rDash(el){
           ${bow?`<div style="display:flex;align-items:center;gap:10px">
             <span style="width:40px;height:40px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
             <div style="min-width:0">
-              <div style="font-size:15px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bow.m.name}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(bow.m.name)}</div>
               <div style="font-size:12px;color:#15803d;font-weight:700">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</div>
             </div>
           </div>
@@ -764,7 +764,7 @@ function rDash(el){
             ${ms.rate!==null?`<span style="font-size:11px;font-weight:600;background:${bColor}18;color:${bColor};padding:1px 8px;border-radius:20px">${ms.rate}% · ${ms.attended.length}/${ms.invited.length}</span>`:''}
             <span style="font-size:11px;color:var(--tx3)">${mLines[0]||''}</span>
           </div>
-          ${ms.missed.length?`<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">${ms.missed.slice(0,3).map(m=>`<span onclick="openMeetingDetail('${m.id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer">⚠ ${m.title}</span>`).join('')}</div>`:''}
+          ${ms.missed.length?`<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">${ms.missed.slice(0,3).map(m=>`<span onclick="openMeetingDetail('${m.id}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer">⚠ ${esc(m.title)}</span>`).join('')}</div>`:''}
         </div>
       </div>`;
     }
@@ -774,7 +774,7 @@ function rDash(el){
       h+=`<div class="card" style="margin-bottom:12px"><div class="ct">📅 Today's Meetings</div>
         ${todayMeetings.map(m=>`<div onclick="openMeetingDetail('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <span style="font-size:15px;font-weight:800;color:var(--ac);width:46px;flex-shrink:0">${m.meeting_time||'—'}</span>
-          <div><div style="font-size:13px;font-weight:600">${m.title}</div><div style="font-size:11px;color:var(--tx3)">${m.location||m.meeting_type||''} · ${m.duration_minutes||60}min</div></div>
+          <div><div style="font-size:13px;font-weight:600">${esc(m.title)}</div><div style="font-size:11px;color:var(--tx3)">${m.location||m.meeting_type||''} · ${m.duration_minutes||60}min</div></div>
           ${spill(m.status)}
         </div>`).join('')}
       </div>`;
@@ -964,7 +964,7 @@ function rDash(el){
         ${todayMeetings.length?todayMeetings.slice(0,3).map(m=>`<div onclick="openMeetingDetail('${m.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">
           <div style="min-width:34px;text-align:center;flex-shrink:0;font-size:11px;font-weight:900;color:var(--ac)">${(m.meeting_time||'—').slice(0,5)}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📅 ${m.title}</div>
+            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📅 ${esc(m.title)}</div>
             <div style="font-size:10px;color:var(--tx3)">${m.duration_minutes||60}min · ${m.meeting_type||''}</div>
           </div>
         </div>`).join(''):''}
@@ -1017,7 +1017,7 @@ function rDash(el){
           <span style="width:30px;height:30px;border-radius:50%;background:${bestW.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${bestW.m.av}</span>
           <div style="flex:1;min-width:0">
             <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.05em">🏆 Best</div>
-            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bestW.m.name}</div>
+            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(bestW.m.name)}</div>
             <div style="font-size:10px;color:#15803d">${bestW.doneW} done</div>
           </div>
           <div style="font-size:18px;font-weight:800;color:#15803d;flex-shrink:0">${bestW.score>0?'+':''}${bestW.score}</div>
@@ -1026,7 +1026,7 @@ function rDash(el){
           <span style="width:30px;height:30px;border-radius:50%;background:${worstW.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${worstW.m.av}</span>
           <div style="flex:1;min-width:0">
             <div style="font-size:10px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:.05em">⚠ Focus</div>
-            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${worstW.m.name}</div>
+            <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(worstW.m.name)}</div>
             <div style="font-size:10px;color:#dc2626">${worstW.overdueW>0?worstW.overdueW+' overdue':''}${worstW.doneW===0?' 0 done':''}</div>
           </div>
           <div style="font-size:18px;font-weight:800;color:#dc2626;flex-shrink:0">${worstW.score>0?'+':''}${worstW.score}</div>
@@ -1051,7 +1051,7 @@ function rDash(el){
         return`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border:1px solid var(--bd);border-radius:8px">
         <span onclick="openTask('${t.id}')" title="${reason==='No update'?'In Progress with no update':reason==='Not opened'?'Assigned but never opened':'Past its due date'}" style="cursor:pointer;font-size:9px;font-weight:800;color:${rc};background:${rc}15;border:1px solid ${rc}30;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">${reason}${hrs?' '+hrs+'h':''}</span>
         <div onclick="openTask('${t.id}')" style="flex:1;overflow:hidden;min-width:0;cursor:pointer">
-          <div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${t.title}</div>
+          <div style="font-size:11px;font-weight:600;white-space:normal;word-break:break-word;line-height:1.3">${esc(t.title)}</div>
           <div style="font-size:10px;color:var(--tx3);margin-top:2px">${mn(t.assignedTo)||'—'}</div>
           ${remCount?`<div style="font-size:10px;color:var(--ac);margin-top:2px;font-weight:600">🔔 Reminded ${remCount}× · last ${fr(remLast.at)}</div>`:`<div style="font-size:10px;color:var(--tx3);margin-top:2px">Not reminded yet</div>`}
         </div>
@@ -1106,15 +1106,15 @@ function rDash(el){
         allTasks.forEach(t=>{
           (t.timeline||[]).forEach(ev=>{
             let icon='📋',color='#64748b',text='';
-            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${ev.by}</strong> requested help from ${ev.helpMember||'?'} on <em>${t.title}</em>`;}
-            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${ev.by}</strong> accepted help from ${ev.helperName||'?'} — <em>${t.title}</em> continues`;}
-            else{icon='📋';color='#64748b';text=`<strong>${ev.by||'?'}</strong> — ${ev.event} on <em>${t.title}</em>`;}
+            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${ev.by}</strong> requested help from ${ev.helpMember||'?'} on <em>${esc(t.title)}</em>`;}
+            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${ev.by}</strong> accepted help from ${ev.helperName||'?'} — <em>${esc(t.title)}</em> continues`;}
+            else{icon='📋';color='#64748b';text=`<strong>${ev.by||'?'}</strong> — ${ev.event} on <em>${esc(t.title)}</em>`;}
             events.push({ts:ev.at,icon,color,text,targetId:t.id,targetType:'task',actor:ev.by||''});
           });
           // Task status changes derived from timestamps
-          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${mn(t.assignedTo)||'?'}</strong> started <em>${t.title}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${mn(t.assignedTo)||'?'}</strong> submitted <em>${t.title}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${mn(t.reviewer)||'Admin'}</strong> approved <em>${t.title}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
+          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${mn(t.assignedTo)||'?'}</strong> started <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${mn(t.assignedTo)||'?'}</strong> submitted <em>${esc(t.title)}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${mn(t.reviewer)||'Admin'}</strong> approved <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
         });
 
         // ── Meetings ──────────────────────────────────────
@@ -1125,10 +1125,10 @@ function rDash(el){
           const icon=status==='Completed'?'✅':status==='Cancelled'?'❌':'📅';
           const color=status==='Completed'?'#15803d':status==='Cancelled'?'#dc2626':'#2563eb';
           const label=status==='Completed'?'completed meeting':'scheduled meeting';
-          events.push({ts,icon,color,text:`<strong>${creator}</strong> ${label} <em>${m.title}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
+          events.push({ts,icon,color,text:`<strong>${creator}</strong> ${label} <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
           // Attendance events
           Object.entries(m.attendance||{}).forEach(([name,status])=>{
-            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${name}</strong> attended <em>${m.title}</em>`,targetId:m.id,targetType:'meeting',actor:name});
+            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${name}</strong> attended <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:name});
           });
         });
 
@@ -1146,7 +1146,7 @@ function rDash(el){
         return top.map(ev=>`<div onclick="${ev.targetType==='task'&&ev.targetId?`openTask('${ev.targetId}')`:ev.targetType==='meeting'&&ev.targetId?`openMeetingDetail('${ev.targetId}')`:''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:${ev.targetId?'pointer':'default'}">
           <span style="font-size:13px;flex-shrink:0;line-height:1.5">${ev.icon}</span>
           <div style="flex:1;overflow:hidden;min-width:0">
-            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.text}</div>
+            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.text)}</div>
             <div style="font-size:10px;color:var(--tx3);margin-top:1px">${fr(ev.ts)}</div>
           </div>
         </div>`).join('');
@@ -1230,7 +1230,7 @@ function rDash(el){
         ${teamPerf.map(({m,active,done,od,inrev,recent_d,rate})=>`<tr class="cl" onclick="openMemberDetail('${m.id}')">
           <td><span style="display:flex;align-items:center;gap:8px">
             <span style="width:28px;height:28px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</span>
-            <span style="font-size:13px;font-weight:700">${m.name}</span>
+            <span style="font-size:13px;font-weight:700">${esc(m.name)}</span>
           </span></td>
           <td style="font-size:12px;color:var(--tx3)">${m.role}</td>
           <td><span style="font-size:16px;font-weight:800;color:${active>=5?'#dc2626':active>=2?'#b45309':'var(--tx)'}">${active}</span></td>
