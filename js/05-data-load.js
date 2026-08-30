@@ -186,7 +186,7 @@ async function refreshData(){
 // ══════════════════════════════════════════════════════
 // SUPABASE WRITE HELPERS
 // ══════════════════════════════════════════════════════
-function showSaving(v){ document.getElementById('tb-sav').classList.toggle('on',v); }
+// showSaving(v) lives in 02-ui-utils-config.js — removed the identical duplicate that used to be here
 
 // Auto-sync: after every successful write, refresh data in background
 let _syncTimer=null;
