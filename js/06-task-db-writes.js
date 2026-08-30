@@ -147,10 +147,11 @@ async function nMeeting(m){
 }
 // ── Service Test DB helpers ──────────────────────────────────────────────
 async function sbSaveSchedule(s){
-  if(s.id&&!s.id.startsWith('sch')){ return sbUpdate('test_schedules',s.id,{operator_id:s.operator_id,member_id:s.member_id,day_of_week:s.day_of_week,active:s.active!==false}); }
-  const r=await sbInsert('test_schedules',{operator_id:s.operator_id,member_id:s.member_id,day_of_week:s.day_of_week,active:true});
+  if(s.id&&!s.id.startsWith('sch')){ return sbUpdate('test_schedules',s.id,{operator_id:s.operator_id,member_id:s.member_id,day_of_week:s.day_of_week,active:s.active!==false,reviewer_id:s.reviewer_id||null}); }
+  const r=await sbInsert('test_schedules',{operator_id:s.operator_id,member_id:s.member_id,day_of_week:s.day_of_week,active:true,reviewer_id:s.reviewer_id||null});
   if(r?.id)s.id=r.id; return r;
 }
+async function sbUpdateScheduleReviewer(id,reviewerId){ return sbUpdate('test_schedules',id,{reviewer_id:reviewerId||null}); }
 async function sbDelSchedule(id){ return sbDelete('test_schedules',id); }
 
 async function sbCreateSession(s){
