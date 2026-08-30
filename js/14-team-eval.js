@@ -19,7 +19,7 @@ window.fTeam=()=>{
       <div style="display:flex;gap:11px;align-items:flex-start">
         <div style="width:40px;height:40px;border-radius:50%;background:${m.color||'#4f46e5'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${m.av||m.name.slice(0,2)}</div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700">${m.name}</div>
+          <div style="font-size:13px;font-weight:700">${esc(m.name)}</div>
           <div style="font-size:10px;color:var(--tx3);margin-top:1px">${m.role} · ${m.dept||'—'}</div>
           <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
             <span style="background:${col}15;color:${col};border:1px solid ${col}25;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px">${m.access||'Member'}</span>
@@ -36,7 +36,7 @@ window.fTeam=()=>{
           ${m.telegram?`<span class="btn bk bxs" title="Telegram connected" style="cursor:default">✈️</span>`:''}
           <div class="ib edt" onclick="openMemberModal('${m.id}')">✏</div>
           <div class="ib" onclick="event.stopPropagation();window._navMember='${m.id}';navTo('alltasks')" title="View tasks" style="color:var(--ac);font-size:11px;font-weight:700">📋</div>
-          <div class="ib del" onclick="delItem('team','${m.id}','${m.name}')">🗑</div>
+          <div class="ib del" onclick="delItem('team','${m.id}')">🗑</div>
         </div>
       </div>
     </div>`;
@@ -52,7 +52,7 @@ window.openMemberDetail=(id)=>{
   document.getElementById('sp-pills').innerHTML=`<span class="pill ${m.access==='Admin'?'sj':m.access==='Manager'?'sr':'sp'}">${m.access||'Member'}</span> <span class="pill sn">${m.status||'Active'}</span>`;
   let body=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
     <div style="width:52px;height:52px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</div>
-    <div><div style="font-size:15px;font-weight:700">${m.name}</div><div style="font-size:12px;color:var(--tx3)">${m.role} · ${m.dept||'—'}</div></div>
+    <div><div style="font-size:15px;font-weight:700">${esc(m.name)}</div><div style="font-size:12px;color:var(--tx3)">${m.role} · ${m.dept||'—'}</div></div>
   </div>
   <div class="sp2">
     <div class="spf"><div class="spl">Email</div><div class="spv">${m.email||'—'}</div></div>
@@ -60,11 +60,11 @@ window.openMemberDetail=(id)=>{
     <div class="spf"><div class="spl">Active Tasks</div><div class="spv">${ma.length}</div></div>
     <div class="spf"><div class="spl">Completed</div><div class="spv">${md}</div></div>
   </div>`;
-  if(m.notes)body+=`<div class="spf"><div class="spl">Notes</div><div class="spnote">${m.notes}</div></div>`;
+  if(m.notes)body+=`<div class="spf"><div class="spl">Notes</div><div class="spnote">${esc(m.notes)}</div></div>`;
   if(mt.length)body+=`<div class="prg" style="margin-bottom:12px"><div class="prf" style="width:${Math.round(md/mt.length*100)}%;background:var(--g)"></div></div>`;
   body+=`<div class="sps">Active Tasks (${ma.length})</div>`;
   ma.slice(0,6).forEach(t=>{
-    body+=`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${t.title}</span>${ppill(t.priority)}${isAdmin()&&m.id!==CU?.id?`<button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:3px 9px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>`:''}</div>`;
+    body+=`<div onclick="openTask('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);cursor:pointer">${spill(t.status)}<span style="font-size:12px;font-weight:500;flex:1">${esc(t.title)}</span>${ppill(t.priority)}${isAdmin()&&m.id!==CU?.id?`<button onclick="event.stopPropagation();reqRemind('${t.id}')" title="Send reminder" style="flex-shrink:0;padding:3px 9px;background:var(--ac);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🔔 Remind</button>`:''}</div>`;
   });
   if(ma.length>6)body+=`<div style="font-size:11px;color:var(--tx3);padding:7px 0">+${ma.length-6} more</div>`;
   if(isAdmin()) body+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:10px">
@@ -128,7 +128,7 @@ window.openMemberDetail=(id)=>{
     <button class="btn bp bsm" onclick="closeSP();window._navMember='${m.id}';navTo('alltasks')">📋 All Tasks</button>
     <button class="btn bg2 bsm" onclick="closeSP();window._navMember='${m.id}';navTo('archive')">🗄 Archive</button>
     <button class="btn bg2 bsm" onclick="openMemberModal('${m.id}')">✏ Edit</button>
-    <button class="btn bd2 bsm" onclick="delItem('team','${m.id}','${m.name}');closeSP()">🗑 Delete</button>
+    <button class="btn bd2 bsm" onclick="delItem('team','${m.id}');closeSP()">🗑 Delete</button>
   </div>`;
   document.getElementById('sp-bd').innerHTML=body;
   document.getElementById('sp-pnl').classList.add('open');
@@ -253,10 +253,10 @@ function rEval(el){
     const {g}=grade(ev.score);
     const lines=[];
     // Opening
-    if(ev.cr>=85&&ev.overdue===0) lines.push(`${m.name} is performing at a high level — completing ${ev.cr}% of tasks with zero overdue items.`);
-    else if(ev.cr>=70) lines.push(`${m.name} is on track with a ${ev.cr}% completion rate.`);
-    else if(ev.cr>=40) lines.push(`${m.name} has a ${ev.cr}% completion rate — there is room for improvement.`);
-    else lines.push(`${m.name}'s completion rate of ${ev.cr}% needs urgent attention.`);
+    if(ev.cr>=85&&ev.overdue===0) lines.push(`${esc(m.name)} is performing at a high level — completing ${ev.cr}% of tasks with zero overdue items.`);
+    else if(ev.cr>=70) lines.push(`${esc(m.name)} is on track with a ${ev.cr}% completion rate.`);
+    else if(ev.cr>=40) lines.push(`${esc(m.name)} has a ${ev.cr}% completion rate — there is room for improvement.`);
+    else lines.push(`${esc(m.name)}'s completion rate of ${ev.cr}% needs urgent attention.`);
     // Overdue
     if(ev.overdue===0&&ev.active>0) lines.push(`All ${ev.active} active tasks are within deadline.`);
     else if(ev.overdue>0) lines.push(`${ev.overdue} task${ev.overdue>1?'s are':' is'} currently overdue — these should be prioritised immediately.`);
@@ -374,7 +374,7 @@ function rEval(el){
       <td style="padding:11px 14px;font-size:13px;color:var(--tx3);font-weight:700;text-align:center">${i<3?medals[i]:i+1}</td>
       <td style="padding:11px 14px"><div style="display:flex;align-items:center;gap:8px">
         <div style="width:30px;height:30px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;border:2px solid ${c}55">${m.av}</div>
-        <div><div style="font-size:13px;font-weight:700">${m.name}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
+        <div><div style="font-size:13px;font-weight:700">${esc(m.name)}</div><div style="font-size:10px;color:var(--tx3)">${m.role}</div></div>
       </div></td>
       <td style="padding:11px 14px;text-align:center"><span style="font-size:17px;font-weight:900;color:${c}">${ev.score}</span><div style="font-size:9px;color:${c};font-weight:700">${g}</div></td>
       <td style="padding:11px 14px;text-align:center;font-size:13px;font-weight:700">${ev.done}<span style="color:var(--tx3);font-size:10px">/${ev.tot}</span></td>
@@ -403,7 +403,7 @@ function rEval(el){
     h+=`<div style="background:${bg};border:1px solid ${bc};border-radius:11px;padding:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div style="width:30px;height:30px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${m.av}</div>
-        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">${m.name}</div><div style="font-size:9px;color:var(--tx3)">${m.role}</div></div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">${esc(m.name)}</div><div style="font-size:9px;color:var(--tx3)">${m.role}</div></div>
         <span style="font-size:10px;font-weight:800;color:${c};background:${c}18;border:1px solid ${c}33;padding:2px 9px;border-radius:20px">${g}</span>
       </div>
       <div style="font-size:12px;color:var(--tx2);line-height:1.65">${note}</div>
