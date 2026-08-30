@@ -123,7 +123,15 @@ function donut(data,size=88){
 function confirmDel(msg,cb){document.getElementById('del-msg').textContent=msg;_delCb=cb;OM('m-del');}
 function doDelete(){CM('m-del');if(_delCb)_delCb();_delCb=null;}
 const TABLE_MAP={tasks:'tasks',team:'team',services:'services',operators:'companies',companies:'companies',backlog:'backlog',docs:'docs',archive:'archive',todos:'todos',projects:'projects'};
-function delItem(col,id,name){
+function delItem(col,id){
+  const item=DB[col]?.find(x=>x.id===id);
+  const name=item?.title||item?.name||'this item';
+  // confirmDel uses textContent (not innerHTML) so no HTML escaping needed
+  // here — escaping would corrupt the display text (e.g. "O'Brien" would
+  // render literally as "O&#39;Brien"). The injection risk this replaces
+  // was purely from embedding `name` into an onclick="..." HTML attribute
+  // at the call sites, which no longer happens now that delItem looks up
+  // the name itself instead of receiving it as a string argument.
   confirmDel(`Delete "${name}"? This cannot be undone.`,async()=>{
     // Capture task details before removal — the row is about to be gone
     // from DB.tasks, so this is the only chance to know who to notify.
