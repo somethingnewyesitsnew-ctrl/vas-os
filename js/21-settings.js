@@ -135,7 +135,7 @@ function rSettings(el){
           ${DB.team.map(m=>`<tr>
             <td><span style="display:flex;align-items:center;gap:6px">
               <span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${m.av}</span>
-              ${m.name}
+              ${esc(m.name)}
             </span></td>
             <td style="font-family:var(--fnm);color:var(--ac);font-weight:600">${m.username||m.name.toLowerCase().split(' ')[0]}</td>
             <td style="font-family:var(--fnm)">${m.password||'abohamood@1.'}</td>
@@ -176,7 +176,7 @@ function rSettings(el){
         <div style="margin-bottom:12px;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
             <span style="width:10px;height:10px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
-            <strong style="font-size:13px;flex:1">${t.name}</strong>
+            <strong style="font-size:13px;flex:1">${esc(t.name)}</strong>
             <button onclick="deleteMemberType('${t.id}')" style="background:none;border:none;color:var(--r);cursor:pointer;font-size:12px;font-weight:700">✕ Remove</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
@@ -351,7 +351,7 @@ window.saveAutoRemSettings=async()=>{
   showSaving(false);
   if(r!==null){
     AUTO_REM_CFG={enabled,interval_hours};
-    logAction('Settings Updated',`${CU.name} ${enabled?'enabled':'disabled'} automatic task reminders (every ${interval_hours}h)`,'Info','Automatic Reminders','');
+    logAction('Settings Updated',`${esc(CU.name)} ${enabled?'enabled':'disabled'} automatic task reminders (every ${interval_hours}h)`,'Info','Automatic Reminders','');
     toast('Reminder settings saved ✓','ok');
   } else {
     toast('Failed to save — check connection','bad');
@@ -561,7 +561,7 @@ window.confirmRestore=async(payload)=>{
   }
   showSaving(false);
   toast(errors===0?`Restore complete — ${restored} records synced ✓`:`Restored ${restored} — ${errors} errors`,errors===0?'ok':'bad',6000);
-  logAction('Restore',`Backup restored by ${CU?.name} — ${restored} records`,'Success','Restore','');
+  logAction('Restore',`Backup restored by ${esc(CU?.name)} — ${restored} records`,'Success','Restore','');
   setTimeout(async()=>{await loadFromNotion();nav(page,document.querySelector('.ni.on'));},1000);
 };
 
