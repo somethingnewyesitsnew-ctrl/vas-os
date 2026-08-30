@@ -272,22 +272,15 @@ window.openTask=(id)=>{
 // ══════════════════════════════════════════════════════
 window.reqStart=(id)=>{
   const t=DB.tasks.find(tk=>tk.id===id);
-  if(t?.type==='Service Test'){ startServiceTestTask(id); return; }
   _pendTask=id;document.getElementById('est-h').value=t?.est||'';OM('m-est');
 };
 
 // Service Test tasks are auto-created when a scheduled test day arrives.
-// Starting one skips the normal "set an estimate" step (already pre-set)
-// and drops the member straight into the checklist for that operator's
-// services, so they can mark each item working/fail and add notes.
+// They go through the normal "Set Estimate & Start" step like any task —
+// see confirmStart(), which routes into the checklist afterward instead
+// of opening the normal task detail view.
 window.startServiceTestTask=async(taskId)=>{
   const t=DB.tasks.find(tk=>tk.id===taskId);if(!t)return;
-  if(t.status==='New'){
-    t.status='In Progress'; t.tsStarted=now();
-    logAction('Task Started',`${CU.name} started "${t.title}"`,'Success',t.title,'',{taskId:t.id,taskTitle:t.title});
-    await nUpdateTask(t);
-    updateBadges();
-  }
   closeSP();
   const todayStr=new Date().toISOString().split('T')[0];
   const op=[...DB.operators,...DB.companies].find(o=>o.id===t.operator);
@@ -469,7 +462,8 @@ window.confirmStart=async()=>{
   notifyAdmins(`${CU.name} started task: "${t.title}" — ${h}h estimated`,'Task Started',t.title,{taskId:t.id});
   notifyAdminsTG(`▶ Task Started\n\n${CU.name} started working on "${t.title}"\nEstimate: ${h}h`,appLink('task-'+t.id));
   await nUpdateTask(t);
-  CM('m-est'); toast(`Started — ${h}h estimated ✓`,'ok'); openTask(_pendTask); updateBadges();
+  CM('m-est'); toast(`Started — ${h}h estimated ✓`,'ok'); updateBadges();
+  if(t.type==='Service Test'){ startServiceTestTask(t.id); } else { openTask(_pendTask); }
 };
 
 window.reqSubmit=(id)=>{
