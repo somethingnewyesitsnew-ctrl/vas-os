@@ -44,6 +44,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    // Basic sanity caps — not a substitute for real auth (this function
+    // is invoked with the public anon key, same as every other client
+    // call in this app), just cheap protection against a malformed or
+    // abusive payload turning into an oversized/garbage push.
+    if (typeof member_id !== 'string' || member_id.length > 100) {
+      return new Response(JSON.stringify({ error: 'invalid member_id' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (typeof title !== 'string' || title.length > 200 || (body && (typeof body !== 'string' || body.length > 1000))) {
+      return new Response(JSON.stringify({ error: 'title/body too long' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: subs, error } = await supabase
