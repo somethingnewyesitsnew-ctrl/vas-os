@@ -665,7 +665,6 @@ function rDash(el){
       return{m,doneW,overdueW,score:doneW*3-overdueW*2};
     }).filter(x=>x.doneW>0||x.overdueW>0).sort((a,b)=>b.score-a.score);
     const bow=bowScores[0];
-    const bowNote=bow?DB.tasks.filter(t=>t.status==='Done'&&taskAssignedToMember(t,bow.m)&&t.tsReviewed&&new Date(t.tsReviewed)>=bowStart).slice(0,2).map(t=>t.title).join(' · '):'';
 
     // ── GRID: left column (60%) = My Tasks → Member Notice, right column (40%) = Tasks Done → Employee of the Week ──
     h+=`<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:14px;overflow:hidden">
@@ -697,6 +696,14 @@ function rDash(el){
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:8px;padding:6px 12px;min-width:0;display:flex;align-items:center;gap:8px;overflow:hidden">
+          <span style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;white-space:nowrap">🎉 Employee of the Week</span>
+          ${bow?`<span style="width:3px;height:3px;border-radius:50%;background:#86efac;flex-shrink:0"></span>
+          <span style="font-size:12.5px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(bow.m.name)}</span>
+          <span style="font-size:11.5px;color:#15803d;font-weight:700;flex-shrink:0;white-space:nowrap;margin-left:auto">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</span>`
+          :`<span style="font-size:11px;color:var(--tx3);white-space:nowrap">Not enough activity yet</span>`}
+        </div>
+
         <div class="card" style="min-width:0;overflow:hidden">
           <div class="ct"><span class="ct-t">✅ Tasks Done</span></div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
@@ -715,19 +722,6 @@ function rDash(el){
             ${doneThisWeek.length>4?`<div style="font-size:11px;color:var(--ac);margin-top:6px;cursor:pointer" onclick="navTo('archive')">+${doneThisWeek.length-4} more in Archive →</div>`:''}
           </div>`:
           `<div style="text-align:center;padding:10px 0;font-size:12px;color:var(--tx3)">No completed tasks this week yet</div>`}
-        </div>
-
-        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:14px;padding:16px;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🎉 Employee of the Week</div>
-          ${bow?`<div style="display:flex;align-items:center;gap:10px">
-            <span style="width:40px;height:40px;border-radius:50%;background:${bow.m.color};display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${bow.m.av}</span>
-            <div style="min-width:0">
-              <div style="font-size:15px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(bow.m.name)}</div>
-              <div style="font-size:12px;color:#15803d;font-weight:700">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</div>
-            </div>
-          </div>
-          ${bowNote?`<div style="font-size:11px;color:var(--tx3);margin-top:10px">${bowNote}</div>`:''}`
-          :`<div style="text-align:center;padding:8px 0;font-size:12px;color:var(--tx3)">Not enough activity this week yet.</div>`}
         </div>
       </div>
     </div>`;
