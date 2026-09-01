@@ -471,18 +471,17 @@ function doLogout(){logAction('Logout',`${esc(CU.name)} logged out`,'Info');if(t
 // DEMO DATA (fallback when offline)
 // ══════════════════════════════════════════════════════
 function loadDemoData(){
-  const pw='abohamood@1.';
   DB.team=[
-    {id:'u1',name:'Aziz',role:'CEO',dept:'Management',access:'Admin',status:'Active',email:'aziz@vas.sd',wa:'+249911000001',color:'#4f46e5',av:'AZ',notes:'',username:'aziz',password:pw},
-    {id:'u2',name:'Aymen',role:'Projects Manager',dept:'Management',access:'Admin',status:'Active',email:'aymen@vas.sd',wa:'',color:'#7c3aed',av:'AY',notes:'',username:'aymen',password:pw},
-    {id:'u3',name:'Maysa',role:'HR Manager',dept:'Management',access:'Admin',status:'Active',email:'maysa@vas.sd',wa:'',color:'#b45309',av:'MA',notes:'',username:'maysa',password:pw},
-    {id:'u4',name:'Al Khateeb',role:'Super Senior Developer',dept:'Engineering',access:'Member',status:'Active',email:'khateeb@vas.sd',wa:'+249911000004',color:'#0369a1',av:'AK',notes:'',username:'alkhateeb',password:pw},
-    {id:'u5',name:'Abd Allah Hisham',role:'Senior Developer',dept:'Engineering',access:'Member',status:'Active',email:'ab@vas.sd',wa:'',color:'#0369a1',av:'AB',notes:'',username:'abdallah',password:pw},
-    {id:'u6',name:'Tibyan',role:'Front End Designer',dept:'Design',access:'Member',status:'Active',email:'tibyan@vas.sd',wa:'',color:'#be185d',av:'TI',notes:'',username:'tibyan',password:pw},
-    {id:'u7',name:'Roa',role:'Content Manager',dept:'Content',access:'Member',status:'Active',email:'roa@vas.sd',wa:'',color:'#047857',av:'RO',notes:'',username:'roa',password:pw},
-    {id:'u8',name:'Ahmed Al Tayef',role:'Sys Admin',dept:'Engineering',access:'Member',status:'Active',email:'ahmed@vas.sd',wa:'',color:'#374151',av:'AT',notes:'',username:'ahmed',password:pw},
-    {id:'u9',name:'Hussam Adil',role:'Developer',dept:'Engineering',access:'Member',status:'Active',email:'hussam@vas.sd',wa:'',color:'#0369a1',av:'HA',notes:'',username:'hussam',password:pw},
-    {id:'u10',name:'TR',role:'Developer',dept:'Engineering',access:'Member',status:'Active',email:'tr@vas.sd',wa:'',color:'#0369a1',av:'TR',notes:'',username:'tr',password:pw},
+    {id:'u1',name:'Aziz',role:'CEO',dept:'Management',access:'Admin',status:'Active',email:'aziz@vas.sd',wa:'+249911000001',color:'#4f46e5',av:'AZ',notes:'',username:'aziz'},
+    {id:'u2',name:'Aymen',role:'Projects Manager',dept:'Management',access:'Admin',status:'Active',email:'aymen@vas.sd',wa:'',color:'#7c3aed',av:'AY',notes:'',username:'aymen'},
+    {id:'u3',name:'Maysa',role:'HR Manager',dept:'Management',access:'Admin',status:'Active',email:'maysa@vas.sd',wa:'',color:'#b45309',av:'MA',notes:'',username:'maysa'},
+    {id:'u4',name:'Al Khateeb',role:'Super Senior Developer',dept:'Engineering',access:'Member',status:'Active',email:'khateeb@vas.sd',wa:'+249911000004',color:'#0369a1',av:'AK',notes:'',username:'alkhateeb'},
+    {id:'u5',name:'Abd Allah Hisham',role:'Senior Developer',dept:'Engineering',access:'Member',status:'Active',email:'ab@vas.sd',wa:'',color:'#0369a1',av:'AB',notes:'',username:'abdallah'},
+    {id:'u6',name:'Tibyan',role:'Front End Designer',dept:'Design',access:'Member',status:'Active',email:'tibyan@vas.sd',wa:'',color:'#be185d',av:'TI',notes:'',username:'tibyan'},
+    {id:'u7',name:'Roa',role:'Content Manager',dept:'Content',access:'Member',status:'Active',email:'roa@vas.sd',wa:'',color:'#047857',av:'RO',notes:'',username:'roa'},
+    {id:'u8',name:'Ahmed Al Tayef',role:'Sys Admin',dept:'Engineering',access:'Member',status:'Active',email:'ahmed@vas.sd',wa:'',color:'#374151',av:'AT',notes:'',username:'ahmed'},
+    {id:'u9',name:'Hussam Adil',role:'Developer',dept:'Engineering',access:'Member',status:'Active',email:'hussam@vas.sd',wa:'',color:'#0369a1',av:'HA',notes:'',username:'hussam'},
+    {id:'u10',name:'TR',role:'Developer',dept:'Engineering',access:'Member',status:'Active',email:'tr@vas.sd',wa:'',color:'#0369a1',av:'TR',notes:'',username:'tr'},
   ];
   DB.services=[{id:'s1',name:'Zaytoon',cat:'Content',status:'Live',desc:'Arabic content on Zain Sudan'},{id:'s2',name:'Coursat Plus',cat:'Education',status:'Live',desc:'Online education on MTN'},{id:'s3',name:'Qawafi',cat:'Entertainment',status:'Live',desc:'Arabic poetry on Sudani'},{id:'s4',name:'Games Club',cat:'Gaming',status:'Live',desc:'Mobile gaming on MTN'},{id:'s5',name:'Booktown',cat:'Books',status:'Live',desc:'Digital books on Sudani'}];
   DB.operators=[{id:'o1',name:'Zain Sudan',type:'Telecom Operator',country:'Sudan',status:'Active',contact:'Zain Tech',email:'tech@zain.sd',phone:'+249156000000',notes:''},{id:'o2',name:'MTN Sudan',type:'Telecom Operator',country:'Sudan',status:'Active',contact:'MTN Partners',email:'partners@mtn.sd',phone:'+249924000000',notes:''},{id:'o3',name:'Sudani',type:'Telecom Operator',country:'Sudan',status:'Active',contact:'Sudani Business',email:'biz@sudani.sd',phone:'+249181000000',notes:''}];
