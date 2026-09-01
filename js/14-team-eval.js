@@ -68,16 +68,12 @@ window.openMemberDetail=(id)=>{
   });
   if(ma.length>6)body+=`<div style="font-size:11px;color:var(--tx3);padding:7px 0">+${ma.length-6} more</div>`;
   if(isAdmin()) body+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:10px">
-    <div style="font-size:9px;font-weight:700;letter-spacing:.05em;color:#dc2626;text-transform:uppercase;margin-bottom:6px">🔐 Login Credentials (Admin only)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div class="spl">Username</div><div style="font-family:var(--fnm);font-size:13px;font-weight:600">${m.username||m.name.toLowerCase().split(' ')[0]}</div></div>
-      <div><div class="spl">Password</div><div style="display:flex;align-items:center;gap:6px">
-        <span id="pw-mask-${m.id}" style="font-family:var(--fnm);font-size:13px;font-weight:600">••••••••</span>
-        <span id="pw-val-${m.id}" style="display:none;font-family:var(--fnm);font-size:13px;font-weight:600">${escapeHtml(m.password||'abohamood@1.')}</span>
-        <button type="button" onclick="const mk=document.getElementById('pw-mask-${m.id}'),vl=document.getElementById('pw-val-${m.id}');const show=vl.style.display==='none';mk.style.display=show?'none':'';vl.style.display=show?'':'none';this.textContent=show?'🙈':'👁'" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0">👁</button>
-      </div></div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:.05em;color:#dc2626;text-transform:uppercase;margin-bottom:6px">🔐 Login (Admin only)</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div><div class="spl">Username</div><div style="font-family:var(--fnm);font-size:13px;font-weight:600">${esc(m.username||m.name.toLowerCase().split(' ')[0])}</div></div>
+      <button type="button" onclick="closeSP();openMemberModal('${m.id}')" style="padding:6px 12px;background:var(--ac);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Reset Password</button>
     </div>
-    <div style="font-size:9px;color:#dc2626;margin-top:6px;opacity:.75">⚠️ Plaintext credentials — flagged for migration to proper auth.</div>
+    <div style="font-size:9px;color:#dc2626;margin-top:6px;opacity:.75">Passwords are no longer readable — they're verified server-side and never sent to the browser. Resetting sets a new one; it can't be viewed afterward.</div>
   </div>`;
   if(isAdmin()){
     const gateLabels=[['projects','Projects'],['services','Services'],['library','Library'],['docs','Documentation'],['archive','Archive'],['comments','Comments'],['reminders','Reminders']];
