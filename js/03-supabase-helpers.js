@@ -28,6 +28,18 @@ async function sbQ(table, params=''){
   }catch(e){ console.error('sbQ',table,e.name==='AbortError'?'timed out after 20s':e.message); return null; }
 }
 
+// Calls a Postgres RPC function via PostgREST. Used for anything that
+// needs to run server-side with elevated privileges (SECURITY DEFINER) —
+// e.g. verify_login() and upsert_member(), which touch the `password`
+// column that RLS now hides from direct table access entirely.
+async function sbRpc(fn, params={}){
+  try{
+    const r = await fetchWithTimeout(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(params)});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); console.error('sbRpc',fn,r.status,e); return null; }
+    return await r.json();
+  }catch(e){ console.error('sbRpc',fn,e.name==='AbortError'?'timed out after 20s':e.message); return null; }
+}
+
 async function sbInsert(table, data){
   try{
     const r = await fetchWithTimeout(`${SB_URL}/rest/v1/${table}`, {method:'POST', headers:SB_HEADERS, body:JSON.stringify(data)});
