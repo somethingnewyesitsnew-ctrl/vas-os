@@ -1085,19 +1085,18 @@ function rDash(el){
         // ── From syslog (task actions, logins, reminders) ──
         syslog.slice(0,60).forEach(e=>{
           let icon='📋',color='#64748b',text='',targetId=null,targetType=null;
-          const a=e.actor||'';
+          const a=esc(e.actor||'');
           switch(e.action){
             case'Login': icon='🔐';color='#2563eb';text=`<strong>${a}</strong> logged in`;break;
-            case'Task Created': icon='➕';color='#2563eb';text=`<strong>${a}</strong> created <em>${e.event?.replace('Task created: ','')}</em>`;break;
-            case'Task Submitted': icon='📤';color='#7c3aed';text=`<strong>${a}</strong> submitted <em>${e.event?.match(/"([^"]+)"/)?.[1]||''}</em> for review`;break;
-            case'Approved': icon='✅';color='#15803d';text=`<strong>${a}</strong> approved <em>${e.event?.match(/"([^"]+)"/)?.[1]||''}</em>`;break;
-            case'Rejected': icon='❌';color='#dc2626';text=`<strong>${a}</strong> rejected <em>${e.event?.match(/"([^"]+)"/)?.[1]||''}</em>`;break;
-            case'Re-Estimated': icon='⏱';color='#d97706';text=`<strong>${a}</strong> re-estimated <em>${e.event?.match(/"([^"]+)"/)?.[1]||''}</em>`;break;
-            case'Help Requested': icon='🤝';color='#ea580c';text=`<strong>${a}</strong> requested help — ${e.event?.replace('Help requested:','').trim()}`;break;
-            case'Reminder Sent': icon='🔔';color='#7c3aed';text=`<strong>${a}</strong> reminded ${e.event?.match(/reminded (.+?) about/)?.[1]||'someone'}`;break;
-            case'Re-Estimated': icon='⏱';color='#d97706';text=`<strong>${a}</strong> re-estimated a task`;break;
-            case'Delete': icon='🗑';color='#dc2626';text=`<strong>${a}</strong> deleted ${e.event||'an item'}`;break;
-            default: icon='📋';color='#64748b';text=`<strong>${a}</strong> — ${e.action}`;
+            case'Task Created': icon='➕';color='#2563eb';text=`<strong>${a}</strong> created <em>${esc(e.event?.replace('Task created: ',''))}</em>`;break;
+            case'Task Submitted': icon='📤';color='#7c3aed';text=`<strong>${a}</strong> submitted <em>${esc(e.event?.match(/"([^"]+)"/)?.[1]||'')}</em> for review`;break;
+            case'Approved': icon='✅';color='#15803d';text=`<strong>${a}</strong> approved <em>${esc(e.event?.match(/"([^"]+)"/)?.[1]||'')}</em>`;break;
+            case'Rejected': icon='❌';color='#dc2626';text=`<strong>${a}</strong> rejected <em>${esc(e.event?.match(/"([^"]+)"/)?.[1]||'')}</em>`;break;
+            case'Re-Estimated': icon='⏱';color='#d97706';text=`<strong>${a}</strong> re-estimated <em>${esc(e.event?.match(/"([^"]+)"/)?.[1]||'')}</em>`;break;
+            case'Help Requested': icon='🤝';color='#ea580c';text=`<strong>${a}</strong> requested help — ${esc(e.event?.replace('Help requested:','').trim())}`;break;
+            case'Reminder Sent': icon='🔔';color='#7c3aed';text=`<strong>${a}</strong> reminded ${esc(e.event?.match(/reminded (.+?) about/)?.[1]||'someone')}`;break;
+            case'Delete': icon='🗑';color='#dc2626';text=`<strong>${a}</strong> deleted ${esc(e.event||'an item')}`;break;
+            default: icon='📋';color='#64748b';text=`<strong>${a}</strong> — ${esc(e.action)}`;
           }
           if(text) events.push({ts:e.at,icon,color,text,targetId,targetType,actor:a});
         });
@@ -1106,15 +1105,15 @@ function rDash(el){
         allTasks.forEach(t=>{
           (t.timeline||[]).forEach(ev=>{
             let icon='📋',color='#64748b',text='';
-            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${ev.by}</strong> requested help from ${ev.helpMember||'?'} on <em>${esc(t.title)}</em>`;}
-            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${ev.by}</strong> accepted help from ${ev.helperName||'?'} — <em>${esc(t.title)}</em> continues`;}
-            else{icon='📋';color='#64748b';text=`<strong>${ev.by||'?'}</strong> — ${ev.event} on <em>${esc(t.title)}</em>`;}
+            if(ev.type==='help_requested'){icon='🤝';color='#ea580c';text=`<strong>${esc(ev.by)}</strong> requested help from ${esc(ev.helpMember||'?')} on <em>${esc(t.title)}</em>`;}
+            else if(ev.type==='help_received'){icon='✅';color='#15803d';text=`<strong>${esc(ev.by)}</strong> accepted help from ${esc(ev.helperName||'?')} — <em>${esc(t.title)}</em> continues`;}
+            else{icon='📋';color='#64748b';text=`<strong>${esc(ev.by||'?')}</strong> — ${esc(ev.event)} on <em>${esc(t.title)}</em>`;}
             events.push({ts:ev.at,icon,color,text,targetId:t.id,targetType:'task',actor:ev.by||''});
           });
           // Task status changes derived from timestamps
-          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${mn(t.assignedTo)||'?'}</strong> started <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${mn(t.assignedTo)||'?'}</strong> submitted <em>${esc(t.title)}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
-          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${mn(t.reviewer)||'Admin'}</strong> approved <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
+          if(t.tsStarted) events.push({ts:t.tsStarted,icon:'▶',color:'#2563eb',text:`<strong>${esc(mn(t.assignedTo)||'?')}</strong> started <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsSubmitted) events.push({ts:t.tsSubmitted,icon:'📤',color:'#7c3aed',text:`<strong>${esc(mn(t.assignedTo)||'?')}</strong> submitted <em>${esc(t.title)}</em> for review`,targetId:t.id,targetType:'task',actor:mn(t.assignedTo)||''});
+          if(t.tsReviewed&&t.status==='Done') events.push({ts:t.tsReviewed,icon:'✅',color:'#15803d',text:`<strong>${esc(mn(t.reviewer)||'Admin')}</strong> approved <em>${esc(t.title)}</em>`,targetId:t.id,targetType:'task',actor:mn(t.reviewer)||''});
         });
 
         // ── Meetings ──────────────────────────────────────
@@ -1125,16 +1124,16 @@ function rDash(el){
           const icon=status==='Completed'?'✅':status==='Cancelled'?'❌':'📅';
           const color=status==='Completed'?'#15803d':status==='Cancelled'?'#dc2626':'#2563eb';
           const label=status==='Completed'?'completed meeting':'scheduled meeting';
-          events.push({ts,icon,color,text:`<strong>${creator}</strong> ${label} <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
+          events.push({ts,icon,color,text:`<strong>${esc(creator)}</strong> ${label} <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:creator});
           // Attendance events
           Object.entries(m.attendance||{}).forEach(([name,status])=>{
-            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${name}</strong> attended <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:name});
+            if(status==='present') events.push({ts:m.ended_at||m.meeting_date,icon:'👋',color:'#2563eb',text:`<strong>${esc(name)}</strong> attended <em>${esc(m.title)}</em>`,targetId:m.id,targetType:'meeting',actor:name});
           });
         });
 
         // ── Reminders from DB ─────────────────────────────
         (DB.reminders||[]).forEach(r=>{
-          events.push({ts:r.at,icon:'🔔',color:'#7c3aed',text:`<strong>${r.fromName||'?'}</strong> reminded <strong>${r.toName||'?'}</strong>${r.taskTitle?' about <em>'+r.taskTitle+'</em>':''}`,targetId:r.taskId,targetType:'task',actor:r.fromName||''});
+          events.push({ts:r.at,icon:'🔔',color:'#7c3aed',text:`<strong>${esc(r.fromName||'?')}</strong> reminded <strong>${esc(r.toName||'?')}</strong>${r.taskTitle?' about <em>'+esc(r.taskTitle)+'</em>':''}`,targetId:r.taskId,targetType:'task',actor:r.fromName||''});
         });
 
         // Sort by timestamp, take top 12
@@ -1146,7 +1145,7 @@ function rDash(el){
         return top.map(ev=>`<div onclick="${ev.targetType==='task'&&ev.targetId?`openTask('${ev.targetId}')`:ev.targetType==='meeting'&&ev.targetId?`openMeetingDetail('${ev.targetId}')`:''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);cursor:${ev.targetId?'pointer':'default'}">
           <span style="font-size:13px;flex-shrink:0;line-height:1.5">${ev.icon}</span>
           <div style="flex:1;overflow:hidden;min-width:0">
-            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.text)}</div>
+            <div style="font-size:12px;color:var(--tx);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.text}</div>
             <div style="font-size:10px;color:var(--tx3);margin-top:1px">${fr(ev.ts)}</div>
           </div>
         </div>`).join('');
