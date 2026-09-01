@@ -63,15 +63,34 @@ async function nUpdateTask(t){
 
 async function nMember(m, lid){
   showSaving(true);
-  const r = await sbInsert('team', {name:m.name,role:m.role,dept:m.dept,access:m.access||'Member',status:'Active',email:m.email||'',telegram:m.telegram||'',color:m.color,av:m.av,username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||'',perm_overrides:m.permOverrides||{},auto_reminders_active:m.autoRemindersActive!==false});
+  // Goes through the upsert_member() RPC — it's the only path that can
+  // write a password, since `team` itself has no direct write-then-read
+  // of that column exposed to the client. Returns a freshly generated
+  // temp password when none was supplied (new member, blank password
+  // field) — the caller is expected to show that to the admin once.
+  const rows = await sbRpc('upsert_member',{
+    p_id:null,p_name:m.name,p_role:m.role,p_dept:m.dept,p_access:m.access||'Member',
+    p_status:'Active',p_email:m.email||'',p_wa:m.telegram||'',p_member_type:m.memberType||'',
+    p_perm_overrides:m.permOverrides||{},p_auto_reminders_active:m.autoRemindersActive!==false,
+    p_color:m.color,p_av:m.av,p_username:m.username||m.name.toLowerCase().split(' ')[0],
+    p_password:m.password||null
+  });
   showSaving(false);
+  const r = Array.isArray(rows)?rows[0]:rows;
   if(r?.id) m.id=r.id;
-  return r;
+  return r; // r.generated_password is set when a temp password was auto-generated
 }
-async function nMemberUpd(m){
+async function nMemberUpd(m, newPassword){
   showSaving(true);
-  const r = await sbUpdate('team', m.id, {name:m.name,role:m.role,dept:m.dept,access:m.access,email:m.email||'',telegram:m.telegram||'',username:m.username||m.name.toLowerCase().split(' ')[0],password:m.password||'abohamood@1.',member_type:m.memberType||'',perm_overrides:m.permOverrides||{},auto_reminders_active:m.autoRemindersActive!==false});
-  showSaving(false); return r;
+  const rows = await sbRpc('upsert_member',{
+    p_id:m.id,p_name:m.name,p_role:m.role,p_dept:m.dept,p_access:m.access,
+    p_status:m.status||'Active',p_email:m.email||'',p_wa:m.telegram||'',p_member_type:m.memberType||'',
+    p_perm_overrides:m.permOverrides||{},p_auto_reminders_active:m.autoRemindersActive!==false,
+    p_color:m.color,p_av:m.av,p_username:m.username||m.name.toLowerCase().split(' ')[0],
+    p_password:newPassword||null // null = leave existing password untouched
+  });
+  showSaving(false);
+  return Array.isArray(rows)?rows[0]:rows;
 }
 
 async function nService(s, lid){
