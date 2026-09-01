@@ -1,5 +1,5 @@
 // §08 ── AUTH — LOGIN / LOGOUT / NAV ────────────────────────────────────
-function doLogin(){
+async function doLogin(){
   const uname=document.getElementById('lu').value.trim().toLowerCase();
   const pass=document.getElementById('lp').value;
   const remember=document.getElementById('l-remember')?.checked;
@@ -18,8 +18,15 @@ function doLogin(){
     errEl.textContent=`No user found for "${uname}". Try your first name`;
     errEl.style.display='block';return;
   }
-  const correctPass=found.password||'abohamood@1.';
-  if(pass!==correctPass){
+  const lbtn=document.getElementById('lbtn')||document.querySelector('.lbtn');
+  if(lbtn){lbtn.textContent='Signing in…';lbtn.disabled=true;}
+  // Password check happens server-side via a SECURITY DEFINER RPC — the
+  // `password` column is not selectable from the client at all anymore
+  // (team_public excludes it, and RLS blocks direct table reads), so
+  // this is the only way to verify a login. No local fallback password.
+  const ok=await sbRpc('verify_login',{p_member_id:found.id,p_password:pass});
+  if(lbtn){lbtn.textContent='Sign In';lbtn.disabled=false;}
+  if(ok!==true){
     errEl.textContent='Incorrect password';
     errEl.style.display='block';return;
   }
@@ -31,10 +38,9 @@ function doLogin(){
   }
   CU={...found};
   if(FULL.includes(CU.name)||AROLES.includes(CU.role))CU.access='Admin';
-  // Record last login time on the team member record
+  // last_login is stamped by verify_login() itself on success — just
+  // reflect it locally so the UI doesn't need another round trip.
   CU.lastLogin=new Date().toISOString();
-  if(CU.id){ try{ sbUpdate('team',CU.id,{last_login:CU.lastLogin}); }catch(e){} }
-  // Also update local DB
   const dbm=DB.team.find(m=>m.id===CU.id);if(dbm)dbm.lastLogin=CU.lastLogin;
   logAction('Login',`${esc(CU.name)} logged in`,'Info');
   startApp();
