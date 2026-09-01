@@ -79,7 +79,7 @@ function openMemberModal(id){
     mtEl.innerHTML='<option value="">— None —</option>'+types.map(t=>`<option value="${esc(t.name)}" ${m?.memberType===t.name?'selected':''}>${esc(t.name)}</option>`).join('');
   }
   if(document.getElementById('mf-username'))document.getElementById('mf-username').value=m?.username||'';
-  if(document.getElementById('mf-password'))document.getElementById('mf-password').value=m?.password||'abohamood@1.';
+  if(document.getElementById('mf-password'))document.getElementById('mf-password').value='';
   document.getElementById('mf-telegram').value=m?.telegram||'';
   // Individual content-access overrides — each defaults to "" (inherit
   // from employment type) unless this member already has an explicit
@@ -263,6 +263,7 @@ window.saveMember=async()=>{
     else if(v==='deny')permOverrides[perm]=false;
   });
   const autoRemindersActive=document.getElementById('mf-auto-rem')?document.getElementById('mf-auto-rem').checked:true;
+  const pwField=document.getElementById('mf-password')?.value?.trim()||'';
   if(_editId){
     const m=DB.team.find(x=>x.id===_editId);if(!m)return;
     m.name=name; m.role=document.getElementById('mf-role').value; m.dept=document.getElementById('mf-dept').value;
@@ -273,17 +274,28 @@ window.saveMember=async()=>{
     m.autoRemindersActive=autoRemindersActive;
     m.av=mkAv(name);
     if(document.getElementById('mf-username')?.value) m.username=document.getElementById('mf-username').value.trim().toLowerCase();
-    if(document.getElementById('mf-password')?.value) m.password=document.getElementById('mf-password').value;
     logAction('Member Updated',`${esc(CU.name)} updated "${name}"`,'Info',name,'');
-    await nMemberUpd(m); CM('m-mbr'); toast('Member updated ✓','ok');
+    // pwField blank = leave the existing password untouched (upsert_member
+    // treats a null/blank password as "don't change it" server-side).
+    await nMemberUpd(m,pwField);
+    CM('m-mbr'); toast('Member updated ✓'+(pwField?' — password changed':''),'ok');
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   } else {
     const colors=['#4f46e5','#7c3aed','#0369a1','#047857','#b45309','#be185d','#dc2626'];
-    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),permOverrides,autoRemindersActive,av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:''};
+    const m={id:'u'+gid(),name,role:document.getElementById('mf-role').value,dept:document.getElementById('mf-dept').value,access:document.getElementById('mf-access').value,memberType:document.getElementById('mf-mtype')?.value||'',status:'Active',email:document.getElementById('mf-email').value,telegram:document.getElementById('mf-telegram').value.trim(),permOverrides,autoRemindersActive,av:mkAv(name),color:colors[Math.floor(Math.random()*colors.length)],notes:'',password:pwField||undefined};
     DB.team.push(m);
     logAction('Member Added',`${esc(CU.name)} added "${name}"`,'Success',name,'');
     const r=await nMember(m,m.id); if(r?.url)NID[m.id]=r.url;
-    CM('m-mbr'); toast(`${name} added ✓`,'ok');
+    delete m.password; // never keep a password value sitting in the client-side cache
+    CM('m-mbr');
+    if(r?.generated_password){
+      // No password was typed, so the server generated a random temp one —
+      // this is the only moment it's ever visible; show it once so the
+      // admin can hand it to the new member.
+      alert(`${name} was added.\n\nTemporary password: ${r.generated_password}\n\nShare this with them securely — it won't be shown again. They should change it after first login.`);
+    } else {
+      toast(`${name} added ✓`,'ok');
+    }
     if(page==='team')nav('team',document.querySelector('.ni.on'));
   }
 };
