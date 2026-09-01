@@ -130,17 +130,18 @@ function rSettings(el){
       </div>
 
       <div class="card">
-        <div class="ct"><span class="ct-t">🔐 Team Credentials</span></div>
-        <div class="tw"><table><thead><tr><th>Name</th><th>Username</th><th>Password</th></tr></thead><tbody>
+        <div class="ct"><span class="ct-t">🔐 Team Logins</span></div>
+        <div class="tw"><table><thead><tr><th>Name</th><th>Username</th><th></th></tr></thead><tbody>
           ${DB.team.map(m=>`<tr>
             <td><span style="display:flex;align-items:center;gap:6px">
-              <span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${m.av}</span>
+              <span style="width:18px;height:18px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${esc(m.av)}</span>
               ${esc(m.name)}
             </span></td>
-            <td style="font-family:var(--fnm);color:var(--ac);font-weight:600">${m.username||m.name.toLowerCase().split(' ')[0]}</td>
-            <td style="font-family:var(--fnm)">${m.password||'abohamood@1.'}</td>
+            <td style="font-family:var(--fnm);color:var(--ac);font-weight:600">${esc(m.username||m.name.toLowerCase().split(' ')[0])}</td>
+            <td><button type="button" onclick="openMemberModal('${m.id}')" style="padding:5px 11px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:var(--tx)">Reset Password</button></td>
           </tr>`).join('')}
         </tbody></table></div>
+        <div style="font-size:10px;color:var(--tx3);padding:8px 2px 0">Passwords are verified server-side and never shown here — resetting sets a new one.</div>
       </div>
     </div>
 
