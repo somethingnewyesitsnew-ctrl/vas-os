@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    // Basic sanity caps — not a substitute for real auth (this function
+    // Basic sanity caps - not a substitute for real auth (this function
     // is invoked with the public anon key, same as every other client
     // call in this app), just cheap protection against a malformed or
     // abusive payload turning into an oversized/garbage push.
