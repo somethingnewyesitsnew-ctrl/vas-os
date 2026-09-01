@@ -58,7 +58,7 @@ loadVersionBadge();
     const lbtn=document.getElementById('lbtn')||document.querySelector('.lbtn');
     if(lbtn){lbtn.textContent='Loading…';lbtn.disabled=true;}
     try{
-      const r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team?order=name',{
+      const r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team_public?order=name',{
         headers:{
           'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws',
           'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws'
@@ -67,9 +67,11 @@ loadVersionBadge();
       if(r.ok){
         const team=await r.json();
         if(team&&team.length){
+          // team_public excludes the password column entirely — login is
+          // verified server-side via the verify_login() RPC in doLogin().
           DB.team=team.map(m=>({...m,color:m.color||mkColor(m.name),av:m.av||mkAv(m.name),
             username:m.username||(m.name.toLowerCase().split(' ')[0]),
-            password:m.password||'abohamood@1.',lastLogin:m.last_login||null}));
+            lastLogin:m.last_login||null}));
           setSync('live','Refresh');
         } else {
           // Tables exist but empty — load demo team so login works
