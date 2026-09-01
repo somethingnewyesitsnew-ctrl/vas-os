@@ -120,7 +120,7 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
   try{
     // Phase 1: load lookups first (team, services, companies, projects)
     const [team,svcs,cos,projs] = await Promise.all([
-      sbQ('team','order=name'),
+      sbQ('team_public','order=name'),
       sbQ('services','order=name'),
       sbQ('companies','order=name'),
       sbQ('projects','order=name'),
@@ -129,7 +129,11 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
 
     if(!team){ setSync('err','Failed — run SQL setup first'); return false; }
 
-    DB.team = (team||[]).map(m=>({...m, name:(m.name||'').trim(), color:m.color||mkColor(m.name), av:m.av||mkAv(m.name), username:m.username||(m.name.toLowerCase().split(' ')[0]), password:m.password||'abohamood@1.', lastLogin:m.last_login||null, memberType:m.member_type||'', permOverrides:m.perm_overrides||{}, autoRemindersActive:m.auto_reminders_active!==false}));
+    // NOTE: this now reads from the `team_public` view, which does not
+    // expose the `password` column at all — passwords never reach the
+    // client. Login is verified server-side via the verify_login() RPC
+    // (see doLogin() in 08-auth-nav.js).
+    DB.team = (team||[]).map(m=>({...m, name:(m.name||'').trim(), color:m.color||mkColor(m.name), av:m.av||mkAv(m.name), username:m.username||(m.name.toLowerCase().split(' ')[0]), lastLogin:m.last_login||null, memberType:m.member_type||'', permOverrides:m.perm_overrides||{}, autoRemindersActive:m.auto_reminders_active!==false}));
     DB.services = (svcs||[]).map(s=>({...s, desc: s.description||'', service_type: s.service_type||'Digital'}));
     DB.operators = (cos||[]).filter(c=>c.type==='Telecom Operator'||['Zain','MTN','Sudani'].some(n=>(c.name||'').includes(n)));
     DB.companies = (cos||[]).filter(c=>!DB.operators.find(o=>o.id===c.id));
