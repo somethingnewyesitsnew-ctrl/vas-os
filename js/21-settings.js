@@ -145,6 +145,25 @@ function rSettings(el){
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">🧪 Test Tools</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Create real test tasks to verify notifications &amp; behavior</span></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.6">Creates one real task per selected member — same as creating them one by one from "+ New Task". Each person gets notified (in-app + push/Telegram) and the task behaves completely normally, so you can confirm delivery and behavior across the whole team in one click. Delete them from All Tasks when you're done.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        ${DB.team.map(m=>`
+        <label style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-size:12px;font-weight:600">
+          <input type="checkbox" class="test-task-member" value="${m.id}" style="width:14px;height:14px;cursor:pointer;accent-color:var(--ac)">
+          <span style="width:16px;height:16px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#fff;flex-shrink:0">${esc(m.av)}</span>
+          ${esc(m.name)}
+        </label>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn bg2 bxs" onclick="document.querySelectorAll('.test-task-member').forEach(c=>c.checked=true)">Select All</button>
+        <button type="button" class="btn bg2 bxs" onclick="document.querySelectorAll('.test-task-member').forEach(c=>c.checked=false)">Select None</button>
+        <input type="date" id="test-task-due" value="${new Date(Date.now()+86400000).toISOString().slice(0,10)}" style="padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px">
+        <button class="btn bp bsm" onclick="createTestTasksForMembers()">🧪 Create Test Task for Selected</button>
+      </div>
+    </div>
+
     ${buildBackupCard()}
 
     <div class="card" style="margin-bottom:12px">
