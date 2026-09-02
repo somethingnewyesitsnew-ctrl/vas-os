@@ -151,7 +151,7 @@ function buildMobMore(){
   const reminders=DB.reminders?.filter(r=>!r.read&&(r.toId===CU?.id||r.toName===CU?.name))||[];
   const hrComs=DB.hrComs?.filter(c=>c.fromId===CU?.id&&c.replies?.some(r=>!c.readByOwner))||[];
   const announcements=DB.announcements?.filter(a=>!(a.readBy||[]).includes(CU?.id)&&(a.audience==='all'||(a.audienceIds||[]).includes(CU?.id)))||[];
-  const todayMeet=DB.meetings?.filter(m=>m.meeting_date===new Date().toISOString().split('T')[0]&&(m.created_by===CU?.name||m.invitees?.includes(CU?.name)))||[];
+  const todayMeet=DB.meetings?.filter(m=>m.meeting_date===localDateStr()&&(m.created_by===CU?.name||m.invitees?.includes(CU?.name)))||[];
   const todos=DB.todos?.filter(t=>t.status!=='Done'&&(t.assignedTo===CU?.name||t.owner_name===CU?.name))||[];
   const allT=DB.tasks.filter(t=>!['Done','Cancelled'].includes(t.status));
 
@@ -277,7 +277,7 @@ function updateMobBadges(){
   const active=my.filter(t=>!['Done','Cancelled','Rejected'].includes(t.status));
   const bdg=document.getElementById('mn-bdg-tasks');
   if(bdg){bdg.textContent=active.length||'';bdg.style.display=active.length?'flex':'none';}
-  const meetings=DB.meetings.filter(m=>m.meeting_date===new Date().toISOString().split('T')[0]&&m.status==='Scheduled'&&(m.created_by===CU?.name||m.invitees?.includes(CU?.name)));
+  const meetings=DB.meetings.filter(m=>m.meeting_date===localDateStr()&&m.status==='Scheduled'&&(m.created_by===CU?.name||m.invitees?.includes(CU?.name)));
   const mbdg=document.getElementById('mn-bdg-meet');
   if(mbdg){mbdg.textContent=meetings.length||'';mbdg.style.display=meetings.length?'flex':'none';}
   // Comments badge
