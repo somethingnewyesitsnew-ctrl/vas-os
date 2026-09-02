@@ -108,7 +108,6 @@ async function notifyTG(memberId, eventType, data={}){
 // from GitHub (see loadVersionBadge() in 29-init-mobile.js) so the
 // sidebar always shows exactly what's deployed, automatically.
 const APP_VERSION='4.3.0';
-const APP_REPO='somethingnewyesitsnew-ctrl/vas-os';
 
 const NDB={
   tasks:'4abbbc95-3f15-4f9e-83dc-ee63b1439ccc',
