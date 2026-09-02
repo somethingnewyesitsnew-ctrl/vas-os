@@ -696,12 +696,12 @@ function rDash(el){
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-        <div style="background:linear-gradient(135deg,#14532d1c,#15803d14);border:1px solid #86efac55;border-radius:8px;padding:6px 12px;min-width:0;display:flex;align-items:center;gap:8px;overflow:hidden">
-          <span style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;white-space:nowrap">🎉 Employee of the Week</span>
-          ${bow?`<span style="width:3px;height:3px;border-radius:50%;background:#86efac;flex-shrink:0"></span>
-          <span style="font-size:12.5px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(bow.m.name)}</span>
-          <span style="font-size:11.5px;color:#15803d;font-weight:700;flex-shrink:0;white-space:nowrap;margin-left:auto">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</span>`
-          :`<span style="font-size:11px;color:var(--tx3);white-space:nowrap">Not enough activity yet</span>`}
+        <div style="background:linear-gradient(135deg,#15803d,#059669);border-radius:8px;padding:8px 14px;min-width:0;display:flex;align-items:center;gap:10px;overflow:hidden;box-shadow:0 2px 10px #15803d4d">
+          <span style="font-size:11.5px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;white-space:nowrap">🏆 Employee of the Week</span>
+          ${bow?`<span style="width:4px;height:4px;border-radius:50%;background:#ffffff80;flex-shrink:0"></span>
+          <span style="font-size:15px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(bow.m.name)}</span>
+          <span style="font-size:12px;color:#fff;font-weight:800;flex-shrink:0;white-space:nowrap;margin-left:auto;background:#ffffff30;padding:3px 10px;border-radius:20px">⭐ ${bow.doneW} task${bow.doneW!==1?'s':''} done</span>`
+          :`<span style="font-size:11.5px;color:#ffffffcc;white-space:nowrap">Not enough activity yet</span>`}
         </div>
 
         <div class="card" style="min-width:0;overflow:hidden">
