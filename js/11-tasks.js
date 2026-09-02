@@ -96,7 +96,7 @@ function renderTasks(el,tasks,showMember){
     if(fdue)f=f.filter(tk=>getDueStatus(tk).key===fdue);
     if(fday){
       const now2=new Date();
-      if(fday==='today'){const ds=now2.toISOString().split('T')[0];f=f.filter(tk=>tk.due===ds||tk.tsCreated?.slice(0,10)===ds||tk.tsReviewed?.slice(0,10)===ds);}
+      if(fday==='today'){const ds=localDateStr(now2);f=f.filter(tk=>tk.due===ds||(tk.tsCreated?localDateStr(new Date(tk.tsCreated)):undefined)===ds||(tk.tsReviewed?localDateStr(new Date(tk.tsReviewed)):undefined)===ds);}
       else if(fday==='week'){const d=new Date(now2);d.setDate(d.getDate()-7);f=f.filter(tk=>new Date(tk.tsCreated||0)>=d||new Date(tk.due||0)>=d||new Date(tk.tsReviewed||0)>=d);}
       else if(fday==='month'){const d=new Date(now2);d.setDate(d.getDate()-30);f=f.filter(tk=>new Date(tk.tsCreated||0)>=d||new Date(tk.due||0)>=d||new Date(tk.tsReviewed||0)>=d);}
     }
