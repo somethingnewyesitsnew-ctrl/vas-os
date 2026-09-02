@@ -15,27 +15,14 @@ function startClock(){
 }
 startClock();
 
-// ── Version badge — semantic version shows instantly (bundled in code),
-// then enhanced with the live commit SHA + relative time fetched from
-// GitHub, so it always reflects exactly what's actually deployed without
-// anyone needing to remember to update it by hand. Fails silently
-// (keeps showing just the semantic version) if offline/rate-limited.
+// ── Version badge — shows the semantic version bundled in code.
+// No external calls, no links out — deliberately self-contained so this
+// works identically on any host without revealing anything about where
+// the code is developed.
 function loadVersionBadge(){
   const el=document.getElementById('sb-version-badge');
   if(!el) return;
   el.textContent='v'+APP_VERSION;
-  el.onclick=()=>window.open(`https://github.com/${APP_REPO}/commits/main`,'_blank');
-  fetch(`https://api.github.com/repos/${APP_REPO}/commits/main`)
-    .then(r=>r.ok?r.json():Promise.reject(r.status))
-    .then(c=>{
-      const sha=c?.sha?.slice(0,7);
-      const when=c?.commit?.author?.date;
-      if(!sha) return;
-      el.textContent=`v${APP_VERSION} · ${sha}`;
-      el.title=`${c.commit?.message?.split('\n')[0]||''}\n${when?fr(when):''} — click to view on GitHub`;
-      el.onclick=()=>window.open(c.html_url,'_blank');
-    })
-    .catch(()=>{ /* offline or rate-limited — semantic version alone still shows */ });
 }
 loadVersionBadge();
 
