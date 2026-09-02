@@ -170,9 +170,9 @@ function buildAlertStrip(){
   const strip=document.getElementById('alert-strip');
   if(!strip||!CU)return;
 
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const tomorrowDate=new Date(); tomorrowDate.setDate(tomorrowDate.getDate()+1);
-  const tomorrowStr=tomorrowDate.toISOString().split('T')[0];
+  const tomorrowStr=localDateStr(tomorrowDate);
   const todayDow=new Date().getDay();
   const tomorrowDow=tomorrowDate.getDay();
 
@@ -275,7 +275,7 @@ function getMeetingStats(memberName, periodDays=30){
     return key && m.attendance[key]==='absent';
   });
   // Upcoming meetings
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const upcoming=DB.meetings.filter(m=>
     m.status==='Scheduled' &&
     m.meeting_date>=todayStr &&
