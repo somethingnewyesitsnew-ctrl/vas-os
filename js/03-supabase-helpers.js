@@ -88,6 +88,14 @@ async function sbDelete(table, id){
   }catch(e){ console.error('sbDelete',table,e.name==='AbortError'?'timed out':e.message); return false; }
 }
 
+// Reminders / HR communications / announcements were calling these but
+// they were never defined — every "Send" on those forms silently threw
+// a ReferenceError (unhandled promise rejection, no visible error) and
+// nothing ever got inserted. Same behavior as sbInsert/sbDelete; kept as
+// distinctly-named wrappers since that's what the callers already expect.
+async function sbCommsInsert(table, data){ return sbInsert(table, data); }
+async function sbCommsDelete(table, id){ return sbDelete(table, id); }
+
 function setSync(s,l){
   const el=document.getElementById('nsync');
   el.className='nsync'+(s==='live'?' live':s==='err'?' err':s==='syncing'?' syncing':'');
