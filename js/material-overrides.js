@@ -46,7 +46,7 @@ function dashSnapshot(values){
   const KEY='vas_kpi_hist';
   let hist={};
   try{ hist=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   const priorDate=Object.keys(hist).filter(d=>d<today).sort().pop();
   const prior=priorDate?hist[priorDate]:null;
   hist[today]={...(hist[today]||{}),...values};
@@ -477,7 +477,7 @@ window.renderProjectDocsList=(projectId)=>{
 // ══════════════════════════════════════════════════════════════════════
 // §10 ── DASHBOARD ───────────────────────────────────────────────────────
 function rDash(el){
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const todayDow=new Date().getDay();
   const now=new Date();
 
@@ -573,7 +573,7 @@ function rDash(el){
     const last30d=new Date(now);last30d.setDate(now.getDate()-30);
     const doneThisWeek=myDone.filter(t=>t.tsReviewed&&new Date(t.tsReviewed)>=last7d);
     const doneThisMonth=myDone.filter(t=>t.tsReviewed&&new Date(t.tsReviewed)>=last30d);
-    const doneToday=myDone.filter(t=>t.tsReviewed&&t.tsReviewed.slice(0,10)===todayStr);
+    const doneToday=myDone.filter(t=>t.tsReviewed&&localDateStr(new Date(t.tsReviewed))===todayStr);
 
     // ── Performance note ──────────────────────────────────────────
     function perfNote(rate,overdue,rejected,active,doneW,newCount,nearDueCount){
@@ -864,14 +864,14 @@ function rDash(el){
   const last30_d=new Date(now); last30_d.setDate(now.getDate()-30);
   const last30Done=doneTasks.filter(t=>t.tsReviewed&&new Date(t.tsReviewed)>=last30_d).length;
   const last30Created=allTasks.filter(t=>t.tsCreated&&new Date(t.tsCreated)>=last30_d).length;
-  const todayDone=doneTasks.filter(t=>t.tsReviewed&&t.tsReviewed.slice(0,10)===todayStr).length;
-  const todayCreated=allTasks.filter(t=>t.tsCreated&&t.tsCreated.slice(0,10)===todayStr).length;
+  const todayDone=doneTasks.filter(t=>t.tsReviewed&&localDateStr(new Date(t.tsReviewed))===todayStr).length;
+  const todayCreated=allTasks.filter(t=>t.tsCreated&&localDateStr(new Date(t.tsCreated))===todayStr).length;
   const day7=Array.from({length:7},(_,i)=>{
     const d=new Date(now);d.setDate(d.getDate()-(6-i));
-    const ds=d.toISOString().split('T')[0];
+    const ds=localDateStr(d);
     const label=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
-    const created=allTasks.filter(t=>t.tsCreated&&t.tsCreated.slice(0,10)===ds).length;
-    const done=doneTasks.filter(t=>t.tsReviewed&&t.tsReviewed.slice(0,10)===ds).length;
+    const created=allTasks.filter(t=>t.tsCreated&&localDateStr(new Date(t.tsCreated))===ds).length;
+    const done=doneTasks.filter(t=>t.tsReviewed&&localDateStr(new Date(t.tsReviewed))===ds).length;
     return{ds,label,created,done,isToday:ds===todayStr};
   });
   const maxBar=Math.max(...day7.map(d=>Math.max(d.created,d.done)),1);
@@ -971,8 +971,8 @@ function rDash(el){
       <div id="dash-upcoming-pane" style="display:none">
         ${(()=>{
           const now10=new Date(); now10.setDate(now10.getDate()+10);
-          const todayS=new Date().toISOString().split('T')[0];
-          const endS=now10.toISOString().split('T')[0];
+          const todayS=localDateStr();
+          const endS=localDateStr(now10);
           const items=[];
           // Upcoming meetings
           DB.meetings.filter(m=>m.meeting_date>todayS&&m.meeting_date<=endS&&!['Completed','Cancelled'].includes(m.status)&&(m.created_by===CU.name||m.invitees?.includes(CU.name)||isAdmin()))
