@@ -1,7 +1,7 @@
 // §28 ── BADGES & UPDATES ────────────────────────────────────────────────
 function updateBadges(){
   if(!CU)return;
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const todayDow=new Date().getDay();
 
   // My tasks (active)
