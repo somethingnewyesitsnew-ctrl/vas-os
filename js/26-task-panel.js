@@ -282,7 +282,7 @@ window.reqStart=(id)=>{
 window.startServiceTestTask=async(taskId)=>{
   const t=DB.tasks.find(tk=>tk.id===taskId);if(!t)return;
   closeSP();
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const op=[...DB.operators,...DB.companies].find(o=>o.id===t.operator);
   let session=DB.testSessions.find(s=>s.test_date===todayStr&&(s.tester_id===CU.id||s.tester_name===CU.name)&&s.operator_name===op?.name&&s.status!=='Cancelled');
   navTo('svctest');
@@ -530,7 +530,7 @@ window.approveTask=async(id)=>{
   t.respH=rh; t.workH=wh; t.revH=rvh; t.cycleH=ch;
 
   // Create archive entry
-  const archEntry={id:'a'+gid(),title:t.title,by:t.assignedTo,reviewer:CU.id,svc:t.service,op:t.operator,type:t.type,priority:t.priority,est:t.est,actual:t.actual,done:new Date().toISOString().split('T')[0],what:t.what||'',outcome:'Successful',respH:rh,workH:wh,revH:rvh,cycleH:ch,reqBy:t.reqBy,at:now()};
+  const archEntry={id:'a'+gid(),title:t.title,by:t.assignedTo,reviewer:CU.id,svc:t.service,op:t.operator,type:t.type,priority:t.priority,est:t.est,actual:t.actual,done:localDateStr(),what:t.what||'',outcome:'Successful',respH:rh,workH:wh,revH:rvh,cycleH:ch,reqBy:t.reqBy,at:now()};
   DB.archive.unshift(archEntry);
   nArchive(archEntry, archEntry.id);
 
