@@ -16,10 +16,12 @@ window.skipTutorial=window.endTutorial=()=>{
   document.getElementById('tut-overlay')?.remove();
   document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'));
   localStorage.setItem('vas_tut_done_'+(CU?.id||'guest'),'1');
-  // First-login flow: tutorial → THEN ask about notifications (once the
-  // overlay is fully gone, not on top of it). No-ops if already granted,
-  // denied, or previously dismissed — see maybeShowPushPrompt.
+  // First-login flow: tutorial → push prompt → mobile setup guide (each
+  // waits for the previous overlay to clear so they never stack).
+  // No-ops if already granted/denied/dismissed — see maybeShowPushPrompt
+  // and maybeShowMobileGuide.
   if(typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,500);
+  if(typeof maybeShowMobileGuide==='function') setTimeout(maybeShowMobileGuide,5000);
 };
 
 function showTutStep(){
@@ -65,5 +67,52 @@ function showTutStep(){
 }
 
 function checkFirstTimeTutorial(){if(!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest')))setTimeout(()=>{if(!document.getElementById('tut-overlay')){_tutFiltered=getTutorialSteps();_tutStep=0;showTutStep();}},2000);}
+
+// ── Mobile setup / notifications guide — shown once per member, same
+// pattern as the tutorial (localStorage flag, keyed by member id). Fires
+// after the tutorial+push-prompt sequence for new members (see
+// skipTutorial above) and after the push prompt for returning members
+// (see registerPushSW in 08-auth-nav.js). Both call sites are mutually
+// exclusive per login, so this never double-shows.
+function maybeShowMobileGuide(){
+  if(document.getElementById('mobile-guide-overlay')) return;
+  if(localStorage.getItem('vas_mobile_guide_seen_'+(CU?.id||'guest'))) return;
+  const ov=document.createElement('div');
+  ov.id='mobile-guide-overlay';
+  ov.innerHTML=`<div onclick="dismissMobileGuide()" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:4000"></div>`;
+  const box=document.createElement('div');
+  box.style.cssText='position:fixed;z-index:4001;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--s);border-radius:14px;padding:22px 24px;width:380px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px var(--bd)';
+  box.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:800;color:var(--tx)">📱 Get the Most Out of Digital Plus</div>
+      <button onclick="dismissMobileGuide()" style="background:none;border:none;font-size:16px;color:var(--tx3);cursor:pointer;padding:0;line-height:1">✕</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--tx2);line-height:1.7">
+      <div style="font-weight:800;color:var(--tx);margin-bottom:4px">🍎 iPhone (Safari)</div>
+      <ol style="margin:0 0 14px 18px;padding:0">
+        <li>Tap the Share icon in Safari</li>
+        <li>Scroll down → <b>Add to Home Screen</b></li>
+        <li>Open the app from that new icon (not from Safari) — required for notifications to work on iPhone</li>
+        <li>Log in, then tap <b>Enable Notifications</b> on the Dashboard</li>
+      </ol>
+      <div style="font-weight:800;color:var(--tx);margin-bottom:4px">🤖 Android (Chrome)</div>
+      <ol style="margin:0 0 14px 18px;padding:0">
+        <li>Tap the ⋮ menu → <b>Add to Home screen</b> / <b>Install app</b></li>
+        <li>Open the app from the new icon</li>
+        <li>Log in, then tap <b>Enable Notifications</b></li>
+      </ol>
+      <div style="font-weight:800;color:var(--tx);margin-bottom:4px">💻 Desktop</div>
+      <ol style="margin:0 0 4px 18px;padding:0">
+        <li>Tap <b>Enable Notifications</b> at the top of the Dashboard and allow when your browser asks</li>
+      </ol>
+    </div>
+    <button onclick="dismissMobileGuide()" style="width:100%;margin-top:16px;padding:10px 14px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer">Got it</button>`;
+  ov.appendChild(box);document.body.appendChild(ov);
+}
+window.maybeShowMobileGuide=maybeShowMobileGuide;
+window.dismissMobileGuide=()=>{
+  document.getElementById('mobile-guide-overlay')?.remove();
+  localStorage.setItem('vas_mobile_guide_seen_'+(CU?.id||'guest'),'1');
+};
 
 // ══════════════════════════════════════════════════════
