@@ -454,7 +454,7 @@ window.addMeetingActionItem=(meetingId)=>{
   const m=DB.meetings.find(x=>x.id===meetingId);
   const teamOpts=DB.team.map(t=>`<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
   const todayPlus=new Date();todayPlus.setDate(todayPlus.getDate()+3);
-  const defDue=todayPlus.toISOString().split('T')[0];
+  const defDue=localDateStr(todayPlus);
 
   // hide empty state
   const empty=document.getElementById('ai-empty');if(empty)empty.style.display='none';
