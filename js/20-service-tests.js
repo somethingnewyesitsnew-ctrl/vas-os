@@ -2,7 +2,7 @@
 function rSvcTest(el){
   if(!canDo('svcTest')){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Access Restricted</div><div class="es">Your membership type does not include access to Service Tests.</div></div>';return;}
   const todayDow=new Date().getDay();
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const mySchedules=isAdmin()?DB.testSchedules.filter(s=>s.active!==false):DB.testSchedules.filter(s=>s.member_id===CU.id&&s.active!==false);
   const todaySchedules=mySchedules.filter(s=>s.day_of_week===todayDow);
   const allChecks=DB.testChecks;
@@ -470,7 +470,7 @@ window.startTestSession=async(operatorId,memberId)=>{
   const op=[...DB.operators,...DB.companies].find(o=>o.id===operatorId);
   const m=DB.team.find(t=>t.id===memberId)||CU;
   if(!op){toast('Operator not found','bad');return;}
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localDateStr();
   const svcs=DB.services.filter(s=>s.operator_name===op.name);
   if(!svcs.length){toast('No services linked to '+op.name+'. Add services first.','bad');return;}
   toast('Starting…','inf',3000);
