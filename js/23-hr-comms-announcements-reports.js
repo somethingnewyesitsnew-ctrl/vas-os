@@ -355,7 +355,7 @@ function rReports(el){
     const wh=Math.round(mt.reduce((s,t)=>s+(t.actual||0),0)*10)/10;
     const cr=mt.length?Math.round(done/mt.length*100):0;
     // 7-day spark
-    const spark=[0,1,2,3,4,5,6].map(i=>{const d=new Date(to);d.setDate(d.getDate()-(6-i));const ds=d.toISOString().split('T')[0];return DB.tasks.filter(t=>t.status==='Done'&&t.assignedTo===m.id&&t.tsReviewed?.slice(0,10)===ds).length;});
+    const spark=[0,1,2,3,4,5,6].map(i=>{const d=new Date(to);d.setDate(d.getDate()-(6-i));const ds=localDateStr(d);return DB.tasks.filter(t=>t.status==='Done'&&t.assignedTo===m.id&&(t.tsReviewed?localDateStr(new Date(t.tsReviewed)):undefined)===ds).length;});
     const mx=Math.max(...spark,1);
     const sparkSvg=`<svg width="55" height="18" viewBox="0 0 55 18"><polyline points="${spark.map((v,i)=>`${i*9},${18-Math.round(v/mx*16)}`).join(' ')}" fill="none" stroke="${cr>=70?'#15803d':cr>=40?'#d97706':'#dc2626'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return{m,total:mt.length,done,ov,rej,wh,cr,sparkSvg};
