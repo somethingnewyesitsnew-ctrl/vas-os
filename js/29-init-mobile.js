@@ -45,12 +45,24 @@ loadVersionBadge();
     const lbtn=document.getElementById('lbtn')||document.querySelector('.lbtn');
     if(lbtn){lbtn.textContent='Loading…';lbtn.disabled=true;}
     try{
-      const r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team_public?order=name',{
-        headers:{
-          'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws',
-          'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws'
-        }
-      });
+      // Plain fetch() never times out on its own — on a slow/flaky mobile
+      // connection this used to be able to hang indefinitely, keeping the
+      // login screen hidden (it's only revealed after this try/catch
+      // settles) behind a splash/blank screen with no way out. Capping it
+      // at 8s guarantees the fallback-to-demo-data path below always runs
+      // and the login screen always appears within a bounded time.
+      const _ctrl=new AbortController();
+      const _t=setTimeout(()=>_ctrl.abort(),8000);
+      let r;
+      try{
+        r=await fetch('https://duglbebwhtuijnduwmvz.supabase.co/rest/v1/team_public?order=name',{
+          signal:_ctrl.signal,
+          headers:{
+            'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws',
+            'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Z2xiZWJ3aHR1aWpuZHV3bXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ1NjgsImV4cCI6MjA5MTUxMDU2OH0.0VFefKrp6Zzp9FbvJybzTwxQfK1nCRa8N_ncJrd9xws'
+          }
+        });
+      } finally { clearTimeout(_t); }
       if(r.ok){
         const team=await r.json();
         if(team&&team.length){
@@ -71,7 +83,7 @@ loadVersionBadge();
       }
     } catch(e){
       loadDemoData();
-      setSync('err','Offline — demo mode');
+      setSync('err', e?.name==='AbortError' ? 'Connection too slow — demo mode' : 'Offline — demo mode');
     }
     buildQuickBtns();
     if(lbtn){lbtn.textContent='Sign In';lbtn.disabled=false;}
