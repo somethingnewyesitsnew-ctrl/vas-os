@@ -302,7 +302,7 @@ function startReminderChecker(){
   const FIRED_KEY='vas_reminded_'+CU?.name;
   const fired=new Set(JSON.parse(localStorage.getItem(FIRED_KEY)||'[]'));
 
-  const SVC_TEST_FIRED_KEY='vas_svctest_fired_'+new Date().toISOString().split('T')[0];
+  const SVC_TEST_FIRED_KEY='vas_svctest_fired_'+localDateStr();
   const svcTestFired=new Set(JSON.parse(localStorage.getItem(SVC_TEST_FIRED_KEY)||'[]'));
 
   function checkReminders(){
@@ -329,7 +329,7 @@ function startReminderChecker(){
     });
 
     // ── Auto task reminders ──────────────────────────────────────────
-    const TASK_REM_KEY='vas_task_rem_'+CU?.id+'_'+new Date().toISOString().split('T')[0];
+    const TASK_REM_KEY='vas_task_rem_'+CU?.id+'_'+localDateStr();
     const taskRemFired=new Set(JSON.parse(localStorage.getItem(TASK_REM_KEY)||'[]'));
     function saveTaskRemFired(){localStorage.setItem(TASK_REM_KEY,JSON.stringify([...taskRemFired]));}
     const myActiveTasks=DB.tasks.filter(t=>(t.assignedTo===CU?.id||(t.assignees||[]).includes(CU?.id))&&['New','In Progress'].includes(t.status));
@@ -377,9 +377,9 @@ function startReminderChecker(){
     // they're just supplementary heads-ups, not the source of truth.
     if(DB.testSchedules?.length){
       const todayDow=new Date().getDay();
-      const todayStr=new Date().toISOString().split('T')[0];
+      const todayStr=localDateStr();
       const tomorrowDow=new Date(Date.now()+86400000).getDay();
-      const tomorrowStr=new Date(Date.now()+86400000).toISOString().split('T')[0];
+      const tomorrowStr=localDateStr(new Date(Date.now()+86400000));
       const hr=new Date().getHours();
       const allTodayScheds=DB.testSchedules.filter(s=>s.day_of_week===todayDow&&s.active!==false);
       const myScheds=allTodayScheds.filter(s=>s.member_id===CU?.id);
