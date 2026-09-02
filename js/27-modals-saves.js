@@ -251,6 +251,44 @@ window.saveTask=async()=>{
   }
 };
 
+// One-click test task generator — creates one real task per selected
+// member, through the exact same create path as the normal "+ New Task"
+// form (DB write, in-app notif, push/Telegram, admin notif, syslog).
+// This is a genuine end-to-end test of notification delivery and task
+// behavior, not a simulated preview — each task behaves completely
+// normally and can be started/submitted/approved/deleted like any other.
+window.createTestTasksForMembers=async()=>{
+  const ids=[...document.querySelectorAll('.test-task-member:checked')].map(c=>c.value);
+  if(!ids.length){toast('Select at least one member','bad');return;}
+  const due=document.getElementById('test-task-due')?.value||'';
+  const stamp=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  let created=0;
+  for(const aid of ids){
+    const ass=DB.team.find(m=>m.id===aid);
+    if(!ass) continue;
+    const title=`🧪 Test Task — ${ass.name} (${stamp})`;
+    const t={id:'t'+gid(),title,status:'New',priority:'Low',type:'Maintenance',
+      assignedTo:aid,assignees:[aid],
+      reviewer:CU?.id||'',
+      service:'',operator:'',company2:null,link:'',projectId:null,
+      reqBy:CU?.name||'',due,est:null,recur:null,
+      actual:null,what:'',tech:'',rejReason:'',createdBy:CU?.name||'',tsCreated:now(),tsAssigned:now(),tsOpened:null,tsStarted:null,tsSubmitted:null,tsReviewed:null,tsArchived:null,rejections:[],
+      desc:'Test task — created to verify notification delivery and app behavior. Safe to complete or delete.',respH:null,workH:null,revH:null,cycleH:null};
+    DB.tasks.unshift(t);
+    logAction('Task Created',`${esc(CU.name)} created "${title}" → ${ass.name}`,'Success',title,'');
+    const r=await nCreateTask(t,t.id); if(r?.id) t.id=r.id;
+    if(!sameName(ass.name,CU?.name)){
+      sendNotif(ass.name,`New task assigned: "${title}" — Low priority`,'Task Assigned',title);
+      notifyTG(aid,'task_assigned',{title,priority:'Low',due:due||'Not set',desc:t.desc,link:appLink('task-'+t.id)});
+    }
+    created++;
+  }
+  notifyAdmins(`${CU.name} created ${created} test task${created!==1?'s':''} to verify notifications`,'Task Assigned','Test Tasks');
+  updateBadges();
+  toast(`${created} test task${created!==1?'s':''} created — ${created!==1?'members':'the member'} notified ✓`,'ok');
+  if(page==='alltasks'||page==='dash')nav(page,document.querySelector('.ni.on'));
+};
+
 window.saveMember=async()=>{
   const name=document.getElementById('mf-name').value.trim();if(!name){toast('Name required','bad');return;}
   // Build permOverrides from the 4 grant/deny/inherit selects — only
