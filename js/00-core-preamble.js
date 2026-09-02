@@ -104,9 +104,9 @@ async function notifyTG(memberId, eventType, data={}){
 // ══════════════════════════════════════════════════════
 // ══ APP VERSION ══════════════════════════════════════════════════════
 // Bumped by hand on every commit that changes app behavior (not just
-// docs/comments). Combined at runtime with the live commit SHA fetched
-// from GitHub (see loadVersionBadge() in 29-init-mobile.js) so the
-// sidebar always shows exactly what's deployed, automatically.
+// docs/comments). Shown as-is in the sidebar (see loadVersionBadge() in
+// 29-init-mobile.js) — deliberately static/self-contained, no external
+// calls or links out.
 const APP_VERSION='4.3.0';
 
 const NDB={
