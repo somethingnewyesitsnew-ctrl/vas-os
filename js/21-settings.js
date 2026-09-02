@@ -495,7 +495,7 @@ window.downloadBackup=()=>{
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   const sysName=(localStorage.getItem('vas_sys_name')||'Digital_Plus_OS').replace(/\s/g,'_');
-  a.href=url;a.download=`${sysName}_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.href=url;a.download=`${sysName}_backup_${localDateStr()}.json`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   showSaving(false);
   saveLocalBackup(payload);
@@ -515,7 +515,7 @@ function saveLocalBackup(payload){
 
 function autoBackupIfNeeded(){
   const key='vas_last_auto_backup';
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
   if(localStorage.getItem(key)===today)return;
   setTimeout(()=>{
     if(!DB.tasks?.length)return;
