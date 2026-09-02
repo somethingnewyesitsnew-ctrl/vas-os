@@ -2,7 +2,7 @@
 function rMeetings(el){
   const sc={Scheduled:'#2563eb',Started:'#15803d',Completed:'#64748b',Cancelled:'#dc2626'};
   const tc={Internal:'#7c3aed',External:'#0891b2',Client:'#15803d',Operator:'#b45309'};
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr();
 
   // Filter my meetings — strict: only show own meetings unless allMeetings permission
   const myMeetings=canDo('allMeetings')?DB.meetings:DB.meetings.filter(m=>m.created_by===CU.name||m.invitees?.includes(CU.name));
@@ -204,7 +204,7 @@ window.openMeetingDetail=(id)=>{
   }
   // Inline add-action-item form (hidden by default)
   const teamOpts2=DB.team.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
-  const defDue2=(()=>{const d=new Date();d.setDate(d.getDate()+3);return d.toISOString().split('T')[0];})();
+  const defDue2=(()=>{const d=new Date();d.setDate(d.getDate()+3);return localDateStr(d);})();
   body+=`<div id="post-action-form" style="display:none;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-top:8px">
     <div style="font-size:11px;font-weight:800;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">New Action Item</div>
     <input id="pa-title" placeholder="Action item title…" style="width:100%;padding:8px 10px;background:var(--s);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none;font-family:var(--fn);margin-bottom:10px;box-sizing:border-box">
@@ -386,7 +386,7 @@ function openMeetingModal(id){
   document.getElementById('m-meeting-t').textContent=m?'Edit Meeting':'New Meeting';
   document.getElementById('mf-btn').textContent=m?'Save Changes':'Create Meeting';
   document.getElementById('mf-title').value=m?.title||'';
-  document.getElementById('mf-date').value=m?.meeting_date||new Date().toISOString().split('T')[0];
+  document.getElementById('mf-date').value=m?.meeting_date||localDateStr();
   document.getElementById('mf-time').value=m?.meeting_time||'09:00';
   document.getElementById('mf-duration').value=m?.duration_minutes||60;
   document.getElementById('mf-type').value=m?.meeting_type||'Internal';
