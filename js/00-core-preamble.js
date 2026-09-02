@@ -129,6 +129,19 @@ const NDB={
 // ══════════════════════════════════════════════════════
 const now=()=>new Date().toISOString();
 
+// Returns YYYY-MM-DD for the LOCAL calendar day (defaults to right now).
+// Deliberately NOT `d.toISOString().split('T')[0]` — that gives the UTC
+// date, which lags a calendar day behind local time for any positive UTC
+// offset (e.g. Khartoum, UTC+2) during local 00:00–02:00. Every "today"/
+// day-bucket comparison in the app (dashboard counters, due-today
+// filters, meeting/task date defaults) must go through this, or it will
+// silently use yesterday's bucket for the first couple hours of each day.
+function localDateStr(d){
+  d=d||new Date();
+  const off=d.getTimezoneOffset()*60000;
+  return new Date(d.getTime()-off).toISOString().split('T')[0];
+}
+
 function calcNextDue(currentDue, recur){
   const base=currentDue?new Date(currentDue):new Date();
   const d=new Date(base);
@@ -139,7 +152,7 @@ function calcNextDue(currentDue, recur){
     case 'monthly':  d.setMonth(d.getMonth()+1); break;
     default:         d.setDate(d.getDate()+7);
   }
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const fd=(d)=>{if(!d)return'—';return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})};
