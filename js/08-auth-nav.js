@@ -161,6 +161,11 @@ async function startApp(){
       registerPushSW().then(()=>{
         const tutorialAlreadyDone=!!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest'));
         if(tutorialAlreadyDone&&typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1200);
+        // Returning members skip the tutorial, so the mobile setup guide
+        // is chained here instead — this is also what makes it appear
+        // once for existing accounts after this feature ships, since
+        // their vas_tut_done flag is already set from before.
+        if(tutorialAlreadyDone&&typeof maybeShowMobileGuide==='function') setTimeout(maybeShowMobileGuide,6000);
       }).catch(e=>console.error('registerPushSW failed:',e));
     }
   });
