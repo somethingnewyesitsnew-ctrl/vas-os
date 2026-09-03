@@ -95,6 +95,35 @@ async function sbDelete(table, id){
 // distinctly-named wrappers since that's what the callers already expect.
 async function sbCommsInsert(table, data){ return sbInsert(table, data); }
 async function sbCommsDelete(table, id){ return sbDelete(table, id); }
+// Was called in 3 places (mark-read, HR reply/status, task-panel reminder
+// mark-read) but never defined — those calls threw immediately, so reads
+// never got marked, HR reply status never saved, etc. Mirrors
+// sbCommsInsert/sbCommsDelete's thin-wrapper pattern.
+async function sbCommsUpdate(table, id, data){ return sbUpdate(table, id, data); }
+
+// Loads HR Communications, Announcements, and Reminders from Supabase
+// into DB.hrComs / DB.announcements / DB.reminders. Was called from 5
+// places (startApp, refreshData, realtime-notif handler) but never
+// defined anywhere — so these three arrays never actually loaded real
+// data in production; they stayed permanently undefined, which is also
+// why rReminders/rAnnouncements/rHrComs crashed outright when opened.
+async function initCommsData(){
+  try{
+    const [hrComs,announcements,reminders] = await Promise.all([
+      sbQ('hr_communications','order=at.desc'),
+      sbQ('announcements','order=at.desc'),
+      sbQ('reminders','order=at.desc'),
+    ]);
+    DB.hrComs = (hrComs||[]).map(c=>({...c, fromId:c.from_id, fromName:c.from_name, readByHR:c.read_by_hr, memberRead:c.member_read, replies:c.replies||[]}));
+    DB.announcements = (announcements||[]).map(a=>({...a, fromId:a.from_id, fromName:a.from_name, audienceIds:a.audience_ids||[], audienceNames:a.audience_names||[], readBy:a.read_by||[]}));
+    DB.reminders = (reminders||[]).map(r=>({...r, fromId:r.from_id, fromName:r.from_name, toId:r.to_id, toName:r.to_name, taskId:r.task_id, taskTitle:r.task_title, meetingId:r.meeting_id||null}));
+  }catch(e){
+    console.error('initCommsData:',e);
+    // Fall back to empty arrays rather than leaving them undefined —
+    // undefined is what caused the hard crashes this function fixes.
+    DB.hrComs=DB.hrComs||[]; DB.announcements=DB.announcements||[]; DB.reminders=DB.reminders||[];
+  }
+}
 
 function setSync(s,l){
   const el=document.getElementById('nsync');
@@ -120,6 +149,21 @@ const AROLES=['CEO','Projects Manager','HR Manager'];
 // admin-broadcast notification relevance, etc.) even though they show as
 // "Admin" everywhere else.
 const isAdmin=()=>CU?.access==='Admin'||FULL.includes(CU?.name)||AROLES.includes(CU?.role);
+// Specifically "is this member the HR Manager" — distinct from isAdmin
+// (which is also true for CEO/Projects Manager via AROLES). Used to gate
+// HR Comms visibility/moderation separately from general admin rights.
+// NOTE: previously called in 9 places across HR Comms + badge-counting
+// but never defined — every call site threw a ReferenceError, which is
+// why the HR Comms page could not render for anyone (see also
+// initCommsData/sbCommsUpdate below, fixed alongside this).
+const isHR=()=>CU?.role==='HR Manager';
+
+// Visibility gate for a single HR Communication record — HR/Admin can
+// see everything, everyone else only their own. Was called once (in
+// rHrComs' list filter) but never defined, so the whole HR Comms page
+// threw the moment it tried to filter the list, same failure class as
+// isHR/initCommsData/sbCommsUpdate above.
+const canSeeHrCom=(c)=>isHR()||isAdmin()||c.fromId===CU?.id||c.fromName===CU?.name;
 
 // ── Member Type Permissions ───────────────────────────────────────────
 const MT_KEY='vas_member_types';
