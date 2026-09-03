@@ -136,7 +136,7 @@ async function startApp(){
   safe('updateBadges',()=>updateBadges());
   safe('loadFormLists',()=>loadFormLists());
   safe('buildAlertStrip',()=>buildAlertStrip());
-  safe('initCommsData',()=>initCommsData()); // load HR coms + announcements from localStorage after DB is ready
+  safe('initCommsData',()=>initCommsData()); // load HR coms + announcements + reminders from Supabase after DB is ready
   safe('checkFirstTimeTutorial',()=>checkFirstTimeTutorial());
   safe('nav dash',()=>nav('dash', document.querySelector('[data-p="dash"]')));
 
@@ -511,6 +511,9 @@ function loadDemoData(){
     {id:'m2',title:'Zain Sudan Sync',description:'Monthly operator sync',meeting_date:'2026-04-18',meeting_time:'14:00',duration_minutes:45,location:'Online - Zoom',meeting_type:'External',status:'Completed',created_by:'Demo Projects Manager',invitees:['Demo CEO','Demo Senior Developer'],attendance:{'Demo CEO':'present','Demo Projects Manager':'present','Demo Senior Developer':'absent'},started_at:'2026-04-18T14:00:00Z',ended_at:'2026-04-18T14:45:00Z',created_at:new Date().toISOString()},
   ];
   DB.todos=[{id:'td1',title:'Review Q1 performance reports',status:'To Do',priority:'High',assignedTo:'Demo CEO',due:'2026-03-20',notes:''},{id:'td2',title:'Set up Make.com automations',status:'In Progress',priority:'Medium',assignedTo:'Demo Projects Manager',due:'2026-03-18',notes:'Task notification automation first'},{id:'td3',title:'Onboard new content team member',status:'To Do',priority:'High',assignedTo:'Demo HR Manager',due:'2026-03-22',notes:''}];
+  DB.reminders=[{id:'r1',fromId:'u2',fromName:'Demo Projects Manager',toId:'u5',toName:'Demo Developer Two',taskId:'t2',taskTitle:'Booktown full-text search',msg:'Any update on the ES index rebuild?',read:false,at:new Date(Date.now()-3600000).toISOString()}];
+  DB.announcements=[{id:'ann1',fromId:'u1',fromName:'Demo CEO',title:'Office closed Thursday',body:'Public holiday — office closed, no meetings scheduled.',priority:'Normal',audience:'all',audienceIds:[],audienceNames:[],readBy:[],at:new Date(Date.now()-86400000).toISOString()}];
+  DB.hrComs=[{id:'hrc1',fromId:'u5',fromName:'Demo Developer Two',title:'Leave request — March 20',body:'Requesting a day off on March 20 for a personal matter.',status:'Pending',readByHR:false,memberRead:true,replies:[],at:new Date(Date.now()-7200000).toISOString()}];
 }
 
 // ══════════════════════════════════════════════════════
