@@ -14,7 +14,7 @@ function rSettings(el){
       memberAccess:['Admin','Member'],
       projectStatuses:['Planning','Active','On Hold','Completed','Cancelled'],
       projectFields:['Engineering','Content','Design','Marketing','Operations','Finance','Research','Other'],
-      taskTypes:['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting'],
+      taskTypes:['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting','Testing'],
       taskPriorities:['Critical','High','Medium','Low'],
       meetingTypes:['Internal','External','Client','Operator'],
       companyTypes:['Telecom Operator','Partner','Client','Vendor','Other'],
@@ -345,7 +345,7 @@ function loadFormLists(){
       memberRoles:['CEO','Projects Manager','HR Manager','Super Senior Developer','Senior Developer','Front End Developer','Front End Designer','Sys Admin','Content Manager','Developer'],
       projectStatuses:['Planning','Active','On Hold','Completed','Cancelled'],
       projectFields:['Engineering','Content','Design','Marketing','Operations','Finance','Research','Other'],
-      taskTypes:['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting'],
+      taskTypes:['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting','Testing'],
       taskPriorities:['Critical','High','Medium','Low'],
       meetingTypes:['Internal','External','Client','Operator'],
       ...l

@@ -149,6 +149,7 @@ async function startApp(){
   }
   safe('startReminderChecker',()=>startReminderChecker());
   safe('startAutoTaskReminders',()=>startAutoTaskReminders());
+  safe('startLoginReminderCheck',()=>startLoginReminderCheck());
   safe('autoBackupIfNeeded',()=>autoBackupIfNeeded());
   safe('startAutoReload',()=>startAutoReload());
   // Push notifications — always register the service worker. The soft
@@ -159,6 +160,8 @@ async function startApp(){
   safe('registerPushSW',()=>{
     if(typeof registerPushSW==='function'){
       registerPushSW().then(()=>{
+        // Re-attach this device to the member who just logged in (no click needed)
+        if(typeof ensurePushOnLogin==='function') ensurePushOnLogin();
         const tutorialAlreadyDone=!!localStorage.getItem('vas_tut_done_'+(CU?.id||'guest'));
         if(tutorialAlreadyDone&&typeof maybeShowPushPrompt==='function') setTimeout(maybeShowPushPrompt,1200);
         // Returning members skip the tutorial, so the mobile setup guide
@@ -298,6 +301,60 @@ function startAutoTaskReminders(){
   setInterval(checkAndSend, Math.min(intervalMs, 30*60*1000));
 }
 
+// ── Login reminders (per-member opt-in) ───────────────────────────────
+// For members an admin has switched ON (Team → member → Login reminders):
+// once they've gone LOGIN_REMINDER_DAYS days without logging in, send them
+// an in-app notification + push asking them to log in, and log it in the
+// login_reminders table (shown on their member detail). Repeats at most once
+// every LOGIN_REMINDER_DAYS days until they log in again.
+//
+// Like the service-test task creation, this runs in whichever team
+// member's open tab happens to be active (an inactive member's own app is,
+// by definition, closed), and is safe with several tabs open: the log row
+// is written FIRST (nothing is sent if it can't be saved, so a missing
+// migration can never cause repeated spam) and the server is re-checked for
+// a recent reminder and a fresher last_login right before sending.
+const LOGIN_REMINDER_DAYS=3;
+function startLoginReminderCheck(){
+  if(!CU) return;
+  const busy=new Set();
+  async function run(){
+    if(!CU||!DB.team?.length) return;
+    const DAY=86400000, nowMs=Date.now(), threshold=LOGIN_REMINDER_DAYS*DAY;
+    const targets=DB.team.filter(m=>m.loginReminderActive===true&&(m.status||'Active')==='Active'&&m.id!==CU.id);
+    for(const m of targets){
+      if(busy.has(m.id)) continue;
+      const baseIso=m.lastLogin||m.created_at; // never logged in -> count from when the account was created
+      const base=baseIso?new Date(baseIso).getTime():NaN;
+      if(isNaN(base)||nowMs-base<threshold) continue;
+      const lastSent=(DB.loginReminders||[]).filter(r=>r.member_id===m.id).reduce((mx,r)=>Math.max(mx,new Date(r.sent_at).getTime()||0),0);
+      if(lastSent&&nowMs-lastSent<threshold) continue;
+      busy.add(m.id);
+      try{
+        // Fresh server checks (this tab's roster may be hours old)
+        const fresh=await sbQ('team_public',`id=eq.${m.id}&select=last_login,login_reminder_active`);
+        if(!Array.isArray(fresh)||!fresh.length) continue;
+        if(fresh[0].login_reminder_active!==true) continue;
+        const freshBase=new Date(fresh[0].last_login||m.created_at||0).getTime();
+        if(isNaN(freshBase)||Date.now()-freshBase<threshold) { if(fresh[0].last_login) m.lastLogin=fresh[0].last_login; continue; }
+        const recent=await sbQ('login_reminders',`member_id=eq.${m.id}&sent_at=gte.${encodeURIComponent(new Date(Date.now()-threshold).toISOString())}&select=id&limit=1`);
+        if(recent===null||recent.length) continue; // table missing/unreachable, or someone else just sent one
+        const days=Math.floor((Date.now()-freshBase)/DAY);
+        const row=await sbInsertSilent('login_reminders',{member_id:m.id,member_name:m.name,days_inactive:days,last_login_at:fresh[0].last_login||null,sent_by:CU.name,channel:'push + in-app'});
+        if(!row) continue; // no log row -> no notification
+        (DB.loginReminders=DB.loginReminders||[]).unshift(row);
+        const msg=`👋 Hi ${m.name}, you haven't logged in to ${SYS()} for ${days} day${days===1?'':'s'}. Please log in and check your tasks.`;
+        sendNotif(m.name,msg,'Reminder','');
+        notifyTG(m.id,'login_reminder',{title:msg,desc:msg,link:appLink('')});
+        logAction('Login Reminder',`Login reminder sent to ${esc(m.name)} (${days}d without login)`,'Info',m.name,'');
+      }catch(e){ console.warn('login reminder check failed for',m.name,e); }
+      finally{ busy.delete(m.id); }
+    }
+  }
+  run();
+  setInterval(run,30*60*1000);
+}
+
 function startReminderChecker(){
   const FIRED_KEY='vas_reminded_'+CU?.name;
   const fired=new Set(JSON.parse(localStorage.getItem(FIRED_KEY)||'[]'));
@@ -411,15 +468,17 @@ function startReminderChecker(){
           if(!hasTask){
             svcTestFired.add(taskKey);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
             const opSvcs=(DB.services||[]).filter(sv=>sv.operator_name===opName||(sv.company_id||sv.operator_id)===s.operator_id).map(sv=>sv.name).join(', ')||'All services';
-            const checks=getCheckTemplates().map((c,i)=>`${i+1}. ${c}`).join('\n');
+            // Per-service check names from Settings (if any) are appended as an extra
+            // checklist; the test areas below are always requested.
+            const extraChecks=(typeof getCheckTemplates==='function'?getCheckTemplates():[]).map(c=>`   • ${c}`).join('\n');
             const reviewerId=s.reviewer_id||defaultReviewerId;
             const newTask={
               id:'t'+gid(),title:`Service Test — ${opName} (${todayStr})`,
-              status:'New',priority:'High',type:'Service Test',
+              status:'New',priority:'High',type:'Testing',
               assignedTo:m.id,assignees:[m.id],reviewer:reviewerId,
               reqBy:'System',createdBy:'System',due:todayStr,est:null,actual:null,
               operator:s.operator_id,service:null,
-              desc:`🧪 Service Test Task\n\n🏢 Operator: ${opName}\n📡 Services: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ Test Items:\n${checks}\n\nClick ▶ Set Estimate & Start below — it'll take you straight into the checklist for each service. Mark each item working or fail, add a note if something's broken. Any fails you flag get turned into tasks automatically.`,
+              desc:`🧪 Scheduled Service Test — ${opName}\n\nPlease run a complete test on ${opName} and report the results.\n📡 Services to cover: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ What to test:\n1. Full cycle test — run every service end to end (subscribe → use → billing/charging → unsubscribe) and confirm each step works.\n2. Content test — content loads, is correct, up to date and in the right language, with no broken or missing items.\n3. UI test — layout, buttons, links, images and text display correctly on the screens and devices you can check.\n4. UX test — the journey is clear and easy to follow, with sensible messages, no dead ends and no confusing steps.\n5. Speed test — pages, menus and responses load quickly; note anything slow and roughly how slow.\n6. Complete services test — go through every service under ${opName}, not only the main ones, and confirm each is live and working.${extraChecks?`\n\n📋 Extra checks from Settings:\n${extraChecks}`:''}\n\n📝 How to report: work through this like any other task — Set Estimate & Start, add comments as you go, and when you submit, list in "What Was Done" what passed and what failed in each area. Create a separate task for every failure you find.`,
               link:'',recur:null,tsCreated:now(),tsOpened:null,tsStarted:null,
               tsSubmitted:null,tsReviewed:null,tsArchived:null,
               what:'',tech:'',rejReason:'',rejections:[],comments:[]
@@ -445,7 +504,9 @@ function startReminderChecker(){
       myScheds.forEach(s=>{
         const op=[...DB.operators,...DB.companies].find(o=>o.id===s.operator_id);
         const opName=op?.name||'?';
-        const alreadyDone=DB.testSessions?.some(ts=>ts.test_date===todayStr&&ts.tester_id===CU?.id&&ts.operator_id===s.operator_id&&ts.status==='Completed');
+        const alreadyDone=DB.testSessions?.some(ts=>ts.test_date===todayStr&&ts.tester_id===CU?.id&&ts.operator_id===s.operator_id&&ts.status==='Completed')
+          // Service tests are normal tasks now — count the day's test task as done once it has moved past New/In Progress
+          ||DB.tasks.some(t=>t.title?.includes('Service Test')&&t.due===todayStr&&t.operator===s.operator_id&&(t.assignedTo===CU?.id||(t.assignees||[]).includes(CU?.id))&&!['New','In Progress'].includes(t.status));
         if(alreadyDone)return;
 
         // 8am reminder

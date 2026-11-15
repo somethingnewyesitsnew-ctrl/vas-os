@@ -91,6 +91,7 @@ async function subscribeToPush() {
     const saved = await savePushSubscription(sub.toJSON());
     if (saved) {
       localStorage.setItem('vas_push_enabled_' + (CU.id || CU.name), '1');
+      localStorage.removeItem('vas_push_disabled_' + (CU.id || CU.name));
       toast('Push notifications enabled ✓', 'ok');
       markMemberPushEnabled(true);
       updatePushToggleUI();
@@ -117,7 +118,7 @@ async function savePushSubscription(subJson) {
   };
   // Upsert by endpoint (unique) so re-subscribing on the same device doesn't duplicate rows
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/push_subscriptions`, {
+    const r = await fetch(`${SB_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`, {
       method: 'POST',
       headers: { ...SB_HEADERS, Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify(row),
@@ -145,6 +146,9 @@ async function unsubscribeFromPush() {
       } catch (e) {}
     }
     localStorage.removeItem('vas_push_enabled_' + (CU?.id || CU?.name));
+    // Remember that THIS member turned it off on purpose, so the silent
+    // re-attach on login never switches it back on against their wishes.
+    localStorage.setItem('vas_push_disabled_' + (CU?.id || CU?.name), '1');
     toast('Push notifications disabled', 'ok');
     markMemberPushEnabled(false);
     updatePushToggleUI();
@@ -162,7 +166,14 @@ async function unsubscribeFromPush() {
 function markMemberPushEnabled(on) {
   if (!CU) return;
   const patch = { push_enabled: !!on, push_updated_at: new Date().toISOString() };
-  if (CU.id) sbUpdateSilent('team', CU.id, patch).catch?.(() => {});
+  if (CU.id) {
+    sbUpdateSilent('team', CU.id, patch).catch?.(() => {});
+    // `team` has RLS with no write policy for the anon key, so the PATCH
+    // above is a silent no-op on locked-down deployments. The RPC (see
+    // SUPABASE_MIGRATION_login_reminders_and_push_state.sql) is the write
+    // that actually persists; until that migration is run it just 404s.
+    sbRpc('set_member_push_state', { p_member_id: CU.id, p_enabled: !!on }).catch?.(() => {});
+  }
   CU.push_enabled = !!on;
   const dbm = DB.team?.find((m) => m.id === CU.id);
   if (dbm) dbm.push_enabled = !!on;
@@ -187,7 +198,7 @@ async function syncPushEnabledState(){
     // while another member whose subscription never dropped keeps
     // working fine, making the two accounts behave differently for a
     // reason that isn't visible anywhere in the UI.
-    if(granted && !subscribed){
+    if(granted && !subscribed && !localStorage.getItem('vas_push_disabled_'+(CU.id||CU.name))){
       try{
         const reg=_swReg||(await registerPushSW());
         if(reg){
@@ -205,6 +216,48 @@ async function syncPushEnabledState(){
       renderPushStatusPill();
     }
   }catch(e){ console.warn('syncPushEnabledState error:', e); }
+}
+
+// §01b.6b ── Remember notifications across logout / login ────────────────
+// Permission and the browser subscription live in the browser, not in the
+// login session, so logging out never removes them. What DID go wrong:
+//  - the status pill was drawn before the service worker had finished
+//    registering, so it could briefly (or permanently) read "off";
+//  - a device already subscribed was never re-saved, so it stayed attached
+//    to whoever enabled it first rather than to the member logging in now.
+// This runs after every login: if permission is already granted (and the
+// member hasn't switched it off themselves) it silently re-attaches this
+// device to the logged-in member, then redraws every status widget once
+// the real state is known. No click needed.
+async function ensurePushOnLogin() {
+  if (!CU || !pushSupported()) return;
+  const key = CU.id || CU.name;
+  try {
+    if (Notification.permission === 'granted' && !localStorage.getItem('vas_push_disabled_' + key)) {
+      const reg = _swReg || (await registerPushSW());
+      if (reg) {
+        try { await navigator.serviceWorker.ready; } catch (e) {}
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+        }
+        const saved = await savePushSubscription(sub.toJSON());
+        if (saved) {
+          localStorage.setItem('vas_push_enabled_' + key, '1');
+          if (CU.push_enabled !== true) markMemberPushEnabled(true);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('ensurePushOnLogin failed:', e);
+  }
+  // Redraw everything now that the real state is known.
+  try { updatePushToggleUI(); } catch (e) {}
+  try { if (typeof renderMobPushStatus === 'function') renderMobPushStatus(); } catch (e) {}
+  try { if (typeof updateMobBadges === 'function') updateMobBadges(); } catch (e) {}
 }
 
 // §01b.7 ── Handle notification taps while the app is already open ──────
@@ -359,6 +412,7 @@ const PUSH_TITLES = {
   announcement: '📢 New announcement',
   hr_reply: '💬 HR replied',
   review_requested: '🔍 Review needed',
+  login_reminder: '👋 We haven\'t seen you in a while',
 };
 
 // Who-did-what phrasing for the push title, e.g. "✅ Aymoon approved your

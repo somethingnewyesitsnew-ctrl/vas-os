@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Digital Plus OS</title>
-<meta name="version" content="v4.3.0-material">
+<meta name="version" content="v4.4.0-material">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:wght@400;500;700&family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/material.css">
@@ -176,7 +176,7 @@
   <div class="mb"><div class="fg">
     <div class="ff fgr"><label>Title *</label><input id="tf-title" placeholder="What needs to be done?"></div>
     <div class="fgr"><label>Priority</label><select id="tf-priority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select></div>
-    <div class="fgr"><label>Type</label><select id="tf-type"><option>Feature</option><option>Bug Fix</option><option>Content</option><option>Design</option><option>Maintenance</option><option>Research</option></select></div>
+    <div class="fgr"><label>Type</label><select id="tf-type"><option>Feature</option><option>Bug Fix</option><option>Content</option><option>Design</option><option>Maintenance</option><option>Research</option><option>Testing</option></select></div>
     <div class="ff fgr" style="position:relative">
       <label>Assign To</label>
       <div id="tf-assign-wrap" style="min-height:38px;border:1px solid var(--bd2);border-radius:7px;padding:5px 7px;display:flex;flex-wrap:wrap;gap:4px;cursor:text;background:var(--s)" onclick="document.getElementById('tf-assign-search').focus()">
@@ -425,7 +425,7 @@
   <div class="mh"><div class="mt">Submit Backlog Idea</div><button class="mx" onclick="CM('m-bl')">✕</button></div>
   <div class="mb"><div class="fg">
     <div class="ff fgr"><label>Idea Title *</label><input id="bf-title"></div>
-    <div class="fgr"><label>Category</label><select id="bf-cat"><option>Feature</option><option>Bug Report</option><option>Process Improvement</option><option>Infrastructure</option><option>Content Strategy</option><option>Design</option><option>Research</option></select></div>
+    <div class="fgr"><label>Category</label><select id="bf-cat"><option>Feature</option><option>Bug Report</option><option>Process Improvement</option><option>Infrastructure</option><option>Content Strategy</option><option>Design</option><option>Research</option><option>Testing</option></select></div>
     <div class="fgr"><label>Priority</label><select id="bf-prio"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
     <div class="ff fgr"><label>Description</label><textarea id="bf-desc"></textarea></div>
     <div class="ff fgr"><label>Why It Matters</label><textarea id="bf-why"></textarea></div>

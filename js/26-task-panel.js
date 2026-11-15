@@ -463,7 +463,7 @@ window.confirmStart=async()=>{
   notifyAdminsTG(`▶ Task Started\n\n${CU.name} started working on "${t.title}"\nEstimate: ${h}h`,appLink('task-'+t.id));
   await nUpdateTask(t);
   CM('m-est'); toast(`Started — ${h}h estimated ✓`,'ok'); updateBadges();
-  if(t.type==='Service Test'){ startServiceTestTask(t.id); } else { openTask(_pendTask); }
+  openTask(_pendTask); // service-test tasks are normal tasks now: no special routing
 };
 
 window.reqSubmit=(id)=>{

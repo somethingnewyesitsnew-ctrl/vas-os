@@ -238,13 +238,7 @@ function rDash(el){
       <div style="font-size:12px;color:#bfdbfe">${doneTasks.length} done · ${activeTasks.length} active</div>
       <div style="height:3px;background:rgba(255,255,255,.2);border-radius:2px;margin-top:10px"><div style="height:100%;width:${taskCompletionRate}%;background:#60a5fa;border-radius:2px"></div></div>
     </div>
-    <div onclick="navTo('alltasks','Overdue')" style="background:linear-gradient(135deg,${overdueRate>20?'#991b1b,#dc2626':overdueRate>5?'#92400e,#d97706':'#14532d,#16a34a'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">⚠</div>
-      <div style="font-size:11px;font-weight:700;color:${overdueRate>20?'#fca5a5':overdueRate>5?'#fcd34d':'#86efac'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Overdue Rate</div>
-      <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${overdueRate}%</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.8)">${overdue.length} tasks overdue</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${overdueRate<=5?'On Track':overdueRate<=20?'Watch':'Critical'}</div>
-    </div>
+    ${overdueCardHTML(overdue,activeTasks.length,overdueRate,null)}
     <div onclick="navTo('projects')" style="background:linear-gradient(135deg,${projHealth===null?'#374151,#4b5563':projHealth>=70?'#14532d,#15803d':projHealth>=40?'#92400e,#b45309':'#7f1d1d,#dc2626'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">◉</div>
       <div style="font-size:11px;font-weight:700;color:${projHealth===null?'#9ca3af':projHealth>=70?'#86efac':projHealth>=40?'#fcd34d':'#fca5a5'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Projects Health</div>
@@ -671,6 +665,34 @@ function rDash(el){
 // ══════════════════════════════════════════════════════
 // DUE STATUS — colour-coded progress indicator
 // ══════════════════════════════════════════════════════
+// Dashboard "Overdue" KPI card. Shows the ACTUAL number of overdue tasks
+// (not a percentage-of-active "rate", which read as a confusing average),
+// with the context that makes the number meaningful: how many tasks are
+// active, how late the worst one is, and the change since the last
+// snapshot day. Colour/status still escalate with the share of active
+// tasks that are late, so "3 of 40" and "3 of 4" don't look the same.
+function overdueCardHTML(overdue, activeCount, overdueRate, prior){
+  const n=overdue.length;
+  const daysLate=(t)=>Math.max(1,Math.ceil((Date.now()-new Date(t.due).setHours(23,59,59,999))/86400000));
+  const worst=n?Math.max(...overdue.map(daysLate)):0;
+  const grad=n===0||overdueRate<=5?'#14532d,#16a34a':overdueRate<=20?'#92400e,#d97706':'#991b1b,#dc2626';
+  const lblClr=n===0||overdueRate<=5?'#86efac':overdueRate<=20?'#fcd34d':'#fca5a5';
+  const status=n===0?'All on track ✓':overdueRate<=5?'On Track':overdueRate<=20?'Watch':'Critical';
+  let delta='';
+  if(prior&&typeof prior.overdueCount==='number'){
+    const d=n-prior.overdueCount;
+    delta=d===0?'no change since yesterday':`${d>0?'▲ +':'▼ '}${d} since yesterday`;
+  }
+  return `<div onclick="navTo('alltasks','Overdue')" style="background:linear-gradient(135deg,${grad});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">⚠</div>
+      <div style="font-size:11px;font-weight:700;color:${lblClr};text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Overdue Tasks</div>
+      <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${n}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.8)">${n===0?'nothing late':`of ${activeCount} active task${activeCount===1?'':'s'}`}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${status}${n?` · longest ${worst}d late`:''}</div>
+      ${delta?`<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">${delta}</div>`:''}
+    </div>`;
+}
+
 function getDueStatus(tk){
   if(!tk.due) return {key:'none',label:'No date',cls:'ds-none'};
   done=['Done','Cancelled'].includes(tk.status);

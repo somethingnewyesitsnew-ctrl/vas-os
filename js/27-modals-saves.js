@@ -27,7 +27,7 @@ function openTaskModal(id, presetProjectId){
   // Apply current saved dropdown lists
   try{
     const saved=JSON.parse(localStorage.getItem('vas_dropdown_lists')||'{}');
-    const types=saved.taskTypes||['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting'];
+    const types=saved.taskTypes||['Feature','Bug Fix','Content','Design','Maintenance','Research','Meeting','Testing'];
     const priorities=saved.taskPriorities||['Critical','High','Medium','Low'];
     const typeEl=document.getElementById('tf-type');
     const prioEl=document.getElementById('tf-priority');

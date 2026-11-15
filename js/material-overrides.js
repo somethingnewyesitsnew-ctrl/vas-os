@@ -810,16 +810,7 @@ function rDash(el){
       <div style="font-size:12px;color:#bfdbfe">${doneTasks.length} done · ${activeTasks.length} active</div>
       <div style="height:3px;background:rgba(255,255,255,.2);border-radius:2px;margin-top:10px"><div style="height:100%;width:${taskCompletionRate}%;background:#60a5fa;border-radius:2px"></div></div>
     </div>
-    <div onclick="navTo('alltasks','Overdue')" style="background:linear-gradient(135deg,${overdueRate>20?'#991b1b,#dc2626':overdueRate>5?'#92400e,#d97706':'#14532d,#16a34a'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">⚠</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
-        <div style="font-size:11px;font-weight:700;color:${overdueRate>20?'#fca5a5':overdueRate>5?'#fcd34d':'#86efac'};text-transform:uppercase;letter-spacing:.07em">Overdue Rate</div>
-        ${dchip(priorSnap,'overdueRate',overdueRate,true)}
-      </div>
-      <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px">${overdueRate}%</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.8)">${overdue.length} tasks overdue</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">${overdueRate<=5?'On Track':overdueRate<=20?'Watch':'Critical'}</div>
-    </div>
+    ${overdueCardHTML(overdue,activeTasks.length,overdueRate,priorSnap)}
     <div onclick="navTo('projects')" style="background:linear-gradient(135deg,${projHealth===null?'#374151,#4b5563':projHealth>=70?'#14532d,#15803d':projHealth>=40?'#92400e,#b45309':'#7f1d1d,#dc2626'});border-radius:12px;padding:16px;cursor:pointer;position:relative;overflow:hidden">
       <div style="position:absolute;right:-8px;top:-8px;font-size:60px;opacity:.07">◉</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">

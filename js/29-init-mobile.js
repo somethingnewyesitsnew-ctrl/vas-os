@@ -70,7 +70,7 @@ loadVersionBadge();
           // verified server-side via the verify_login() RPC in doLogin().
           DB.team=team.map(m=>({...m,color:m.color||mkColor(m.name),av:m.av||mkAv(m.name),
             username:m.username||(m.name.toLowerCase().split(' ')[0]),
-            lastLogin:m.last_login||null}));
+            lastLogin:m.last_login||null,loginReminderActive:m.login_reminder_active===true}));
           setSync('live','Refresh');
         } else {
           // Tables exist but empty — load demo team so login works

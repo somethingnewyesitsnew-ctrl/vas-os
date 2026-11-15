@@ -53,7 +53,7 @@ function renderAccessSummary(permKey,label){
 }
 
 let syslog=[]; // in-memory system log
-let DB={team:[],tasks:[],services:[],operators:[],companies:[],backlog:[],docs:[],archive:[],todos:[],projects:[],meetings:[],testSchedules:[],testSessions:[],testChecks:[],reminders:[],announcements:[],hrComs:[]};
+let DB={team:[],tasks:[],services:[],operators:[],companies:[],backlog:[],docs:[],archive:[],todos:[],projects:[],meetings:[],testSchedules:[],testSessions:[],testChecks:[],loginReminders:[],reminders:[],announcements:[],hrComs:[]};
 
 // ══════════════════════════════════════════════════════
 // LOAD ALL FROM SUPABASE

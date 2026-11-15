@@ -117,6 +117,29 @@ window.openMemberDetail=(id)=>{
     </div>
   </div>`;
 
+  // ── Login reminders (admin only): per-member switch + history ───────
+  if(isAdmin()){
+    const lrOn=m.loginReminderActive===true;
+    const lrList=(DB.loginReminders||[]).filter(r=>r.member_id===m.id).sort((a,b)=>new Date(b.sent_at||0)-new Date(a.sent_at||0));
+    body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase">📨 Login reminders</div>
+        <span style="font-size:16px;font-weight:800;color:${lrList.length?'var(--ac)':'var(--tx3)'}">${lrList.length}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:11px;color:var(--tx2);line-height:1.4">Automatically remind this member to log in after <b>${LOGIN_REMINDER_DAYS} days</b> without a login.</div>
+        <button type="button" onclick="toggleLoginReminder('${m.id}')" style="flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid ${lrOn?'var(--gbr)':'var(--bd)'};background:${lrOn?'var(--gb)':'var(--s)'};color:${lrOn?'var(--g)':'var(--tx3)'};font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">${lrOn?'● ON':'○ OFF'}</button>
+      </div>
+      ${lrList.length?`<div style="display:flex;flex-direction:column;gap:4px;max-height:170px;overflow-y:auto;margin-top:8px">
+        ${lrList.slice(0,15).map(r=>`<div style="padding:6px 9px;background:var(--s);border-radius:6px;border:1px solid var(--bd)">
+          <div style="font-size:11px;font-weight:600;color:var(--tx)">${fdt(r.sent_at)}</div>
+          <div style="font-size:10px;color:var(--tx3)">${r.days_inactive!=null?r.days_inactive+' day'+(r.days_inactive===1?'':'s')+' without login':'Login reminder'}${r.sent_by?' · sent from '+escapeHtml(r.sent_by)+'’s session':''}</div>
+        </div>`).join('')}
+      </div>${lrList.length>15?`<div style="font-size:10px;color:var(--tx3);margin-top:4px">+${lrList.length-15} older</div>`:''}`
+      :`<div style="font-size:10px;color:var(--tx3);margin-top:6px">${lrOn?'No login reminders sent yet.':'Off — no login reminders will be sent to this member.'}</div>`}
+    </div>`;
+  }
+
   body+=`<div id="mem-rem-week"><div style="font-size:11px;color:var(--tx3);padding:8px 0">Loading reminder activity…</div></div>`;
 
   body+=`<div class="spa" style="flex-wrap:wrap">
@@ -129,6 +152,20 @@ window.openMemberDetail=(id)=>{
   document.getElementById('sp-bd').innerHTML=body;
   document.getElementById('sp-pnl').classList.add('open');
   loadMemberWeekReminders(m);
+};
+
+// Admin: switch the automatic "please log in" reminder on/off for one member.
+// Written through the set_login_reminder() RPC because `team` is RLS-locked.
+window.toggleLoginReminder=async(id)=>{
+  if(!isAdmin()) return;
+  const m=DB.team.find(x=>x.id===id); if(!m) return;
+  const next=!(m.loginReminderActive===true);
+  const ok=await sbRpc('set_login_reminder',{p_member_id:id,p_active:next});
+  if(ok!==true){ toast('Could not save — run SUPABASE_MIGRATION_login_reminders_and_push_state.sql in Supabase first','bad',7000); return; }
+  m.loginReminderActive=next;
+  logAction('Login Reminder Setting',`${esc(CU.name)} turned login reminders ${next?'ON':'OFF'} for ${esc(m.name)}`,'Info',m.name,'');
+  toast(`Login reminders ${next?'ON':'OFF'} for ${m.name}`,'ok');
+  openMemberDetail(id);
 };
 
 // Monday 00:00 of the current calendar week, as an ISO string — the
