@@ -107,7 +107,7 @@ async function notifyTG(memberId, eventType, data={}){
 // docs/comments). Shown as-is in the sidebar (see loadVersionBadge() in
 // 29-init-mobile.js) — deliberately static/self-contained, no external
 // calls or links out.
-const APP_VERSION='4.5.0';
+const APP_VERSION='4.6.0';
 
 const NDB={
   tasks:'4abbbc95-3f15-4f9e-83dc-ee63b1439ccc',

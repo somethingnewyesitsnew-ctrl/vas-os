@@ -168,7 +168,8 @@ function rSettings(el){
 
     <div class="card" style="margin-bottom:12px">
       <div class="ct"><span class="ct-t">⏰ Automatic Task Reminders</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Periodic nudges about new/overdue/due-soon tasks</span></div>
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.6">When enabled, everyone with "Automatic Task Reminders" checked on their profile (Team → Edit Member) gets a periodic check-in about tasks they haven't opened, tasks that are overdue, and tasks due soon — delivered in-app and via Telegram. Only runs while that person has the app open in a browser tab; it isn't a server-side scheduler.</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.6">When enabled, everyone with "Automatic Task Reminders" checked on their profile (Team → Edit Member) gets a periodic check-in about tasks they haven't opened, tasks that are overdue, and tasks due soon — as an in-app notification and a push to their phone/computer.${AUTO_REM_CFG?.server_side?' <b style="color:var(--g)">Runs on the server, so it works even when the app is closed.</b>':''}</div>
+      ${AUTO_REM_CFG?.server_side?'':`<div style="font-size:11px;line-height:1.6;margin-bottom:12px;padding:8px 10px;border-radius:7px;background:var(--ab,rgba(217,119,6,.12));border:1px solid var(--abr,rgba(217,119,6,.4));color:var(--tx2)">⚠️ Server-side reminders are not set up yet, so reminders only go out while a person has the app open in a browser tab. To make them work with the app closed, run <code style="background:var(--s);padding:1px 4px;border-radius:3px">SUPABASE_MIGRATION_server_auto_reminders.sql</code> once in the Supabase SQL Editor, then reload.</div>`}
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700">
           <input type="checkbox" id="autorem-enabled" ${AUTO_REM_CFG?.enabled?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)">
@@ -180,6 +181,16 @@ function rSettings(el){
             ${[1,2,4,6,8,12,24].map(h=>`<option value="${h}" ${Number(AUTO_REM_CFG?.interval_hours)===h?'selected':''}>${h} hour${h>1?'s':''}</option>`).join('')}
           </select>
         </div>
+        ${AUTO_REM_CFG?.server_side?`<div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;font-weight:700;color:var(--tx3)">Only between</label>
+          <select id="autorem-start" style="padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px">
+            ${Array.from({length:24},(_,h)=>h).map(h=>`<option value="${h}" ${Number(AUTO_REM_CFG.start_hour)===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}
+          </select>
+          <span style="font-size:11px;color:var(--tx3)">and</span>
+          <select id="autorem-end" style="padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:12px">
+            ${Array.from({length:24},(_,h)=>h+1).map(h=>`<option value="${h}" ${Number(AUTO_REM_CFG.end_hour)===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}
+          </select>
+        </div>`:''}
         <button class="btn bp bsm" onclick="saveAutoRemSettings()">💾 Save</button>
       </div>
       <div id="autorem-weekly-table" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bd)">
@@ -441,12 +452,20 @@ window.saveLoginReminderDays=async()=>{
 window.saveAutoRemSettings=async()=>{
   const enabled=document.getElementById('autorem-enabled')?.checked||false;
   const interval_hours=parseInt(document.getElementById('autorem-interval')?.value||'4');
+  const patch={enabled,interval_hours,updated_at:new Date().toISOString()};
+  // The sending-hours window only exists once the server-side migration has been run
+  if(AUTO_REM_CFG?.server_side){
+    const start_hour=parseInt(document.getElementById('autorem-start')?.value||'8');
+    const end_hour=parseInt(document.getElementById('autorem-end')?.value||'20');
+    if(!(end_hour>start_hour)){ toast('"Only between" must end after it starts (e.g. 08:00 to 20:00)','bad'); return; }
+    patch.start_hour=start_hour; patch.end_hour=end_hour;
+  }
   showSaving(true);
-  const r=await sbUpdate('auto_reminder_settings',1,{enabled,interval_hours,updated_at:new Date().toISOString()});
+  const r=await sbUpdate('auto_reminder_settings',1,patch);
   showSaving(false);
   if(r!==null){
-    AUTO_REM_CFG={enabled,interval_hours};
-    logAction('Settings Updated',`${esc(CU.name)} ${enabled?'enabled':'disabled'} automatic task reminders (every ${interval_hours}h)`,'Info','Automatic Reminders','');
+    AUTO_REM_CFG={...AUTO_REM_CFG,enabled,interval_hours,...(patch.start_hour!==undefined?{start_hour:patch.start_hour,end_hour:patch.end_hour}:{})};
+    logAction('Settings Updated',`${esc(CU.name)} ${enabled?'enabled':'disabled'} automatic task reminders (every ${interval_hours}h${patch.start_hour!==undefined?', '+String(patch.start_hour).padStart(2,'0')+':00–'+String(patch.end_hour).padStart(2,'0')+':00':''})`,'Info','Automatic Reminders','');
     toast('Reminder settings saved ✓','ok');
   } else {
     toast('Failed to save — check connection','bad');

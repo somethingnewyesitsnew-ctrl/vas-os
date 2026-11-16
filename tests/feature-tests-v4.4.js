@@ -248,6 +248,42 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
   // member panel text follows the setting
   APP_CFG.loginReminderDays=4; openMemberDetail('a');
   ok('member details text shows the configured days (4)', document.getElementById('sp-bd').innerHTML.includes('<b>4 days</b>'));
+
+  // ---------- 8. Server-side automatic task reminders ----------
+  document.querySelectorAll('#sta-list').forEach(e=>e.closest('div[class]')&&0); try{setEl.remove();}catch(e){}
+  loadDemoData();
+  CU={id:'u2',name:'Demo Member',role:'Dev',color:'#4f46e5',av:'DM',access:'Member',autoRemindersActive:true};
+  DB.tasks=[{id:'tt1',title:'Unopened',status:'New',tsOpened:null,assignedTo:'u2',assignees:['u2'],due:null}];
+  const tabSends=[]; window.sendNotif=(to,text)=>{tabSends.push(text);}; window.notifyTG=()=>{}; localStorage.clear();
+  AUTO_REM_CFG={enabled:true,interval_hours:4,server_side:false,start_hour:8,end_hour:20};
+  startAutoTaskReminders();
+  ok('before the server migration, an open tab still sends the reminder (old behaviour kept)', tabSends.length===1&&tabSends[0].includes('1 new task'), JSON.stringify(tabSends));
+  tabSends.length=0; localStorage.clear();
+  AUTO_REM_CFG={enabled:true,interval_hours:4,server_side:true,start_hour:8,end_hour:20};
+  startAutoTaskReminders();
+  ok('once the server job is active, open tabs send NOTHING (no duplicates)', tabSends.length===0, JSON.stringify(tabSends));
+
+  CU={id:'u1',name:'Demo CEO',role:'CEO',color:'#4f46e5',av:'DC',access:'Admin',email:'x@example.com'};
+  AUTO_REM_CFG={enabled:true,interval_hours:4,server_side:false,start_hour:8,end_hour:20};
+  let sEl=document.createElement('div'); rSettings(sEl);
+  ok('Settings warns the server job is not set up yet, and hides the hours', sEl.innerHTML.includes('Server-side reminders are not set up yet')&&!sEl.innerHTML.includes('id="autorem-start"'));
+  AUTO_REM_CFG={enabled:true,interval_hours:6,server_side:true,start_hour:9,end_hour:18};
+  sEl=document.createElement('div'); rSettings(sEl);
+  ok('Settings says it runs on the server and shows the allowed hours (09:00-18:00)', sEl.innerHTML.includes('works even when the app is closed')&&/<option value="9" selected(="")?>09:00/.test(sEl.innerHTML)&&/<option value="18" selected(="")?>18:00/.test(sEl.innerHTML), (sEl.innerHTML.match(/id="autorem-start"[\s\S]{0,200}/)||[''])[0]);
+  ok('the "not set up" warning is gone once server-side is active', !sEl.innerHTML.includes('Server-side reminders are not set up yet'));
+  document.body.appendChild(sEl);
+  let upd=null; window.sbUpdate=async(tbl,id,patch)=>{upd={tbl,id,patch};return {ok:1};};
+  document.getElementById('autorem-start').value='7'; document.getElementById('autorem-end').value='21';
+  await saveAutoRemSettings();
+  ok('saving sends start/end hours with enabled/interval', upd&&upd.tbl==='auto_reminder_settings'&&upd.patch.start_hour===7&&upd.patch.end_hour===21&&upd.patch.interval_hours===6, JSON.stringify(upd));
+  ok('live config updated after save', AUTO_REM_CFG.start_hour===7&&AUTO_REM_CFG.end_hour===21&&AUTO_REM_CFG.server_side===true);
+  upd=null; document.getElementById('autorem-start').value='20'; document.getElementById('autorem-end').value='8';
+  await saveAutoRemSettings();
+  ok('an end hour not after the start hour is refused', upd===null);
+  AUTO_REM_CFG={enabled:true,interval_hours:4,server_side:false,start_hour:8,end_hour:20};
+  sEl.remove(); sEl=document.createElement('div'); rSettings(sEl); document.body.appendChild(sEl);
+  upd=null; await saveAutoRemSettings();
+  ok('without the migration, saving only sends the old columns (no failing hour columns)', upd&&upd.patch.start_hour===undefined&&upd.patch.end_hour===undefined&&upd.patch.interval_hours===4, JSON.stringify(upd));
 }catch(e){ window.__R.push({name:'TEST CRASH',pass:false,extra:e.stack}); }
 window.__done=true; })();
 `;

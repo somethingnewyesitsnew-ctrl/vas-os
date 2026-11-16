@@ -11,7 +11,7 @@
 // instead of staring at a blank splash.
 // ══════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'dpos-shell-v' + (self.registration ? 1 : 1) + '-4.5.0';
+const CACHE_NAME = 'dpos-shell-v' + (self.registration ? 1 : 1) + '-4.6.0';
 
 const SHELL_ASSETS = [
   './',

@@ -105,12 +105,21 @@ async function fetchAndUpsertTestSession(id){
 // Global automatic-reminder settings — a single-row admin config
 // (enabled + how many hours between checks). Loaded once per full data
 // load, read by startAutoTaskReminders() in 08-auth-nav.js.
-let AUTO_REM_CFG={enabled:false,interval_hours:4};
+// server_side=true means the database scheduler (pg_cron, see
+// SUPABASE_MIGRATION_server_auto_reminders.sql) sends these even when no app is
+// open; start_hour/end_hour are the allowed sending window in the server's timezone.
+let AUTO_REM_CFG={enabled:false,interval_hours:4,server_side:false,start_hour:8,end_hour:20};
 async function loadAutoRemCfg(){
   try{
     const rows=await sbQ('auto_reminder_settings','id=eq.1');
     const row=Array.isArray(rows)?rows[0]:null;
-    if(row) AUTO_REM_CFG={enabled:!!row.enabled,interval_hours:Number(row.interval_hours)||4};
+    if(row) AUTO_REM_CFG={
+      enabled:!!row.enabled,
+      interval_hours:Number(row.interval_hours)||4,
+      server_side:row.server_side===true,
+      start_hour:Number.isInteger(row.start_hour)?row.start_hour:8,
+      end_hour:Number.isInteger(row.end_hour)?row.end_hour:20
+    };
   }catch(e){ console.warn('loadAutoRemCfg failed',e); }
 }
 

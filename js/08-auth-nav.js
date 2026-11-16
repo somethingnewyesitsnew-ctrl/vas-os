@@ -264,10 +264,14 @@ function startAutoReload(){
 // specifically on due-date-driven signals the other checker doesn't
 // cover: new/unopened tasks, overdue tasks, and tasks due soon, rolled
 // into one consolidated ping per interval rather than one per task.
-// Like the checker below, this only runs in an open browser tab — there
-// is no server-side always-on scheduler behind it.
+// Once SUPABASE_MIGRATION_server_auto_reminders.sql has been run
+// (AUTO_REM_CFG.server_side), the database sends these on a schedule even
+// when nobody has the app open, and this tab-based version steps aside so
+// nobody is reminded twice. Until then it keeps working as before (only
+// while that person has the app open in a browser tab).
 function startAutoTaskReminders(){
   if(!AUTO_REM_CFG?.enabled) return;
+  if(AUTO_REM_CFG.server_side===true) return;
   if(CU?.autoRemindersActive===false) return;
   const intervalMs=Math.max(1,AUTO_REM_CFG.interval_hours||4)*3600000;
 
