@@ -114,6 +114,54 @@ async function loadAutoRemCfg(){
   }catch(e){ console.warn('loadAutoRemCfg failed',e); }
 }
 
+// ── Shared app settings (service test areas, login-reminder days) ──────
+// Stored in the app_settings table (key -> json value) rather than
+// localStorage, because the scheduled service-test task is created from
+// whichever team member's tab happens to be open, and the login reminder is
+// sent the same way. Both must read ONE shared value, not a per-browser one.
+// {name} lines below may contain {operator}, replaced with the operator's name.
+const DEFAULT_TEST_AREAS=[
+  {name:'Full cycle test',desc:'Run every service end to end (subscribe → use → billing/charging → unsubscribe) and confirm each step works.'},
+  {name:'Content test',desc:'Content loads, is correct, up to date and in the right language, with no broken or missing items.'},
+  {name:'UI test',desc:'Layout, buttons, links, images and text display correctly on the screens and devices you can check.'},
+  {name:'UX test',desc:'The journey is clear and easy to follow, with sensible messages, no dead ends and no confusing steps.'},
+  {name:'Speed test',desc:'Pages, menus and responses load quickly; note anything slow and roughly how slow.'},
+  {name:'Complete services test',desc:'Go through every service under {operator}, not only the main ones, and confirm each is live and working.'}
+];
+let APP_CFG={serviceTestAreas:null,loginReminderDays:3};
+function getServiceTestAreas(){
+  const a=APP_CFG.serviceTestAreas;
+  const clean=Array.isArray(a)?a.filter(x=>x&&String(x.name||'').trim()).map(x=>({name:String(x.name).trim(),desc:String(x.desc||'').trim()})):[];
+  return clean.length?clean:DEFAULT_TEST_AREAS;
+}
+function getLoginReminderDays(){
+  const n=Math.floor(Number(APP_CFG.loginReminderDays));
+  return n>=1&&n<=60?n:3;
+}
+async function loadAppSettings(){
+  try{
+    const rows=await sbQ('app_settings','select=key,value');
+    if(!Array.isArray(rows)) return; // table missing -> built-in defaults
+    rows.forEach(r=>{
+      if(r.key==='service_test_areas'&&Array.isArray(r.value)) APP_CFG.serviceTestAreas=r.value;
+      if(r.key==='login_reminder_days'&&r.value!=null) APP_CFG.loginReminderDays=Number(r.value);
+    });
+  }catch(e){ console.warn('loadAppSettings failed',e); }
+}
+// Upsert one setting. Returns the saved row, or null if it could not be saved.
+async function saveAppSetting(key,value){
+  try{
+    const r=await fetchWithTimeout(`${SB_URL}/rest/v1/app_settings?on_conflict=key`,{
+      method:'POST',
+      headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates,return=representation'},
+      body:JSON.stringify({key,value,updated_at:new Date().toISOString(),updated_by:CU?.name||''})
+    });
+    if(!r.ok){ console.warn('saveAppSetting',key,r.status,await r.text().catch(()=>'')); return null; }
+    const d=await r.json();
+    return Array.isArray(d)?(d[0]||{key}):d;
+  }catch(e){ console.warn('saveAppSetting',key,e.message); return null; }
+}
+
 // §05 ── DATA LOAD ───────────────────────────────────────────────────────
 async function loadFromNotion(){ // kept as loadFromNotion for compatibility
   setSync('syncing','Loading…');
@@ -125,6 +173,7 @@ async function loadFromNotion(){ // kept as loadFromNotion for compatibility
       sbQ('companies','order=name'),
       sbQ('projects','order=name'),
       loadAutoRemCfg(),
+      loadAppSettings(),
     ]);
 
     if(!team){ setSync('err','Failed — run SQL setup first'); return false; }

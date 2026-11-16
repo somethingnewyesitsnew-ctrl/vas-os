@@ -187,6 +187,28 @@ function rSettings(el){
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">🧪 Service Test Areas</span><span style="font-size:10px;color:var(--tx3);font-weight:400">What every scheduled Service Test task asks the tester to cover</span></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">These are listed, in this order, in every automatically created Service Test task. Write the area name, plus (optionally) what you want checked. Use <b>{operator}</b> in a description to insert the operator's name. Changes apply to tasks created from now on.</div>
+      <div id="sta-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">${staRowsHTML(getServiceTestAreas())}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn bg2 bsm" onclick="staAdd()">＋ Add area</button>
+        <button type="button" class="btn bg2 bsm" onclick="staReset()">↩ Reset to defaults</button>
+        <button type="button" class="btn bp bsm" onclick="saveTestAreas()">💾 Save</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">👋 Login Reminders</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Nudge members who haven't logged in</span></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Members you have switched ON (Team → member details → Login reminders) get a notification once they have gone this many days without logging in, then again every same number of days until they log in.</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label style="font-size:11px;font-weight:700;color:var(--tx3)">Remind after</label>
+        <input type="number" id="lrd-days" min="1" max="60" step="1" value="${getLoginReminderDays()}" style="width:80px;padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;font-weight:700">
+        <span style="font-size:12px;color:var(--tx2)">days without login</span>
+        <button type="button" class="btn bp bsm" onclick="saveLoginReminderDays()">💾 Save</button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="ct"><span class="ct-t">👥 Member Types & Permissions</span>
         <span style="font-size:10px;color:var(--tx3);font-weight:400">Define employment types and what each can access</span>
@@ -361,6 +383,59 @@ window.saveSettings=()=>{
   });
   document.title=name;
   toast('Settings saved ✓','ok');
+};
+
+// ── Service Test Areas editor + Login Reminder days (shared app_settings) ──
+function staRowsHTML(list){
+  return list.map((a,i)=>`<div class="sta-row" style="display:flex;gap:8px;align-items:flex-start;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px">
+    <div style="font-size:12px;font-weight:800;color:var(--tx3);padding-top:8px;min-width:18px">${i+1}.</div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+      <input class="sta-name" value="${escapeHtml(a.name||'')}" placeholder="Area name, e.g. Speed test" style="padding:6px 9px;background:var(--s);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:13px;font-weight:700;width:100%;box-sizing:border-box">
+      <textarea class="sta-desc" rows="2" placeholder="What to check (optional)" style="padding:6px 9px;background:var(--s);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:12px;width:100%;box-sizing:border-box;resize:vertical;font-family:inherit">${escapeHtml(a.desc||'')}</textarea>
+    </div>
+    <button type="button" class="btn bg2 bxs" title="Remove" onclick="staRemove(${i})" style="flex-shrink:0">✕</button>
+  </div>`).join('');
+}
+function staReadDOM(){
+  return [...document.querySelectorAll('#sta-list .sta-row')].map(r=>({
+    name:r.querySelector('.sta-name').value.trim(),
+    desc:r.querySelector('.sta-desc').value.trim()
+  }));
+}
+function staRender(list){ const el=document.getElementById('sta-list'); if(el) el.innerHTML=staRowsHTML(list); }
+window.staAdd=()=>{
+  const l=staReadDOM(); l.push({name:'',desc:''}); staRender(l);
+  const names=document.querySelectorAll('#sta-list .sta-name'); names[names.length-1]?.focus();
+};
+window.staRemove=(i)=>{ const l=staReadDOM(); l.splice(i,1); staRender(l); };
+window.staReset=()=>{
+  if(!confirm('Replace the list with the built-in default areas? (Click Save afterwards to keep them.)')) return;
+  staRender(DEFAULT_TEST_AREAS.map(a=>({...a})));
+};
+window.saveTestAreas=async()=>{
+  if(!isAdmin()) return;
+  const list=staReadDOM().filter(a=>a.name);
+  if(!list.length){ toast('Keep at least one test area','bad'); return; }
+  showSaving(true);
+  const r=await saveAppSetting('service_test_areas',list);
+  showSaving(false);
+  if(!r){ toast('Could not save — run SUPABASE_MIGRATION_app_settings.sql in Supabase first','bad',7000); return; }
+  APP_CFG.serviceTestAreas=list;
+  staRender(list);
+  logAction('Settings Updated',`${esc(CU.name)} updated the Service Test areas (${list.length})`,'Info','Service Tests','');
+  toast('Service test areas saved ✓','ok');
+};
+window.saveLoginReminderDays=async()=>{
+  if(!isAdmin()) return;
+  const n=parseInt(document.getElementById('lrd-days')?.value,10);
+  if(!(n>=1&&n<=60)){ toast('Enter a number of days between 1 and 60','bad'); return; }
+  showSaving(true);
+  const r=await saveAppSetting('login_reminder_days',n);
+  showSaving(false);
+  if(!r){ toast('Could not save — run SUPABASE_MIGRATION_app_settings.sql in Supabase first','bad',7000); return; }
+  APP_CFG.loginReminderDays=n;
+  logAction('Settings Updated',`${esc(CU.name)} set login reminders to ${n} day${n===1?'':'s'} without login`,'Info','Login Reminders','');
+  toast(`Login reminders will go out after ${n} day${n===1?'':'s'} ✓`,'ok');
 };
 
 window.saveAutoRemSettings=async()=>{

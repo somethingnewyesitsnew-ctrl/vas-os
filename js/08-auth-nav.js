@@ -303,10 +303,10 @@ function startAutoTaskReminders(){
 
 // ── Login reminders (per-member opt-in) ───────────────────────────────
 // For members an admin has switched ON (Team → member → Login reminders):
-// once they've gone LOGIN_REMINDER_DAYS days without logging in, send them
+// once they've gone N days (Settings -> Login Reminders, default 3) without logging in, send them
 // an in-app notification + push asking them to log in, and log it in the
 // login_reminders table (shown on their member detail). Repeats at most once
-// every LOGIN_REMINDER_DAYS days until they log in again.
+// every N days until they log in again.
 //
 // Like the service-test task creation, this runs in whichever team
 // member's open tab happens to be active (an inactive member's own app is,
@@ -314,13 +314,12 @@ function startAutoTaskReminders(){
 // is written FIRST (nothing is sent if it can't be saved, so a missing
 // migration can never cause repeated spam) and the server is re-checked for
 // a recent reminder and a fresher last_login right before sending.
-const LOGIN_REMINDER_DAYS=3;
 function startLoginReminderCheck(){
   if(!CU) return;
   const busy=new Set();
   async function run(){
     if(!CU||!DB.team?.length) return;
-    const DAY=86400000, nowMs=Date.now(), threshold=LOGIN_REMINDER_DAYS*DAY;
+    const DAY=86400000, nowMs=Date.now(), threshold=getLoginReminderDays()*DAY;
     const targets=DB.team.filter(m=>m.loginReminderActive===true&&(m.status||'Active')==='Active'&&m.id!==CU.id);
     for(const m of targets){
       if(busy.has(m.id)) continue;
@@ -468,9 +467,8 @@ function startReminderChecker(){
           if(!hasTask){
             svcTestFired.add(taskKey);localStorage.setItem(SVC_TEST_FIRED_KEY,JSON.stringify([...svcTestFired]));
             const opSvcs=(DB.services||[]).filter(sv=>sv.operator_name===opName||(sv.company_id||sv.operator_id)===s.operator_id).map(sv=>sv.name).join(', ')||'All services';
-            // Per-service check names from Settings (if any) are appended as an extra
-            // checklist; the test areas below are always requested.
-            const extraChecks=(typeof getCheckTemplates==='function'?getCheckTemplates():[]).map(c=>`   • ${c}`).join('\n');
+            // The areas to test come from Settings -> Service Test Areas (shared, editable)
+            const areasText=getServiceTestAreas().map((a,n)=>`${n+1}. ${a.name}${a.desc?' — '+a.desc.split('{operator}').join(opName):''}`).join('\n');
             const reviewerId=s.reviewer_id||defaultReviewerId;
             const newTask={
               id:'t'+gid(),title:`Service Test — ${opName} (${todayStr})`,
@@ -478,7 +476,7 @@ function startReminderChecker(){
               assignedTo:m.id,assignees:[m.id],reviewer:reviewerId,
               reqBy:'System',createdBy:'System',due:todayStr,est:null,actual:null,
               operator:s.operator_id,service:null,
-              desc:`🧪 Scheduled Service Test — ${opName}\n\nPlease run a complete test on ${opName} and report the results.\n📡 Services to cover: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ What to test:\n1. Full cycle test — run every service end to end (subscribe → use → billing/charging → unsubscribe) and confirm each step works.\n2. Content test — content loads, is correct, up to date and in the right language, with no broken or missing items.\n3. UI test — layout, buttons, links, images and text display correctly on the screens and devices you can check.\n4. UX test — the journey is clear and easy to follow, with sensible messages, no dead ends and no confusing steps.\n5. Speed test — pages, menus and responses load quickly; note anything slow and roughly how slow.\n6. Complete services test — go through every service under ${opName}, not only the main ones, and confirm each is live and working.${extraChecks?`\n\n📋 Extra checks from Settings:\n${extraChecks}`:''}\n\n📝 How to report: work through this like any other task — Set Estimate & Start, add comments as you go, and when you submit, list in "What Was Done" what passed and what failed in each area. Create a separate task for every failure you find.`,
+              desc:`🧪 Scheduled Service Test — ${opName}\n\nPlease run a complete test on ${opName} and report the results.\n📡 Services to cover: ${opSvcs}\n📅 Date: ${todayStr}\n\n✅ What to test:\n${areasText}\n\n📝 How to report: work through this like any other task — Set Estimate & Start, add comments as you go, and when you submit, list in "What Was Done" what passed and what failed in each area. Create a separate task for every failure you find.`,
               link:'',recur:null,tsCreated:now(),tsOpened:null,tsStarted:null,
               tsSubmitted:null,tsReviewed:null,tsArchived:null,
               what:'',tech:'',rejReason:'',rejections:[],comments:[]

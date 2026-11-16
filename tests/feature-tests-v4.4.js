@@ -171,6 +171,83 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
   localStorage.clear(); window.Notification={permission:'default',requestPermission:async()=>{window.__prompted=true;return 'granted';}}; calls.subscribe=0;
   await ensurePushOnLogin();
   ok('never auto-prompts for permission when not yet granted', !window.__prompted&&calls.subscribe===0);
+
+  // ---------- 6. Editable service-test areas (Settings) ----------
+  window.sbQ=async()=>[]; // keep the demo-data reload quiet
+  loadDemoData(); // earlier sections replaced DB.team with synthetic members
+  APP_CFG.serviceTestAreas=[{name:'Billing check',desc:'Check {operator} charging is correct.'},{name:'Speed test',desc:''}];
+  DB.operators=[{id:'op1',name:'Zain'}]; DB.tasks=[]; localStorage.clear();
+  DB.testSchedules=[{id:'sch1',day_of_week:new Date().getDay(),member_id:'u2',operator_id:'op1',active:true,reviewer_id:'u3'}];
+  CU={id:'u1',name:'Demo CEO',role:'CEO',color:'#4f46e5',av:'DC',access:'Admin',email:'x@example.com'};
+  startReminderChecker();
+  let t2=DB.tasks.find(x=>x.title&&x.title.startsWith('Service Test — Zain'));
+  ok('custom areas appear in the task, in order, with {operator} filled in', !!t2&&t2.desc.includes('1. Billing check — Check Zain charging is correct.')&&t2.desc.includes('2. Speed test'), t2&&t2.desc);
+  ok('areas not in the list are NOT in the task', !!t2&&!t2.desc.includes('Full cycle test')&&!t2.desc.includes('Content test'));
+  ok('the old Settings "extra checks" block is gone', !!t2&&!t2.desc.includes('Extra checks from Settings'));
+  APP_CFG.serviceTestAreas=[]; ok('empty/blank list falls back to the 6 defaults', getServiceTestAreas().length===6);
+  APP_CFG.serviceTestAreas=[{name:'  ',desc:'x'}]; ok('blank-named rows are ignored', getServiceTestAreas().length===6);
+  APP_CFG.serviceTestAreas=null;
+
+  // Settings page shows both cards, with the current values
+  APP_CFG.loginReminderDays=5;
+  const setEl=document.createElement('div'); rSettings(setEl);
+  ok('Settings shows the Service Test Areas card with all 6 defaults', setEl.innerHTML.includes('Service Test Areas')&&(setEl.innerHTML.match(/class="sta-row"/g)||[]).length===6);
+  ok('Settings shows the Login Reminders card with the saved days (5)', setEl.innerHTML.includes('Login Reminders')&&/id="lrd-days"[^>]*value="5"/.test(setEl.innerHTML));
+  document.body.appendChild(setEl);
+  // edit through the real handlers
+  staAdd(); const nm=document.querySelectorAll('#sta-list .sta-name'); nm[nm.length-1].value='Roaming test';
+  ok('Add area adds a row', document.querySelectorAll('#sta-list .sta-row').length===7);
+  staRemove(0); ok('Remove drops that row', document.querySelectorAll('#sta-list .sta-row').length===6&&document.querySelector('#sta-list .sta-name').value==='Content test');
+  const saves=[]; window.fetch=async(url,opts)=>{saves.push({url:String(url),body:JSON.parse(opts.body)});return {ok:true,json:async()=>[{key:'x'}],text:async()=>''};};
+  await saveTestAreas();
+  const sv=saves.find(c=>c.url.includes('app_settings'));
+  ok('Save upserts service_test_areas by key', !!sv&&sv.url.includes('on_conflict=key')&&sv.body.key==='service_test_areas'&&sv.body.value.length===6&&sv.body.value[5].name==='Roaming test', JSON.stringify(sv));
+  ok('shared config is updated after save', APP_CFG.serviceTestAreas&&APP_CFG.serviceTestAreas.length===6);
+  // failure (table missing) must not change anything
+  const keep=JSON.stringify(APP_CFG.serviceTestAreas);
+  window.fetch=async()=>({ok:false,status:404,json:async()=>({}),text:async()=>'relation does not exist'});
+  document.querySelector('#sta-list .sta-name').value='Changed but unsaved'; await saveTestAreas();
+  ok('failed save leaves the live setting untouched', JSON.stringify(APP_CFG.serviceTestAreas)===keep);
+  // cannot save an empty list
+  window.fetch=async(url,opts)=>{saves.push({url:String(url),body:JSON.parse(opts.body)});return {ok:true,json:async()=>[{}],text:async()=>''};};
+  saves.length=0; document.querySelectorAll('#sta-list .sta-name').forEach(i=>i.value=''); await saveTestAreas();
+  ok('saving with no areas is refused', saves.length===0);
+  // members cannot save settings
+  const cu2=CU; CU={id:'a',name:'Away On',access:'Member'}; saves.length=0; document.querySelector('#sta-list .sta-name').value='Hack'; await saveTestAreas(); await saveLoginReminderDays();
+  ok('non-admins cannot save settings', saves.length===0); CU=cu2;
+
+  // ---------- 7. Login-reminder days from Settings ----------
+  saves.length=0;
+  window.fetch=async(url,opts)=>{saves.push({url:String(url),body:JSON.parse(opts.body)});return {ok:true,json:async()=>[{}],text:async()=>''};};
+  document.getElementById('lrd-days').value='0'; await saveLoginReminderDays();
+  ok('0 days is rejected', saves.length===0);
+  document.getElementById('lrd-days').value='100'; await saveLoginReminderDays();
+  ok('100 days is rejected', saves.length===0);
+  document.getElementById('lrd-days').value='7'; await saveLoginReminderDays();
+  const dv=saves.find(c=>c.url.includes('app_settings'));
+  ok('valid days are saved as login_reminder_days', !!dv&&dv.body.key==='login_reminder_days'&&dv.body.value===7, JSON.stringify(dv));
+  ok('getLoginReminderDays now returns 7', getLoginReminderDays()===7);
+  APP_CFG.loginReminderDays='junk'; ok('junk value falls back to 3', getLoginReminderDays()===3);
+
+  // engine honours the setting: member away 5 days
+  const ago2=(d)=>new Date(Date.now()-d*86400000).toISOString();
+  const run=async(days)=>{
+    APP_CFG.loginReminderDays=days;
+    DB.team=[{id:'u1',name:'Demo CEO',access:'Admin',status:'Active',lastLogin:ago2(1),loginReminderActive:false,created_at:ago2(100)},
+             {id:'a',name:'Away On',access:'Member',status:'Active',lastLogin:ago2(5),loginReminderActive:true,created_at:ago2(100)}];
+    DB.loginReminders=[]; const got=[]; const ins=[];
+    window.sendNotif=(to)=>{got.push(to);}; window.notifyTG=()=>{}; window.logAction=()=>{};
+    window.sbQ=async(table,params)=>{ if(table==='team_public') return [{last_login:ago2(5),login_reminder_active:true}]; return []; };
+    window.sbInsertSilent=async(tb,row)=>{const r={id:'z',sent_at:new Date().toISOString(),...row};ins.push(r);return r;};
+    startLoginReminderCheck(); await sleep(80); return got;
+  };
+  ok('with the setting at 7 days, someone away 5 days is NOT reminded', (await run(7)).length===0);
+  ok('with the setting at 2 days, the same person IS reminded', (await run(2)).join()==='Away On');
+  ok('with the setting at 5 days, exactly 5 days away IS reminded', (await run(5)).join()==='Away On');
+  window.fetch=()=>Promise.reject(new Error('network disabled'));
+  // member panel text follows the setting
+  APP_CFG.loginReminderDays=4; openMemberDetail('a');
+  ok('member details text shows the configured days (4)', document.getElementById('sp-bd').innerHTML.includes('<b>4 days</b>'));
 }catch(e){ window.__R.push({name:'TEST CRASH',pass:false,extra:e.stack}); }
 window.__done=true; })();
 `;

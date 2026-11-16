@@ -127,7 +127,7 @@ window.openMemberDetail=(id)=>{
         <span style="font-size:16px;font-weight:800;color:${lrList.length?'var(--ac)':'var(--tx3)'}">${lrList.length}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="font-size:11px;color:var(--tx2);line-height:1.4">Automatically remind this member to log in after <b>${LOGIN_REMINDER_DAYS} days</b> without a login.</div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.4">Automatically remind this member to log in after <b>${getLoginReminderDays()} day${getLoginReminderDays()===1?'':'s'}</b> without a login.</div>
         <button type="button" onclick="toggleLoginReminder('${m.id}')" style="flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid ${lrOn?'var(--gbr)':'var(--bd)'};background:${lrOn?'var(--gb)':'var(--s)'};color:${lrOn?'var(--g)':'var(--tx3)'};font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">${lrOn?'● ON':'○ OFF'}</button>
       </div>
       ${lrList.length?`<div style="display:flex;flex-direction:column;gap:4px;max-height:170px;overflow-y:auto;margin-top:8px">
