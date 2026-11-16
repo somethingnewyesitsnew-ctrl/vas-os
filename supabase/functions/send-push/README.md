@@ -16,15 +16,28 @@ this function reads from.
 
 ## 2. Your VAPID keys
 
-Already generated and wired into the client (`js/01-push-notifications.js`,
-`VAPID_PUBLIC_KEY` constant). You only need to set the **private** one as
-a secret — never put it in client code.
+> **Never commit the private key to this repository (it is public).** It is
+> only ever stored as a Supabase secret.
+
+Generate a key pair once (any computer with Node):
 
 ```
-VAPID_PUBLIC_KEY  = BPE_NOrkd8udHrEJPpzznZXZNdBqR9YJ_EaHlKKPLjDqBAyw9O8JUNw92Dky-Hob0BUiyynpCdWOtgIW46z3Rnw
-VAPID_PRIVATE_KEY = oH0uFU9wqRe9Vrz5PU6QffTRFti4r38B6-YDZoiNums
-VAPID_SUBJECT     = mailto:youremail@example.com   (any contact email/URL — required by the push spec, not shown to users)
+npx web-push generate-vapid-keys
 ```
+
+- The **public** key goes in the client: `VAPID_PUBLIC_KEY` in
+  `js/01-push-notifications.js` (it is safe for this to be public).
+- The **private** key goes ONLY into the Supabase secret `VAPID_PRIVATE_KEY`
+  (step 3 below). Do not paste it into code, chat, tickets or this file.
+- `VAPID_SUBJECT` = a contact like `mailto:youremail@example.com` (required by
+  the push spec, never shown to users).
+
+Secrets to set on the function: `VAPID_PUBLIC_KEY` (same value as the client),
+`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`.
+
+If you ever rotate the keys: update the client constant, update the secrets,
+and run `SUPABASE_MIGRATION_push_key_rotation.sql` to clear old subscriptions.
+Devices re-subscribe automatically the next time the app is opened.
 
 ## 3. Deploy — pick one
 
@@ -46,8 +59,8 @@ VAPID_SUBJECT     = mailto:youremail@example.com   (any contact email/URL — re
 npm install -g supabase
 supabase login
 supabase link --project-ref duglbebwhtuijnduwmvz
-supabase secrets set VAPID_PUBLIC_KEY=BPE_NOrkd8udHrEJPpzznZXZNdBqR9YJ_EaHlKKPLjDqBAyw9O8JUNw92Dky-Hob0BUiyynpCdWOtgIW46z3Rnw
-supabase secrets set VAPID_PRIVATE_KEY=oH0uFU9wqRe9Vrz5PU6QffTRFti4r38B6-YDZoiNums
+supabase secrets set VAPID_PUBLIC_KEY=<your public key>
+supabase secrets set VAPID_PRIVATE_KEY=<your private key>
 supabase secrets set VAPID_SUBJECT=mailto:youremail@example.com
 supabase functions deploy send-push
 ```

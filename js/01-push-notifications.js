@@ -20,7 +20,7 @@
 
 // Public VAPID key — safe to expose client-side by design (this is what
 // the browser uses to verify pushes actually come from our server).
-const VAPID_PUBLIC_KEY = 'BPE_NOrkd8udHrEJPpzznZXZNdBqR9YJ_EaHlKKPLjDqBAyw9O8JUNw92Dky-Hob0BUiyynpCdWOtgIW46z3Rnw';
+const VAPID_PUBLIC_KEY = 'BBLwbC3Qv43VdhVJvTHZiQ9tYkf0COYCq-z4rqMi6_Qr-AGbfvydXPBOfQT9dmn7_ZgBMNRgMnUW24RMaoq_cjI';
 
 // Every Supabase Edge Function lives at this fixed path once deployed —
 // nothing to change here after you deploy supabase/functions/send-push.
@@ -66,6 +66,36 @@ async function getExistingPushSubscription() {
   return reg.pushManager.getSubscription();
 }
 
+// §01b.0 ── Subscriptions are bound to one VAPID key ──────────────────────
+// A browser push subscription only works with the VAPID key it was created
+// with. If the key pair is ever rotated, devices still holding a subscription
+// made with the OLD key must drop it and subscribe again with the new one
+// (permission is already granted, so this is silent). subscribe() also
+// throws if a subscription with a different key already exists, which is
+// why the old one has to be removed first.
+function pushSubUsesCurrentKey(sub) {
+  try {
+    const cur = sub?.options?.applicationServerKey;
+    if (!cur) return true; // browser doesn't expose it - can't tell, keep it
+    const a = new Uint8Array(cur), b = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  } catch (e) { return true; }
+}
+async function getOrCreatePushSubscription(reg) {
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && !pushSubUsesCurrentKey(sub)) {
+    try { await sub.unsubscribe(); } catch (e) {}
+    sub = null;
+  }
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+  }
+  return sub;
+}
+
 // §01b.1 ── Subscribe this device ────────────────────────────────────────
 async function subscribeToPush() {
   if (!pushSupported()) { toast('Push notifications aren\'t supported on this browser', 'bad'); return false; }
@@ -81,13 +111,7 @@ async function subscribeToPush() {
   if (!reg) { toast('Could not register service worker', 'bad'); return false; }
 
   try {
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
+    const sub = await getOrCreatePushSubscription(reg);
     const saved = await savePushSubscription(sub.toJSON());
     if (saved) {
       localStorage.setItem('vas_push_enabled_' + (CU.id || CU.name), '1');
@@ -202,10 +226,7 @@ async function syncPushEnabledState(){
       try{
         const reg=_swReg||(await registerPushSW());
         if(reg){
-          let sub=await reg.pushManager.getSubscription();
-          if(!sub){
-            sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
-          }
+          const sub=await getOrCreatePushSubscription(reg);
           const saved=await savePushSubscription(sub.toJSON());
           if(saved){ subscribed=true; console.log('syncPushEnabledState: silently re-subscribed this device to push'); }
         }
@@ -237,13 +258,7 @@ async function ensurePushOnLogin() {
       const reg = _swReg || (await registerPushSW());
       if (reg) {
         try { await navigator.serviceWorker.ready; } catch (e) {}
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-          });
-        }
+        const sub = await getOrCreatePushSubscription(reg);
         const saved = await savePushSubscription(sub.toJSON());
         if (saved) {
           localStorage.setItem('vas_push_enabled_' + key, '1');
@@ -291,7 +306,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 async function isPushSubscribedHere() {
   if (!pushSupported()) return false;
   const sub = await getExistingPushSubscription();
-  return !!sub;
+  return !!sub && pushSubUsesCurrentKey(sub);
 }
 
 function updatePushToggleUI() {

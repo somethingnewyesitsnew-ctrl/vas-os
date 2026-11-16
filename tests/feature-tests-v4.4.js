@@ -284,6 +284,39 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
   sEl.remove(); sEl=document.createElement('div'); rSettings(sEl); document.body.appendChild(sEl);
   upd=null; await saveAutoRemSettings();
   ok('without the migration, saving only sends the old columns (no failing hour columns)', upd&&upd.patch.start_hour===undefined&&upd.patch.end_hour===undefined&&upd.patch.interval_hours===4, JSON.stringify(upd));
+
+  // ---------- 9. VAPID key rotation ----------
+  const NEWKEY=urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  const OLDKEY=urlBase64ToUint8Array('BPE_NOrkd8udHrEJPpzznZXZNdBqR9YJ_EaHlKKPLjDqBAyw9O8JUNw92Dky-Hob0BUiyynpCdWOtgIW46z3Rnw');
+  ok('client now uses a NEW public key (not the exposed one)', VAPID_PUBLIC_KEY!=='BPE_NOrkd8udHrEJPpzznZXZNdBqR9YJ_EaHlKKPLjDqBAyw9O8JUNw92Dky-Hob0BUiyynpCdWOtgIW46z3Rnw'&&NEWKEY.length===65&&NEWKEY[0]===4);
+  const rot={unsub:0,subscribed:0,saved:0};
+  const mkSub=(key,ep)=>({endpoint:ep,options:{applicationServerKey:key?key.buffer.slice(key.byteOffset,key.byteOffset+key.byteLength):null},toJSON(){return {endpoint:ep,keys:{p256dh:'p',auth:'a'}};},unsubscribe:async()=>{rot.unsub++;current=null;return true;}});
+  let current=null;
+  const regR={pushManager:{getSubscription:async()=>current,subscribe:async(o)=>{rot.subscribed++;const got=new Uint8Array(o.applicationServerKey);current=mkSub(got,'https://push.example/new');return current;}}};
+  Object.defineProperty(window.navigator,'serviceWorker',{configurable:true,value:{register:async()=>regR,ready:Promise.resolve(regR),getRegistration:async()=>regR,addEventListener(){}}});
+  _swReg=regR; // the app caches its registration; point it at this test's fake
+  window.Notification={permission:'granted',requestPermission:async()=>'granted'};
+  window.fetch=async(url,opts)=>{ if(String(url).includes('push_subscriptions')) rot.saved++; return {ok:true,json:async()=>[{id:'x'}],text:async()=>''}; };
+  CU={id:'a',name:'Away On',access:'Member'}; localStorage.clear();
+  // device still holding a subscription made with the OLD key
+  current=mkSub(OLDKEY,'https://push.example/old');
+  ok('an old-key subscription is NOT reported as working', (await isPushSubscribedHere())===false);
+  await ensurePushOnLogin();
+  ok('login drops the old-key subscription and creates a new one silently', rot.unsub===1&&rot.subscribed===1&&rot.saved===1, JSON.stringify(rot));
+  ok('the replacement is bound to the NEW key', current&&current.endpoint==='https://push.example/new'&&(await isPushSubscribedHere())===true);
+  // already on the new key -> left alone
+  rot.unsub=rot.subscribed=rot.saved=0; current=mkSub(NEWKEY,'https://push.example/keep');
+  await ensurePushOnLogin();
+  ok('a subscription already on the new key is kept (no churn)', rot.unsub===0&&rot.subscribed===0&&rot.saved===1, JSON.stringify(rot));
+  // browser that does not expose the key -> kept
+  rot.unsub=rot.subscribed=rot.saved=0; current=mkSub(null,'https://push.example/nokey');
+  await ensurePushOnLogin();
+  ok('if the browser does not expose the key, the subscription is kept', rot.unsub===0&&rot.subscribed===0);
+  // manual Enable path also replaces stale subscriptions
+  rot.unsub=rot.subscribed=rot.saved=0; current=mkSub(OLDKEY,'https://push.example/old2'); localStorage.clear();
+  const okEnable=await subscribeToPush();
+  ok('clicking Enable also replaces an old-key subscription', okEnable===true&&rot.unsub===1&&rot.subscribed===1, JSON.stringify(rot));
+  window.fetch=()=>Promise.reject(new Error('network disabled'));
 }catch(e){ window.__R.push({name:'TEST CRASH',pass:false,extra:e.stack}); }
 window.__done=true; })();
 `;
