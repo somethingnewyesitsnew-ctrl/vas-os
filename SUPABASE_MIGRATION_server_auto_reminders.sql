@@ -87,7 +87,8 @@ begin
   end if;
 
   -- 14 minutes of slack so a 15-minute job never drifts a whole cycle late
-  v_gap := make_interval(hours => greatest(1, coalesce(cfg.interval_hours, 4))) - interval '14 minutes';
+  -- interval_hours may be integer, numeric or text depending on how the column was created
+  v_gap := make_interval(hours => greatest(1, round(coalesce(nullif(cfg.interval_hours::text, '')::numeric, 4))::int)) - interval '14 minutes';
 
   for m in
     select id, name from public.team
