@@ -118,7 +118,7 @@ window.openMemberDetail=(id)=>{
   </div>`;
 
   // ── Login reminders (admin only): per-member switch + history ───────
-  if(isAdmin()){
+  if(canSeeLoginLog()){
     const lrOn=m.loginReminderActive===true;
     const lrList=(DB.loginReminders||[]).filter(r=>r.member_id===m.id).sort((a,b)=>new Date(b.sent_at||0)-new Date(a.sent_at||0));
     body+=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:10px">

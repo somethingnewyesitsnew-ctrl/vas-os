@@ -59,7 +59,7 @@ async function handleRealtimeNotif(payload){
   if(!REALTIME_NOTIF_TYPES.includes(row.type))return;
 
   const isOwnEcho=sameName(row.from_name,CU.name);
-  const isRelevant=sameName(row.to_name,CU.name)||(row.admins_only&&isAdmin());
+  const isRelevant=sameName(row.to_name,CU.name)||(row.admins_only&&canReceiveAdminAlerts());
 
   // Personal bell/notifs list: only for events actually addressed to
   // this user (or admin broadcasts), and never our own echoed action —
@@ -206,6 +206,50 @@ function initAssignPicker(preselected=[]) {
   renderAssignTags();
 }
 
+// ── Workload awareness when assigning ────────────────────────────────
+// Open = assigned to them (primary or co-assignee) and not Done/Cancelled.
+// excludeTaskId lets an edited task not count against its own assignee.
+function memberWorkload(id, excludeTaskId) {
+  const today = localDateStr(new Date());
+  const mine = DB.tasks.filter(t => t.id !== excludeTaskId && !['Done', 'Cancelled'].includes(t.status) &&
+    (t.assignedTo === id || (t.assignees || []).includes(id)));
+  return { open: mine.length, overdue: mine.filter(t => t.due && t.due < today).length };
+}
+// 'high' = at/over the limits set in Settings, 'busy' = getting close, else 'ok'
+function workloadLevel(w) {
+  const c = APP_CFG.workload || { open: 8, overdue: 3 };
+  if (w.open >= c.open || w.overdue >= c.overdue) return 'high';
+  if (w.open >= Math.ceil(c.open * 0.7) || w.overdue >= 1) return 'busy';
+  return 'ok';
+}
+function renderWorkloadHint() {
+  const anchor = document.getElementById('tf-assign-wrap');
+  if (!anchor) return;
+  let box = document.getElementById('tf-load-hint');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'tf-load-hint';
+    box.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-top:6px';
+    anchor.insertAdjacentElement('afterend', box);
+  }
+  const colors = { ok: ['var(--gb)', 'var(--g)'], busy: ['var(--ab,rgba(217,119,6,.14))', 'var(--a,#d97706)'], high: ['var(--rb,rgba(220,38,38,.14))', 'var(--r,#dc2626)'] };
+  box.innerHTML = _selectedAssignees.map(id => {
+    const m = DB.team.find(x => x.id === id); if (!m) return '';
+    const w = memberWorkload(id, _editId), lvl = workloadLevel(w), [bg, fg] = colors[lvl];
+    return `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:${bg};color:${fg}" title="Open tasks and overdue tasks this person already has">${lvl === 'high' ? '⚠️ ' : ''}${esc(m.name.split(' ')[0])}: ${w.open} open · ${w.overdue} overdue</span>`;
+  }).join('');
+}
+// Returns true if it is OK to go ahead. Asks first when someone being NEWLY
+// assigned is already at/over the limits.
+function confirmWorkload(alreadyAssigned = []) {
+  const heavy = _selectedAssignees.filter(id => !alreadyAssigned.includes(id)).map(id => {
+    const m = DB.team.find(x => x.id === id); if (!m) return null;
+    const w = memberWorkload(id, _editId); return workloadLevel(w) === 'high' ? { m, w } : null;
+  }).filter(Boolean);
+  if (!heavy.length) return true;
+  return confirm(heavy.map(h => `${h.m.name} already has ${h.w.open} open task${h.w.open === 1 ? '' : 's'} (${h.w.overdue} overdue).`).join('\n') + '\n\nAssign anyway?');
+}
+
 function renderAssignTags() {
   const wrap = document.getElementById('tf-assign-tags');
   if (!wrap) return;
@@ -218,6 +262,7 @@ function renderAssignTags() {
       <span class="atag-x" onclick="removeAssignTag('${id}')">✕</span>
     </span>`;
   }).join('');
+  renderWorkloadHint();
 }
 
 function removeAssignTag(id) {

@@ -1,6 +1,11 @@
 // §21 ── SETTINGS ────────────────────────────────────────────────────────
 function rSettings(el){
-  if(!isAdmin()){el.innerHTML='<div class="empty"><div class="ei">🔒</div><div class="et">Admin only</div></div>';return;}
+  if(!canOpenSettings()){
+    el.innerHTML=isAdmin()
+      ?'<div class="empty"><div class="ei">🔒</div><div class="et">You don\'t have access to Settings</div><div class="es">Ask the account owner to tick Settings for you under Settings → Who Gets What.</div></div>'
+      :'<div class="empty"><div class="ei">🔒</div><div class="et">Admin only</div></div>';
+    return;
+  }
   
   // Load saved lists from localStorage
   const LISTS_KEY = 'vas_dropdown_lists';
@@ -220,6 +225,71 @@ function rSettings(el){
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">👥 Who Gets What</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Choose exactly which people receive or see each thing</span></div>
+      ${APP_CFG.recipientAccess
+        ?'<div style="font-size:11px;line-height:1.6;margin-bottom:10px;color:var(--tx2)"><b style="color:var(--g)">Customised.</b> Only the people ticked get or see each item. Anyone added to the team later starts with nothing ticked.</div>'
+        :'<div style="font-size:11px;line-height:1.6;margin-bottom:10px;padding:8px 10px;border-radius:7px;background:var(--ab,rgba(217,119,6,.12));border:1px solid var(--abr,rgba(217,119,6,.4));color:var(--tx2)"><b>Not customised yet.</b> Right now these go to / are shown to all admins, as before. The ticks below show who that is. Change them and click <b>Save</b> to take control: after that, <b>only the people ticked</b> get or see each item.</div>'}
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:640px;font-size:11px">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 8px;color:var(--tx3);font-weight:700">Person</th>
+          ${RA_COLS.map(c=>`<th style="padding:6px 4px;text-align:center;color:var(--tx3);font-weight:700;vertical-align:bottom;border-left:${c.k==='loginlog'?'2px solid var(--bd)':'0'}" title="${escapeHtml(c.title)}">
+            <div style="white-space:nowrap">${c.label}</div>
+            <div style="font-weight:400;font-size:10px"><a href="#" onclick="raColumn('${c.k}',true);return false" style="color:var(--ac)">all</a> · <a href="#" onclick="raColumn('${c.k}',false);return false" style="color:var(--ac)">none</a></div>
+          </th>`).join('')}
+        </tr></thead>
+        <tbody>${raRowsHTML()}</tbody>
+      </table></div>
+      <div style="font-size:10px;color:var(--tx3);margin:8px 0 10px;line-height:1.6">Receive: Morning brief, Escalations and Weekly report come from the server (even when the app is closed); Admin alerts are the notifications/pushes sent to admins (for example a deleted task or a rescheduled meeting); Access requests are things waiting for approval (for example Library access). See: <b>Login history</b> is the login-reminder history in member details; <b>Settings</b> is this page. Only admins can be given the See items. You always keep your own Settings access.</div>
+      <button type="button" class="btn bp bsm" onclick="saveRecipientAccess()">💾 Save</button>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="ct"><span class="ct-t">📬 Automatic Digests</span><span style="font-size:10px;color:var(--tx3);font-weight:400">Sent by the server, even when the app is closed, to the people you tick in Who Gets What</span></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Each one is OFF until you switch it on. They only send inside the "Only between" hours of Automatic Task Reminders above. Needs <code style="background:var(--s);padding:1px 4px;border-radius:3px">SUPABASE_MIGRATION_server_digests.sql</code> to have been run once. <b>Preview</b> shows what would be sent now, using the saved settings (click Save first).</div>
+      ${(()=>{
+        const mb=APP_CFG.morningBrief, es=APP_CFG.escalation, wr=APP_CFG.weeklyReport, wl=APP_CFG.workload;
+        const hrs=(sel)=>Array.from({length:24},(_,h)=>`<option value="${h}" ${Number(sel)===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('');
+        const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map((d,i)=>`<option value="${i+1}" ${Number(wr.day)===i+1?'selected':''}>${d}</option>`).join('');
+        const inp='padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:12px';
+        const lbl='font-size:11px;color:var(--tx2)';
+        const row='display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--bd)';
+        return `
+        <div style="${row};border-top:none">
+          <label style="display:flex;align-items:center;gap:6px;min-width:170px;font-size:12px;font-weight:700;color:var(--tx)"><input type="checkbox" id="dg-mb-on" ${mb.enabled?'checked':''}> ☀️ Morning brief</label>
+          <span style="${lbl}">every day at</span><select id="dg-mb-hour" style="${inp}">${hrs(mb.hour)}</select>
+          <span style="${lbl}">— overdue, due today, waiting review, needs help, members not logging in</span>
+          <button type="button" class="btn bg2 bxs" onclick="previewDigest('morning_brief')">👁 Preview</button>
+        </div>
+        <div style="${row}">
+          <label style="display:flex;align-items:center;gap:6px;min-width:170px;font-size:12px;font-weight:700;color:var(--tx)"><input type="checkbox" id="dg-es-on" ${es.enabled?'checked':''}> 🚨 Escalation</label>
+          <span style="${lbl}">overdue</span><input type="number" id="dg-es-od" min="1" max="60" value="${Number(es.overdue_days)||2}" style="${inp};width:58px">
+          <span style="${lbl}">+ days → Escalations recipients · review waiting</span><input type="number" id="dg-es-rh" min="1" max="720" value="${Number(es.review_hours)||24}" style="${inp};width:64px">
+          <span style="${lbl}">+ hours → the task\'s reviewer · repeat every</span><input type="number" id="dg-es-rep" min="1" max="60" value="${Number(es.repeat_days)||3}" style="${inp};width:58px"><span style="${lbl}">days</span>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2)"><input type="checkbox" id="dg-es-rev" ${es.notify_reviewers!==false?'checked':''}> nudge the task\'s reviewer (untick to send those to the Escalations recipients instead)</label>
+          <button type="button" class="btn bg2 bxs" onclick="previewDigest('escalation')">👁 Preview</button>
+        </div>
+        <div style="${row}">
+          <label style="display:flex;align-items:center;gap:6px;min-width:170px;font-size:12px;font-weight:700;color:var(--tx)"><input type="checkbox" id="dg-wr-on" ${wr.enabled?'checked':''}> 📊 Weekly report</label>
+          <span style="${lbl}">every</span><select id="dg-wr-day" style="${inp}">${days}</select>
+          <span style="${lbl}">at</span><select id="dg-wr-hour" style="${inp}">${hrs(wr.hour)}</select>
+          <span style="${lbl}">— done, created, open, overdue, top performers</span>
+          <button type="button" class="btn bg2 bxs" onclick="previewDigest('weekly_report')">👁 Preview</button>
+        </div>
+        <div style="${row}">
+          <div style="min-width:170px;font-size:12px;font-weight:700;color:var(--tx)">⚖️ Workload warning</div>
+          <span style="${lbl}">when assigning, warn if the person already has</span><input type="number" id="dg-wl-open" min="1" max="200" value="${Number(wl.open)||8}" style="${inp};width:64px">
+          <span style="${lbl}">open tasks or</span><input type="number" id="dg-wl-over" min="1" max="100" value="${Number(wl.overdue)||3}" style="${inp};width:58px"><span style="${lbl}">overdue</span>
+        </div>`;
+      })()}
+      <div style="margin-top:6px"><button type="button" class="btn bp bsm" onclick="saveDigestSettings()">💾 Save</button></div>
+      <div id="dig-preview" style="margin-top:12px"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Recently sent</div>
+        <div id="dig-log" style="font-size:11px;color:var(--tx3)">Loading…</div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="ct"><span class="ct-t">👥 Member Types & Permissions</span>
         <span style="font-size:10px;color:var(--tx3);font-weight:400">Define employment types and what each can access</span>
@@ -279,6 +349,7 @@ function rSettings(el){
   });
 
   loadWeeklyReminderTable();
+  loadDigestLog();
 
   // Push notification toggle box — reflects this device's actual subscription state
   if(typeof updatePushToggleUI==='function') updatePushToggleUI();
@@ -396,6 +467,68 @@ window.saveSettings=()=>{
   toast('Settings saved ✓','ok');
 };
 
+// ── Who Gets What ─────────────────────────────────────────────────────────
+const RA_COLS=[
+  {k:'brief',     label:'☀️ Morning brief',  title:'Daily summary of what needs attention'},
+  {k:'escalation',label:'🚨 Escalations',     title:'Tasks overdue for days, and reviews nobody has picked up'},
+  {k:'weekly',    label:'📊 Weekly report',   title:'Weekly team numbers'},
+  {k:'alerts',    label:'🔔 Admin alerts',    title:'Notifications and pushes sent to admins, e.g. a task was deleted or a meeting rescheduled'},
+  {k:'requests',  label:'📚 Access requests', title:'Requests waiting for approval, e.g. Library access'},
+  {k:'loginlog',  label:'📨 Login history',   title:'See the login-reminder history and switch in member details', adminOnly:true},
+  {k:'settings',  label:'⚙️ Settings',        title:'Open this Settings page', adminOnly:true}
+];
+// What each item does today if nobody has customised yet (mirrors the built-in rules)
+function raDefault(m,k){
+  if(k==='brief'||k==='escalation'||k==='weekly') return m.access==='Admin';   // the server digests: active Admins
+  if(k==='requests') return isAdminMember(m);
+  return isLegacyAdminMember(m);
+}
+function raChecked(m,k){ return APP_CFG.recipientAccess?recipientFlagFor(m,k):raDefault(m,k); }
+function raRowsHTML(){
+  const active=DB.team.filter(m=>(m.status||'Active')==='Active')
+    .sort((a,b)=>(isLegacyAdminMember(b)-isLegacyAdminMember(a))||String(a.name).localeCompare(String(b.name)));
+  return active.map(m=>{
+    const adm=isLegacyAdminMember(m);
+    return `<tr style="border-top:1px solid var(--bd)">
+      <td style="padding:6px 8px"><div style="display:flex;align-items:center;gap:7px">
+        <span style="width:22px;height:22px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0">${escapeHtml(m.av||'')}</span>
+        <div><div style="font-weight:600;color:var(--tx)">${escapeHtml(m.name)}${m.id===CU?.id?' <span style="font-weight:400;color:var(--tx3)">(you)</span>':''}</div>
+        <div style="font-size:10px;color:var(--tx3)">${escapeHtml(m.role||'')}${adm?' · Admin':''}</div></div></div></td>
+      ${RA_COLS.map(c=>{
+        const locked=c.adminOnly&&!adm;
+        const forced=c.k==='settings'&&(m.id===CU?.id||FULL.includes(m.name));
+        const on=forced||(!locked&&raChecked(m,c.k));
+        return `<td style="padding:6px 4px;text-align:center;border-left:${c.k==='loginlog'?'2px solid var(--bd)':'0'}"><input type="checkbox" id="ra-${m.id}-${c.k}" ${on?'checked':''} ${locked||forced?'disabled':''} title="${locked?'Only admins can be given this':forced?'You always keep your own Settings access':''}"></td>`;
+      }).join('')}
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="padding:10px;color:var(--tx3)">No active members</td></tr>';
+}
+window.raColumn=(k,on)=>{
+  DB.team.forEach(m=>{ const el=document.getElementById(`ra-${m.id}-${k}`); if(el&&!el.disabled) el.checked=!!on; });
+};
+window.saveRecipientAccess=async()=>{
+  if(!canOpenSettings()) return;
+  const people={};
+  DB.team.filter(m=>(m.status||'Active')==='Active').forEach(m=>{
+    const f={};
+    RA_COLS.forEach(c=>{ const el=document.getElementById(`ra-${m.id}-${c.k}`); if(el&&el.checked) f[c.k]=true; });
+    if(m.id===CU.id||FULL.includes(m.name)) f.settings=true;   // never lock out yourself / the founders
+    if(Object.keys(f).length) people[m.id]=f;
+  });
+  const empty=RA_COLS.filter(c=>c.k!=='loginlog'&&c.k!=='settings'&&!Object.values(people).some(f=>f[c.k])).map(c=>c.label);
+  if(empty.length&&!confirm('Nobody is ticked for:\n'+empty.join('\n')+'\n\nNothing will be sent for those. Save anyway?')) return;
+  const value={people,saved_by:CU.name,saved_at:new Date().toISOString()};
+  showSaving(true);
+  const r=await saveAppSetting('recipient_access',value);
+  showSaving(false);
+  if(!r){ toast('Could not save — run SUPABASE_MIGRATION_app_settings.sql in Supabase first','bad',7000); return; }
+  APP_CFG.recipientAccess=value;
+  applySettingsNavAccess();
+  logAction('Settings Updated',`${esc(CU.name)} changed who gets/sees digests, alerts, requests and Settings (${Object.keys(people).length} people ticked)`,'Info','Who Gets What','');
+  toast('Saved — only the people ticked will now get or see these ✓','ok',4500);
+  nav('settings',document.getElementById('nav-st'));
+};
+
 // ── Service Test Areas editor + Login Reminder days (shared app_settings) ──
 function staRowsHTML(list){
   return list.map((a,i)=>`<div class="sta-row" style="display:flex;gap:8px;align-items:flex-start;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px">
@@ -448,6 +581,57 @@ window.saveLoginReminderDays=async()=>{
   logAction('Settings Updated',`${esc(CU.name)} set login reminders to ${n} day${n===1?'':'s'} without login`,'Info','Login Reminders','');
   toast(`Login reminders will go out after ${n} day${n===1?'':'s'} ✓`,'ok');
 };
+
+// ── Automatic Digests (morning brief / escalation / weekly report) + workload warning ──
+window.saveDigestSettings=async()=>{
+  if(!isAdmin()) return;
+  const num=(id)=>parseInt(document.getElementById(id)?.value,10);
+  const inR=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+  const mb={enabled:!!document.getElementById('dg-mb-on')?.checked,hour:num('dg-mb-hour')};
+  const es={enabled:!!document.getElementById('dg-es-on')?.checked,overdue_days:num('dg-es-od'),review_hours:num('dg-es-rh'),repeat_days:num('dg-es-rep'),notify_reviewers:!!document.getElementById('dg-es-rev')?.checked};
+  const wr={enabled:!!document.getElementById('dg-wr-on')?.checked,day:num('dg-wr-day'),hour:num('dg-wr-hour')};
+  const wl={open:num('dg-wl-open'),overdue:num('dg-wl-over')};
+  if(!inR(mb.hour,0,23)||!inR(wr.hour,0,23)||!inR(wr.day,1,7)){ toast('Check the hours and weekday','bad'); return; }
+  if(!inR(es.overdue_days,1,60)||!inR(es.review_hours,1,720)||!inR(es.repeat_days,1,60)){ toast('Escalation: days must be 1-60 and review hours 1-720','bad'); return; }
+  if(!inR(wl.open,1,200)||!inR(wl.overdue,1,100)){ toast('Workload warning: enter whole numbers','bad'); return; }
+  showSaving(true);
+  const results=await Promise.all([
+    saveAppSetting('morning_brief',mb),saveAppSetting('escalation',es),
+    saveAppSetting('weekly_report',wr),saveAppSetting('workload_warning',wl)
+  ]);
+  showSaving(false);
+  if(results.some(r=>!r)){ toast('Could not save — run SUPABASE_MIGRATION_app_settings.sql in Supabase first','bad',7000); return; }
+  APP_CFG.morningBrief=mb; APP_CFG.escalation=es; APP_CFG.weeklyReport=wr; APP_CFG.workload=wl;
+  const on=[mb.enabled&&'morning brief',es.enabled&&'escalation',wr.enabled&&'weekly report'].filter(Boolean);
+  logAction('Settings Updated',`${esc(CU.name)} updated automatic digests (on: ${on.join(', ')||'none'})`,'Info','Automatic Digests','');
+  toast('Digest settings saved ✓','ok');
+};
+window.previewDigest=async(kind)=>{
+  const host=document.getElementById('dig-preview'); if(!host) return;
+  host.innerHTML='<div style="font-size:11px;color:var(--tx3)">Loading preview…</div>';
+  const res=await sbRpc('digest_preview',{p_kind:kind});
+  if(!Array.isArray(res)){
+    host.innerHTML='<div style="font-size:11px;color:var(--r,#dc2626)">Could not preview. Run <code>SUPABASE_MIGRATION_server_digests.sql</code> once in the Supabase SQL Editor, then try again.</div>';
+    return;
+  }
+  host.innerHTML=res.length
+    ?`<div style="font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Preview — what would be sent now (nothing was sent)</div>`+
+      res.map(r=>`<div style="padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:7px;margin-bottom:5px"><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">To ${escapeHtml(r.recipient||'')}</div><div style="font-size:12px;color:var(--tx);line-height:1.5">${escapeHtml(r.message||'')}</div></div>`).join('')
+    :'<div style="font-size:11px;color:var(--tx3)">Nothing to send right now — no task matches these rules (or no active Admin exists).</div>';
+};
+async function loadDigestLog(){
+  const host=document.getElementById('dig-log'); if(!host) return;
+  const rows=await sbQ('digest_log','order=sent_at.desc&limit=40');
+  if(!Array.isArray(rows)){ host.textContent='Not available yet — run SUPABASE_MIGRATION_server_digests.sql.'; return; }
+  const label={morning_brief:'☀️ Brief',weekly_report:'📊 Weekly',escalation_overdue:'🚨 Overdue',escalation_review:'🔍 Review'};
+  const seen=new Set(), out=[];
+  for(const r of rows){            // escalation logs one row per task: show each batch once
+    const k=r.kind+'|'+(r.recipient_name||'')+'|'+(r.message||'')+'|'+String(r.sent_at||'').slice(0,16);
+    if(seen.has(k)) continue; seen.add(k); out.push(r);
+    if(out.length>=10) break;
+  }
+  host.innerHTML=out.length?out.map(r=>`<div style="padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--tx2);font-weight:600">${label[r.kind]||escapeHtml(r.kind)}</span> <span>${fdt(r.sent_at)}</span>${r.recipient_name?` · to ${escapeHtml(r.recipient_name)}`:''}<div style="color:var(--tx3);margin-top:1px">${escapeHtml(String(r.message||'').slice(0,170))}</div></div>`).join(''):'Nothing sent yet.';
+}
 
 window.saveAutoRemSettings=async()=>{
   const enabled=document.getElementById('autorem-enabled')?.checked||false;

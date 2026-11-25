@@ -222,7 +222,7 @@ window.requestLibAccess=()=>{
   logAction('Library Access Requested',`${esc(CU.name)} requested library access${reason?' — Reason: '+reason:''}`, 'Info','Library','');
   toast('Request sent ✓ — admins have been notified','ok',5000);
   // Notify all admins + PMs
-  DB.team.filter(m=>isAdminMember(m)).forEach(m=>{
+  DB.team.filter(m=>recipientFlagFor(m,'requests',isAdminMember)).forEach(m=>{
     sendNotif(m.name,`${CU.name} requested Library access${reason?' — '+reason:''}`, 'Library Request','Library');
     notifyTG(m.id,'default',{desc:`📚 Library Access Request\n\n${CU.name} is requesting access to the Library.${reason?'\n\nReason: '+reason:''}\n\nPlease review in the app.`,link:appLink('library')});
   });

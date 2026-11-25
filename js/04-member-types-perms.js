@@ -36,6 +36,31 @@ function memberHasPerm(m,permKey){
 // Same as memberHasPerm, but for the currently logged-in user.
 function canDoStrict(perm){ return memberHasPerm(CU,perm); }
 
+// ── Who gets / sees what (Settings -> Who Gets What) ─────────────────────
+// APP_CFG.recipientAccess is null until an admin saves that card, and then
+// everything behaves exactly as it always did (the broad built-in "admin"
+// definition). Once saved it is { people: { <memberId>: { brief, escalation,
+// weekly, alerts, requests, loginlog, settings } } } and ONLY people with
+// that flag set get / see that item. People added later start with nothing.
+//   brief / escalation / weekly = the three server digests
+//   alerts   = admin broadcast notifications + pushes (deleted tasks, reschedules...)
+//   requests = approval requests (e.g. Library access)
+//   loginlog = the login-reminder history/switch in member details
+//   settings = opening the Settings page
+function isLegacyAdminMember(m){
+  return !!m&&(m.access==='Admin'||FULL.includes(m.name)||AROLES.includes(m.role));
+}
+function recipientFlagFor(m,key,legacyFn){
+  if(!m) return false;
+  const ra=APP_CFG.recipientAccess;
+  if(!ra||typeof ra!=='object') return (legacyFn||isLegacyAdminMember)(m);   // not customised yet
+  if(key==='settings'&&FULL.includes(m.name)) return true;                  // founders can never be locked out of Settings
+  return ra.people?.[m.id]?.[key]===true;
+}
+const canReceiveAdminAlerts=()=>recipientFlagFor(CU,'alerts');
+const canSeeLoginLog=()=>isAdmin()&&recipientFlagFor(CU,'loginlog');
+const canOpenSettings=()=>isAdmin()&&recipientFlagFor(CU,'settings');
+
 // Admin-only summary of which team members currently have access to a
 // permission-gated page — rendered directly on the page itself so an
 // admin can see (and jump to) who's granted without opening every

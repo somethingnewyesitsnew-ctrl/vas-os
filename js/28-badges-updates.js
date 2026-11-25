@@ -21,7 +21,7 @@ function updateBadges(){
   // Pending review count for admin
   const pendingRev=isAdmin()?DB.tasks.filter(t=>t.status==='Pending Review').length:rev.length;
   // Unread notifications
-  const unread=notifs.filter(n=>{const rel=(n.to===CU.name)||(n.adminsOnly&&isAdmin());return rel&&!n.readBy?.includes(CU.name);}).length;
+  const unread=notifs.filter(n=>{const rel=(n.to===CU.name)||(n.adminsOnly&&canReceiveAdminAlerts());return rel&&!n.readBy?.includes(CU.name);}).length;
 
   function setBadge(id,count){const el=document.getElementById(id);if(el){el.textContent=count;el.style.display=count>0?'':'none';}}
 

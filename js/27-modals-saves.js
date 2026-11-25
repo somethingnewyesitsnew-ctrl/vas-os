@@ -184,6 +184,9 @@ function openTodoModal(id){
 window.saveTask=async()=>{
   const title=document.getElementById('tf-title').value.trim();
   if(!title){toast('Task title required','bad');return;}
+  // Workload check: only for people being newly assigned (not those already on the task)
+  { const cur=_editId?DB.tasks.find(x=>x.id===_editId):null;
+    if(!confirmWorkload(cur?[...(cur.assignees||[]),cur.assignedTo].filter(Boolean):[])) return; }
   if(_editId){
     const t=DB.tasks.find(x=>x.id===_editId);if(!t)return;
     t.title=title; t.priority=document.getElementById('tf-priority').value; t.type=document.getElementById('tf-type').value;
@@ -612,7 +615,7 @@ async function sendNotif(toName, text, type='Mention', taskTitle='', adminsOnly=
   };
   notifs.unshift(n);notifs=notifs.slice(0,60);
   // Show immediately for current user if relevant
-  if(sameName(n.to,CU?.name)||(n.adminsOnly&&isAdmin()))renderNotifs();
+  if(sameName(n.to,CU?.name)||(n.adminsOnly&&canReceiveAdminAlerts()))renderNotifs();
   updateBadges();
   // Persist to Supabase async (non-blocking). link_type/link_id use the
   // silent writer since those columns are an additive migration — older
@@ -681,7 +684,7 @@ function renderNotifs(){
   const list=document.getElementById('nd-list');if(!list)return;
   const mine=notifs.filter(n=>{
     if(sameName(n.to,CU?.name))return true;
-    if(n.adminsOnly&&isAdmin())return true;
+    if(n.adminsOnly&&canReceiveAdminAlerts())return true;
     return false;
   });
   if(!mine.length){list.innerHTML='<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">All caught up! ✓</div>';updateBadges();return;}

@@ -52,7 +52,7 @@ function logAction(action,event,severity='Info',target='',details='',meta={}){
 // the action is themselves an admin.
 function notifyAdminsTG(msg,link=''){
   if(!isAdmin())
-    DB.team.filter(m=>isAdminMember(m)&&m.id!==CU?.id).forEach(m=>{
+    DB.team.filter(m=>(m.status||'Active')==='Active'&&recipientFlagFor(m,'alerts',isAdminMember)&&m.id!==CU?.id).forEach(m=>{
       notifyTG(m.id,'default',{desc:`🔔 *VAS Admin Alert*\n\n${msg}`,link:link||appLink('')});
     });
 }

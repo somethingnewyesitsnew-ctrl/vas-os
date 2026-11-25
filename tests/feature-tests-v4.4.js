@@ -317,6 +317,194 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
   const okEnable=await subscribeToPush();
   ok('clicking Enable also replaces an old-key subscription', okEnable===true&&rot.unsub===1&&rot.subscribed===1, JSON.stringify(rot));
   window.fetch=()=>Promise.reject(new Error('network disabled'));
+
+  // ---------- 10. Workload warning ----------
+  loadDemoData();
+  CU={id:'u1',name:'Demo CEO',role:'CEO',color:'#4f46e5',av:'DC',access:'Admin',email:'x@example.com'};
+  const tdy=localDateStr(new Date()), past=localDateStr(new Date(Date.now()-3*86400000)), fut=localDateStr(new Date(Date.now()+9*86400000));
+  const mkT=(i,o)=>({id:'w'+i,title:'W'+i,status:'In Progress',assignedTo:'u2',assignees:['u2'],due:fut,...o});
+  APP_CFG.workload={open:8,overdue:3};
+  DB.tasks=[
+    ...[1,2,3,4,5,6,7].map(i=>mkT(i,{})),                         // 7 open for u2
+    mkT(8,{status:'Done'}), mkT(9,{status:'Cancelled'}),          // not counted
+    mkT(10,{assignedTo:'u3',assignees:['u3','u2']}),              // co-assignee counts for u2 -> 8 open
+    mkT(11,{due:past}),                                           // overdue for u2 -> 9 open, 1 overdue
+    mkT(12,{assignedTo:'u4',assignees:['u4'],due:past}),          // u4: 1 open, 1 overdue
+  ];
+  let w=memberWorkload('u2');
+  ok('workload counts open tasks incl. co-assigned, ignoring Done/Cancelled', w.open===9&&w.overdue===1, JSON.stringify(w));
+  ok('workload can exclude the task being edited', memberWorkload('u2','w11').open===8&&memberWorkload('u2','w11').overdue===0);
+  ok('level: 9 open with limit 8 is HIGH', workloadLevel(w)==='high');
+  ok('level: 1 open + 1 overdue is BUSY', workloadLevel(memberWorkload('u4'))==='busy');
+  ok('level: nothing assigned is OK', workloadLevel(memberWorkload('u5'))==='ok');
+  ok('level: overdue limit alone triggers HIGH', workloadLevel({open:2,overdue:3})==='high');
+  APP_CFG.workload={open:20,overdue:10}; ok('limits come from Settings (raised -> same person is no longer HIGH)', workloadLevel(w)!=='high'); APP_CFG.workload={open:8,overdue:3};
+
+  openTaskModal(null);
+  _selectedAssignees=['u2','u5']; renderAssignTags();
+  let hint=document.getElementById('tf-load-hint');
+  ok('assign form shows each picked person\\'s load', !!hint&&hint.textContent.includes(': 9 open · 1 overdue')&&hint.textContent.includes(': 0 open · 0 overdue'), hint&&hint.textContent);
+  ok('overloaded person is flagged with a warning mark', hint.textContent.includes('⚠️'));
+  _selectedAssignees=[]; renderAssignTags(); ok('hint clears when nobody is picked', document.getElementById('tf-load-hint').textContent==='');
+
+  // saveTask asks before overloading
+  let asked=[]; window.confirm=(m)=>{asked.push(m);return false;};
+  openTaskModal(null); document.getElementById('tf-title').value='New thing'; _selectedAssignees=['u2']; renderAssignTags();
+  const nBefore=DB.tasks.length; await saveTask();
+  ok('assigning to an overloaded person asks first', asked.length===1&&asked[0].includes('already has 9 open tasks (1 overdue)')&&asked[0].includes('Assign anyway?'), asked[0]);
+  ok('cancelling the question creates nothing', DB.tasks.length===nBefore);
+  asked=[]; _selectedAssignees=['u5']; renderAssignTags(); await saveTask();
+  ok('a lightly loaded person is not questioned', asked.length===0);
+  // editing: people already on the task are not re-asked
+  asked=[]; window.confirm=(m)=>{asked.push(m);return true;};
+  openTaskModal('w1'); document.getElementById('tf-title').value='W1 edited';
+  _selectedAssignees=['u2']; renderAssignTags(); await saveTask();
+  ok('editing a task does not re-ask about the person already on it', asked.length===0, asked[0]);
+  asked=[]; openTaskModal('w1'); document.getElementById('tf-title').value='W1 again'; _selectedAssignees=['u2','u3']; await saveTask();
+  ok('...but a newly added overloaded co-assignee is asked about only if over the limit', asked.length===0 || !asked[0].includes('Demo Member'));
+
+  // ---------- 11. Automatic Digests settings ----------
+  CU={id:'u1',name:'Demo CEO',role:'CEO',color:'#4f46e5',av:'DC',access:'Admin',email:'x@example.com'};
+  window.sbQ=async(table)=>{ if(table==='digest_log') return [
+      {kind:'morning_brief',recipient_name:'Aymoon',message:'M1',sent_at:new Date().toISOString()},
+      {kind:'escalation_overdue',recipient_name:null,message:'ESC batch',sent_at:'2026-11-19T08:07:11Z'},
+      {kind:'escalation_overdue',recipient_name:null,message:'ESC batch',sent_at:'2026-11-19T08:07:11Z'},
+      {kind:'escalation_overdue',recipient_name:null,message:'ESC batch',sent_at:'2026-11-19T08:07:12Z'}];
+    return []; };
+  const dEl=document.createElement('div'); rSettings(dEl); document.body.appendChild(dEl);
+  ok('Settings has the Automatic Digests card with all three digests + workload', ['☀️ Morning brief','🚨 Escalation','📊 Weekly report','Workload warning'].every(x=>dEl.innerHTML.includes(x)));
+  ok('all digests start OFF', !document.getElementById('dg-mb-on').checked&&!document.getElementById('dg-es-on').checked&&!document.getElementById('dg-wr-on').checked);
+  await sleep(30);
+  ok('recently-sent list shows batches once (3 identical escalation rows -> 1)', (document.getElementById('dig-log').innerHTML.match(/ESC batch/g)||[]).length===1&&document.getElementById('dig-log').innerHTML.includes('M1'), document.getElementById('dig-log').innerHTML.slice(0,300));
+  const puts=[]; window.fetch=async(url,opts)=>{ if(String(url).includes('app_settings')) puts.push(JSON.parse(opts.body)); return {ok:true,json:async()=>[{key:'x'}],text:async()=>''}; };
+  document.getElementById('dg-mb-on').checked=true; document.getElementById('dg-mb-hour').value='7';
+  document.getElementById('dg-es-on').checked=true; document.getElementById('dg-es-od').value='3'; document.getElementById('dg-es-rh').value='12'; document.getElementById('dg-es-rep').value='2';
+  document.getElementById('dg-wr-on').checked=true; document.getElementById('dg-wr-day').value='7'; document.getElementById('dg-wr-hour').value='9';
+  document.getElementById('dg-wl-open').value='6'; document.getElementById('dg-wl-over').value='2';
+  await saveDigestSettings();
+  const by=Object.fromEntries(puts.map(x=>[x.key,x.value]));
+  ok('Save writes four app_settings keys', Object.keys(by).sort().join()==='escalation,morning_brief,weekly_report,workload_warning', Object.keys(by).join());
+  ok('morning brief saved (on, 07:00)', by.morning_brief&&by.morning_brief.enabled===true&&by.morning_brief.hour===7);
+  ok('escalation saved (3 days, 12 h, repeat 2)', by.escalation&&by.escalation.enabled&&by.escalation.overdue_days===3&&by.escalation.review_hours===12&&by.escalation.repeat_days===2, JSON.stringify(by.escalation));
+  ok('weekly report saved (Sunday = 7, 09:00)', by.weekly_report&&by.weekly_report.day===7&&by.weekly_report.hour===9&&by.weekly_report.enabled===true);
+  ok('workload limits saved and live', by.workload_warning&&by.workload_warning.open===6&&APP_CFG.workload.open===6&&APP_CFG.workload.overdue===2);
+  ok('live config updated after save', APP_CFG.morningBrief.enabled===true&&APP_CFG.escalation.overdue_days===3&&APP_CFG.weeklyReport.day===7);
+  // validation
+  puts.length=0; document.getElementById('dg-mb-hour').value='99'; await saveDigestSettings();
+  ok('an impossible hour is rejected without saving', puts.length===0);
+  document.getElementById('dg-mb-hour').value='7'; document.getElementById('dg-es-od').value='0'; await saveDigestSettings();
+  ok('0 overdue days is rejected', puts.length===0);
+  document.getElementById('dg-es-od').value='3';
+  // failure leaves live config alone
+  const keepCfg=JSON.stringify(APP_CFG.escalation); document.getElementById('dg-es-od').value='9';
+  window.fetch=async()=>({ok:false,status:404,json:async()=>({}),text:async()=>'no table'});
+  await saveDigestSettings(); ok('a failed save leaves the live settings untouched', JSON.stringify(APP_CFG.escalation)===keepCfg);
+  // members cannot save
+  puts.length=0; window.fetch=async(url,opts)=>{puts.push(1);return {ok:true,json:async()=>[{}],text:async()=>''};}; const savedAdmin=CU; CU={id:'a',name:'X',access:'Member'}; await saveDigestSettings(); ok('members cannot save digest settings', puts.length===0); CU=savedAdmin;
+  // preview
+  window.sbRpc=async(fn,a)=>{ window.__pv={fn,a}; return [{recipient:'Aymoon',message:'☀️ Morning brief: 🚨 3 overdue <b>x</b>'}]; };
+  await previewDigest('morning_brief');
+  ok('Preview calls digest_preview and shows the text (HTML-escaped)', window.__pv.fn==='digest_preview'&&window.__pv.a.p_kind==='morning_brief'&&document.getElementById('dig-preview').innerHTML.includes('3 overdue &lt;b&gt;x&lt;/b&gt;')&&document.getElementById('dig-preview').innerHTML.includes('nothing was sent'));
+  window.sbRpc=async()=>[]; await previewDigest('escalation'); ok('empty preview says nothing to send', document.getElementById('dig-preview').textContent.includes('Nothing to send'));
+  window.sbRpc=async()=>null; await previewDigest('weekly_report'); ok('preview without the migration explains what to run', document.getElementById('dig-preview').textContent.includes('SUPABASE_MIGRATION_server_digests.sql'));
+  // loading saved config
+  window.sbQ=async(t)=>t==='app_settings'?[{key:'morning_brief',value:{enabled:true,hour:6}},{key:'workload_warning',value:{open:12}},{key:'escalation',value:'junk'}]:[];
+  APP_CFG.morningBrief={enabled:false,hour:8}; APP_CFG.workload={open:8,overdue:3}; APP_CFG.escalation={enabled:false,overdue_days:2,review_hours:24,repeat_days:3};
+  await loadAppSettings();
+  ok('loadAppSettings merges saved digest/workload settings over defaults', APP_CFG.morningBrief.hour===6&&APP_CFG.morningBrief.enabled===true&&APP_CFG.workload.open===12&&APP_CFG.workload.overdue===3);
+  ok('a malformed saved value is ignored', APP_CFG.escalation.overdue_days===2);
+  window.fetch=()=>Promise.reject(new Error('network disabled'));
+
+  // ---------- 12. Who Gets What ----------
+  const mkM=(id,name,access,role,status)=>({id,name,access,role:role||'Dev',status:status||'Active',color:'#4f46e5',av:name.slice(0,2).toUpperCase(),email:''});
+  DB.team=[mkM('a1','Aymoon','Admin','Owner'),mkM('a2','Sara','Admin'),mkM('m1','Ann','Member'),mkM('m2','Bob','Member','Project Manager'),mkM('x1','Gone','Admin','Dev','Inactive'),mkM('f1','Aziz','Admin')];
+  const asUser=(id)=>{ const m=DB.team.find(x=>x.id===id); CU={...m}; };
+  window.sbQ=async()=>[]; window.nav=(p)=>{window.__nav=p;}; window.logAction=()=>{};
+  // -- legacy: not customised -> exactly the old behaviour
+  APP_CFG.recipientAccess=null;
+  asUser('a2'); ok('legacy: an admin receives admin alerts, sees login history, opens Settings', canReceiveAdminAlerts()&&canSeeLoginLog()&&canOpenSettings());
+  asUser('m1'); ok('legacy: a plain member gets/sees none of it', !canReceiveAdminAlerts()&&!canSeeLoginLog()&&!canOpenSettings());
+  // -- customised
+  APP_CFG.recipientAccess={people:{a1:{alerts:true,loginlog:true,settings:true,brief:true},m1:{alerts:true,requests:true}}};
+  asUser('a1'); ok('configured: ticked admin gets alerts / login history / Settings', canReceiveAdminAlerts()&&canSeeLoginLog()&&canOpenSettings());
+  asUser('a2'); ok('configured: an admin who is NOT ticked gets and sees nothing', !canReceiveAdminAlerts()&&!canSeeLoginLog()&&!canOpenSettings());
+  asUser('m1'); ok('configured: a non-admin can be given admin alerts', canReceiveAdminAlerts());
+  ok('configured: ...but not the admin-only "see" items', !canSeeLoginLog()&&!canOpenSettings());
+  asUser('f1'); ok('configured: a founder can never be locked out of Settings', canOpenSettings());
+  // -- Settings page + nav
+  asUser('a2'); let gate=document.createElement('div'); rSettings(gate);
+  ok('an un-ticked admin sees "no access" instead of Settings', gate.innerHTML.includes("don't have access to Settings")&&!gate.innerHTML.includes('ct-t'), gate.innerHTML.slice(0,200));
+  asUser('m1'); gate=document.createElement('div'); rSettings(gate); ok('a member still just sees "Admin only"', gate.innerHTML.includes('Admin only'));
+  const navSt=document.getElementById('nav-st'); navSt.style.display='';
+  asUser('a2'); applySettingsNavAccess(); ok('Settings menu item is hidden for an un-ticked admin', navSt.style.display==='none');
+  asUser('a1'); applySettingsNavAccess(); ok('...and shown for a ticked one', navSt.style.display==='');
+  // -- admin broadcast notifications (in-app)
+  const bell=(uid)=>{ asUser(uid); notifs=[{id:'n1',to:'Nobody',from:'X',text:'ADMIN-BROADCAST',type:'Mention',task:'',adminsOnly:true,readBy:[],time:new Date().toISOString()}]; renderNotifs(); return document.getElementById('nd-list').innerHTML; };
+  ok('ticked person sees the admin broadcast in their bell', bell('a1').includes('ADMIN-BROADCAST'));
+  ok('un-ticked admin does NOT see it', !bell('a2').includes('ADMIN-BROADCAST'));
+  ok('a ticked non-admin member DOES see it', bell('m1').includes('ADMIN-BROADCAST'));
+  ok('another member does not', !bell('m2').includes('ADMIN-BROADCAST'));
+  // -- admin push broadcast
+  const pushed=[]; window.notifyTG=(id)=>{pushed.push(id);};
+  asUser('m2'); notifyAdminsTG('something happened');   // a non-admin triggered it
+  ok('push alerts go only to the ticked people (a1, m1), not every admin', pushed.sort().join()==='a1,m1', pushed.join());
+  APP_CFG.recipientAccess=null; pushed.length=0; asUser('m1'); notifyAdminsTG('x');
+  ok('legacy: push alerts still go to every admin-type member (incl. Project Manager role)', pushed.sort().join()==='a1,a2,f1,m2', pushed.join());
+  // -- approval requests (e.g. Library)
+  ok('legacy: library requests go to admin-type members', ['a1','a2','m2','f1'].every(id=>recipientFlagFor(DB.team.find(x=>x.id===id),'requests',isAdminMember))&&!recipientFlagFor(DB.team.find(x=>x.id==='m1'),'requests',isAdminMember));
+  APP_CFG.recipientAccess={people:{m1:{requests:true}}};
+  ok('configured: library requests go ONLY to the ticked person', DB.team.filter(m=>recipientFlagFor(m,'requests',isAdminMember)).map(m=>m.id).join()==='m1');
+  // -- login history in member details
+  APP_CFG.recipientAccess={people:{a1:{loginlog:true,settings:true}}};
+  asUser('a2'); openMemberDetail('m1'); ok('member details hide login history from an un-ticked admin', !document.getElementById('sp-bd').innerHTML.includes('Login reminders'));
+  asUser('a1'); openMemberDetail('m1'); ok('...and show it to a ticked admin', document.getElementById('sp-bd').innerHTML.includes('Login reminders'));
+
+  // -- the card
+  APP_CFG.recipientAccess=null; asUser('a1');
+  const wEl=document.createElement('div'); rSettings(wEl); document.body.appendChild(wEl);
+  ok('Settings has the Who Gets What card, flagged as not customised', wEl.innerHTML.includes('Who Gets What')&&wEl.innerHTML.includes('Not customised yet'));
+  ok('only ACTIVE people are listed (5 rows, not the inactive one)', (wEl.innerHTML.match(/id="ra-[a-z0-9]+-brief"/g)||[]).length===5&&!document.getElementById('ra-x1-brief'));
+  const ck=(id,k)=>document.getElementById('ra-'+id+'-'+k);
+  ok('defaults mirror today: admins ticked for the digests', ck('a1','brief').checked&&ck('a2','weekly').checked&&!ck('m1','brief').checked);
+  ok('defaults mirror today: alerts to admin-type members incl. Project Manager role? (alerts = admin rule only)', ck('a1','alerts').checked&&!ck('m2','alerts').checked&&ck('m2','requests').checked);
+  ok('login history / Settings boxes are locked for non-admins', ck('m1','loginlog').disabled&&ck('m1','settings').disabled&&!ck('m1','settings').checked);
+  ok('your own Settings box is ticked and locked', ck('a1','settings').checked&&ck('a1','settings').disabled);
+  ok('founder Settings box is ticked and locked', ck('f1','settings').checked&&ck('f1','settings').disabled);
+  // column all / none
+  raColumn('weekly',false); ok('"none" clears a column', !ck('a1','weekly').checked&&!ck('a2','weekly').checked);
+  raColumn('weekly',true); ok('"all" ticks every enabled box in a column', ck('m1','weekly').checked&&ck('a2','weekly').checked);
+  raColumn('settings',true); ok('"all" never touches locked boxes', !ck('m1','settings').checked);
+  raColumn('weekly',false);
+  // save
+  const saved=[]; window.fetch=async(url,opts)=>{ if(String(url).includes('app_settings')) saved.push(JSON.parse(opts.body)); return {ok:true,json:async()=>[{key:'x'}],text:async()=>''}; };
+  let asked2=[]; window.confirm=(m)=>{asked2.push(m);return false;};
+  await saveRecipientAccess();
+  ok('saving with nobody ticked for the weekly report asks first', asked2.length===1&&asked2[0].includes('Weekly report'), asked2[0]);
+  ok('cancelling that question saves nothing', saved.length===0&&APP_CFG.recipientAccess===null);
+  window.confirm=()=>true; ck('a2','brief').checked=false; ck('m1','weekly').checked=true; ck('m1','alerts').checked=true;
+  await saveRecipientAccess();
+  const rv=saved.find(x=>x.key==='recipient_access'); const pp=rv&&rv.value.people;
+  ok('save writes the recipient_access setting', !!rv&&!!pp, JSON.stringify(saved));
+  ok('Aymoon ticks stored', pp&&pp.a1&&pp.a1.brief===true&&pp.a1.escalation===true&&pp.a1.settings===true, JSON.stringify(pp&&pp.a1));
+  ok('un-ticked box is not stored (Sara no brief)', pp&&pp.a2&&!pp.a2.brief&&pp.a2.escalation===true);
+  ok('a non-admin can be stored as a recipient (Ann weekly + alerts)', pp&&pp.m1&&pp.m1.weekly===true&&pp.m1.alerts===true&&!pp.m1.settings);
+  ok('your own Settings access is always kept', pp&&pp.a1.settings===true);
+  ok('the inactive person is not stored', pp&&!pp.x1);
+  ok('live config switched to customised and the page was refreshed', APP_CFG.recipientAccess&&JSON.stringify(APP_CFG.recipientAccess.people)===JSON.stringify(pp)&&window.__nav==='settings');
+  // failure leaves it alone
+  const before2=JSON.stringify(APP_CFG.recipientAccess); window.fetch=async()=>({ok:false,status:404,json:async()=>({}),text:async()=>''});
+  ck('a1','brief').checked=false; await saveRecipientAccess();
+  ok('a failed save changes nothing', JSON.stringify(APP_CFG.recipientAccess)===before2);
+  // only people allowed into Settings can save
+  saved.length=0; window.fetch=async(url,opts)=>{saved.push(1);return {ok:true,json:async()=>[{}],text:async()=>''};}; asUser('a2'); APP_CFG.recipientAccess={people:{a1:{settings:true}}}; await saveRecipientAccess();
+  ok('an admin without Settings access cannot save it', saved.length===0);
+  // reviewer option in the digests card
+  APP_CFG.recipientAccess=null; asUser('a1'); const dEl2=document.createElement('div'); rSettings(dEl2); document.body.appendChild(dEl2);
+  ok('digests card has the reviewer option, ticked by default', document.getElementById('dg-es-rev')&&document.getElementById('dg-es-rev').checked);
+  const puts2=[]; window.fetch=async(url,opts)=>{ if(String(url).includes('app_settings')) puts2.push(JSON.parse(opts.body)); return {ok:true,json:async()=>[{key:'x'}],text:async()=>''}; };
+  document.getElementById('dg-es-rev').checked=false; await saveDigestSettings();
+  ok('the reviewer option is saved in the escalation settings', (puts2.find(x=>x.key==='escalation')||{value:{}}).value.notify_reviewers===false, JSON.stringify(puts2.find(x=>x.key==='escalation')));
+  window.fetch=()=>Promise.reject(new Error('network disabled'));
 }catch(e){ window.__R.push({name:'TEST CRASH',pass:false,extra:e.stack}); }
 window.__done=true; })();
 `;

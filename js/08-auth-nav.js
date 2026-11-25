@@ -111,6 +111,7 @@ async function startApp(){
     const secMgmt=document.getElementById('sec-mgmt');if(secMgmt)secMgmt.style.display=canDoStrict('projects')?'':'none';
     const secOps=document.getElementById('sec-ops');if(secOps)secOps.style.display=canDoStrict('services')?'':'none';
   }
+  applySettingsNavAccess();
   document.getElementById('sav').textContent=CU.av;
   document.getElementById('sav').style.background=CU.color;
   document.getElementById('sur').textContent=CU.role;
@@ -318,6 +319,11 @@ function startAutoTaskReminders(){
 // is written FIRST (nothing is sent if it can't be saved, so a missing
 // migration can never cause repeated spam) and the server is re-checked for
 // a recent reminder and a fresher last_login right before sending.
+// Settings is only shown to admins who are allowed in (Settings -> Who Gets What)
+function applySettingsNavAccess(){
+  const el=document.getElementById('nav-st'); if(!el) return;
+  el.style.display=canOpenSettings()?'':'none';
+}
 function startLoginReminderCheck(){
   if(!CU) return;
   const busy=new Set();

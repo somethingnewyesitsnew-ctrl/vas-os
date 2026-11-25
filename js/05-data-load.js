@@ -137,7 +137,17 @@ const DEFAULT_TEST_AREAS=[
   {name:'Speed test',desc:'Pages, menus and responses load quickly; note anything slow and roughly how slow.'},
   {name:'Complete services test',desc:'Go through every service under {operator}, not only the main ones, and confirm each is live and working.'}
 ];
-let APP_CFG={serviceTestAreas:null,loginReminderDays:3};
+let APP_CFG={
+  serviceTestAreas:null,loginReminderDays:3,
+  // Server-side digests (SUPABASE_MIGRATION_server_digests.sql reads the same app_settings keys)
+  morningBrief:{enabled:false,hour:8},
+  escalation:{enabled:false,overdue_days:2,review_hours:24,repeat_days:3},
+  weeklyReport:{enabled:false,day:1,hour:8},
+  // Warn before assigning to someone with this many open / overdue tasks
+  workload:{open:8,overdue:3},
+  // null = never customised -> built-in admin behaviour; see recipientFlagFor() in 04
+  recipientAccess:null
+};
 function getServiceTestAreas(){
   const a=APP_CFG.serviceTestAreas;
   const clean=Array.isArray(a)?a.filter(x=>x&&String(x.name||'').trim()).map(x=>({name:String(x.name).trim(),desc:String(x.desc||'').trim()})):[];
@@ -154,6 +164,12 @@ async function loadAppSettings(){
     rows.forEach(r=>{
       if(r.key==='service_test_areas'&&Array.isArray(r.value)) APP_CFG.serviceTestAreas=r.value;
       if(r.key==='login_reminder_days'&&r.value!=null) APP_CFG.loginReminderDays=Number(r.value);
+      const obj=(v)=>v&&typeof v==='object'&&!Array.isArray(v)?v:null;
+      if(r.key==='morning_brief'&&obj(r.value)) APP_CFG.morningBrief={...APP_CFG.morningBrief,...r.value};
+      if(r.key==='escalation'&&obj(r.value)) APP_CFG.escalation={...APP_CFG.escalation,...r.value};
+      if(r.key==='weekly_report'&&obj(r.value)) APP_CFG.weeklyReport={...APP_CFG.weeklyReport,...r.value};
+      if(r.key==='workload_warning'&&obj(r.value)) APP_CFG.workload={...APP_CFG.workload,...r.value};
+      if(r.key==='recipient_access'&&obj(r.value)&&obj(r.value.people)) APP_CFG.recipientAccess=r.value;
     });
   }catch(e){ console.warn('loadAppSettings failed',e); }
 }
